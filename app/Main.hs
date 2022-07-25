@@ -5,9 +5,9 @@ import Data.Text.IO (getLine)
 import Text.Megaparsec
 import Text.Megaparsec.Char.Lexer (decimal)
 
-import Parser (uintRaw, addressRaw)
+import Parser (uintRaw, bytesRaw)
 
 main :: IO ()
 main = do
     input <- getLine
-    parseTest addressRaw input
+    parseTest bytesRaw input
