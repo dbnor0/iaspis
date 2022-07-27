@@ -25,6 +25,7 @@ executable iaspis
         Main.hs
     other-modules:
         Parser
+        Source
         Type
         Value
     other-extensions:

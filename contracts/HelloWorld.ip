@@ -1,0 +1,6 @@
+import "HelloNether.ip";
+import "Ownable.ip";
+
+enum x {
+    enum
+}

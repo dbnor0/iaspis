@@ -1,13 +1,17 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main where
 
-import Prelude hiding (getLine)
-import Data.Text.IO (getLine)
+import Prelude hiding (getLine, readFile)
+import Data.Text.IO (getLine, readFile)
 import Text.Megaparsec
 import Text.Megaparsec.Char.Lexer (decimal)
 
-import Parser (uintRaw, bytesRaw)
+import Parser (source)
 
 main :: IO ()
 main = do
-    input <- getLine
-    parseTest bytesRaw input
+    input <- readFile "./contracts/HelloWorld.ip"
+    case parse source "" input of
+        Left err -> print err
+        Right ast -> print ast
