@@ -51,7 +51,7 @@ data MemberDecl
     , functionPayability :: PayabilityKind
     , functionKind :: FunctionKind
     , functionName :: Identifier
-    , functionArgList :: [(Type, Identifier)]
+    , functionSig :: FunctionSignature
     }
     deriving (Eq, Show)
 
@@ -79,8 +79,30 @@ data FunctionKind
     | Procedure
     deriving (Eq, Show)
 
+data Arg = Arg 
+    { argType :: Type
+    , argLocation :: Maybe MemoryLocation
+    , argName :: Identifier 
+    } deriving (Eq, Show)
+
+data FunctionSignature = 
+    FunctionSignature { inputArgs :: [Arg], returnType :: Type}
+    deriving (Eq, Show)
+
+data MemoryLocation 
+    = Storage
+    | Memory
+    deriving (Eq, Show)
+
+data Statement
+    = VarDeclStatement Type Identifier (Maybe Expression)
+    | MemoryAssignment Identifier Expression
+    | StorageAssignment Identifier Expression
+
+data Expression
+
 data Struct = Struct 
-    { structName :: Identifier, structFields :: [(Type, Identifier)] } 
+    { structName :: Identifier, structFields :: [Arg] } 
     deriving (Eq, Show)
 
 data Enum = Enum 

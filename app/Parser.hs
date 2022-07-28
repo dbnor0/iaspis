@@ -29,6 +29,15 @@ whitespace = space1
 spaceOrComment :: Parser ()
 spaceOrComment = space whitespace lineComment blockComment
 
+reserved :: Text -> Parser ()
+reserved = void . lex . chunk
+
+block :: Parser a -> Parser a
+block = between (reserved "{") (reserved "}")
+
+backtrack :: [Parser a] -> Parser a
+backtrack = choice . (<$>) try
+
 source' :: Parser Source
 source' = Source <$> many (try importStmt) <*> many decl
 
@@ -41,24 +50,24 @@ semicolon = reserved ";"
 comma :: Parser ()
 comma = reserved ","
 
-reserved :: Text -> Parser ()
-reserved = void . lex . chunk
+statement :: Parser a -> Parser a
+statement = flip (<*) semicolon
 
-block :: Parser a -> Parser a
-block = between (reserved "{") (reserved "}")
+keyword :: Text -> a -> Parser a
+keyword k = (<$ reserved k)
 
 importStmt :: Parser Import
-importStmt = Import <$> (reserved "import" *> stringRaw <* semicolon)
+importStmt = Import <$> statement import'
+    where import' = reserved "import" *> stringRaw
 
 decl :: Parser Declaration
-decl = choice $ try <$> [struct, enum, contract]
+decl = backtrack [struct, enum, contract]
 
 struct :: Parser Declaration
 struct = StructDecl <$> (Struct <$> name <*> fields)
     where name      = reserved "struct" *> identifier
           fields    = block $ many fieldDecl
-          fieldDecl = field <* semicolon
-          field     = (,) <$> type' <*> identifier 
+          fieldDecl = statement arg
 
 enum :: Parser Declaration
 enum = EnumDecl <$> (Enum <$> name <*> fields)
@@ -66,7 +75,7 @@ enum = EnumDecl <$> (Enum <$> name <*> fields)
           fields = block $ sepBy1 identifier comma
 
 contract :: Parser Declaration
-contract = ContractDecl <$> choice (try <$> [immutableContract, proxyContract, facetContract])
+contract = ContractDecl <$> backtrack [immutableContract, proxyContract, facetContract]
 
 immutableContract :: Parser Contract
 immutableContract = ImmutableContract <$> name <*> inheritanceList <*> memberList
@@ -91,52 +100,67 @@ memberList :: Parser [MemberDecl]
 memberList = block $ many memberDecl
 
 memberDecl :: Parser MemberDecl
-memberDecl = choice $ try <$> [fieldDecl, functionDecl]
+memberDecl = backtrack [fieldDecl, functionDecl]
 
 fieldDecl :: Parser MemberDecl
-fieldDecl = field <* semicolon
-    where field      = FieldDecl <$> proxyKind <*> visibility <*> modifiers <*> type' <*> identifier  
-          modifiers  = many modifier 
+fieldDecl = statement field
+    where field      = FieldDecl <$> proxyKind <*> visibility <*> modifiers <*> type' <*> identifier
+          modifiers  = many modifier
 
 proxyKind :: Parser ProxyMemberKind
 proxyKind = reserved "@" *> facetId
-    where facetId = choice $ try <$> [SharedProxyMember <$ reserved "*", UniqueProxyMember <$> identifier]
+    where facetId = backtrack [ keyword "*" SharedProxyMember, UniqueProxyMember <$> identifier ]
 
 visibility :: Parser MemberVisibility
-visibility = choice $ try <$> 
-    [ Public <$ reserved "pub"
-    , Private <$ reserved "pvt"
-    , Internal <$ reserved "int"
-    , External <$ reserved "ext"
+visibility = backtrack
+    [ keyword "pub" Public
+    , keyword "pvt" Private
+    , keyword "int" Internal
+    , keyword "ext" External
     ]
 
 modifier :: Parser FieldModifier
-modifier = choice $ try <$> [ConstMod <$ reserved "const"]
+modifier = backtrack [keyword "const" ConstMod]
 
 functionDecl :: Parser MemberDecl
-functionDecl = FunctionDecl <$> visibility <*> payability <*> functionKind' <*> identifier <*> argList <* body
-    where body = block $ reserved "body" 
+functionDecl = FunctionDecl <$> visibility <*> payability <*> functionKind' <*> identifier <*> functionSig' <* body
+    where body = block $ reserved "body"
 
 payability :: Parser PayabilityKind
-payability = choice $ try <$> [Payable <$ reserved "$", NonPayable <$ reserved "!"]
+payability = backtrack
+    [ keyword "$" Payable
+    , keyword "!" NonPayable
+    ]
 
 functionKind' :: Parser FunctionKind
-functionKind' = choice $ try <$> [Function <$ reserved "fn", Procedure <$ reserved "proc"]
+functionKind' = backtrack
+    [ keyword "fn" Function
+    , keyword "proc" Procedure
+    ]
 
-argList :: Parser [(Type, Identifier)]
-argList = between (reserved "(") (reserved ")") args
-    where args = sepBy arg comma
-          arg  = (,) <$> type' <*> identifier
+functionSig' :: Parser FunctionSignature
+functionSig' = FunctionSignature <$> argList <*> returnType
+    where argList = between (reserved "(") (reserved ")") (sepBy arg comma)
+          returnType = reserved "=>" *> type'
+
+arg :: Parser Arg
+arg = Arg <$> type' <*> optional memoryLocation  <*> identifier
+
+memoryLocation :: Parser MemoryLocation
+memoryLocation = backtrack
+    [ keyword "storage" Storage
+    , keyword "memory" Memory
+    ]
 
 identifier :: Parser Text
 identifier = lex $ cons <$> satisfy isAlpha <*> takeWhileP Nothing isAlphaNum
 
 type' :: Parser Type
-type' = choice $ try <$> 
-    [ AddressT <$ reserved "address"
-    , BoolT <$ reserved "bool"
-    , DynamicBytesT <$ reserved "bytes"
-    , StringT <$ reserved "string"
+type' =  backtrack
+    [ keyword "address" AddressT
+    , keyword "bool" BoolT
+    , keyword "bytes" DynamicBytesT
+    , keyword "string" StringT
     ]
 
 lex :: Parser a -> Parser a

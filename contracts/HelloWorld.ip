@@ -1,19 +1,19 @@
 import "HelloNether.ip";
 import "Ownable.ip";
 
-open proxy Market for Primary, Secondary {
+closed proxy Market for Primary, Secondary {
     @       * pub       bool test;
     @ Primary pvt const string x; 
 }
 
 facet Primary to Market {
-    pub $ fn doSomething (address x) {
+    pub $ fn doSomething (address x) => string {
         body
     }
 }
 
 facet Secondary to Market {
-    pvt ! proc doSomethingElse (string a, bytes b) {
+    pvt ! proc doSomethingElse (string memory a, bytes memory b) => bool {
         body
     }
 }
