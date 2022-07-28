@@ -27,6 +27,7 @@ executable iaspis
         Parser
         Source
         Type
+        Utils
         Value
     other-extensions:
         OverloadedStrings

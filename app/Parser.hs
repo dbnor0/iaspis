@@ -10,10 +10,12 @@ import Data.Char (isDigit, isHexDigit, isAlphaNum, isAlpha)
 import Text.Megaparsec.Char.Lexer (decimal, hexadecimal, skipLineComment, skipBlockComment, space, lexeme, charLiteral)
 import Numeric (showHex)
 import Prelude hiding (length, lex, Enum)
-import Control.Monad (guard, void)
+import Control.Monad (guard, void, when)
 import Text.Megaparsec.Char (char, space1)
 import Value (Value (..))
 import Source
+import Data.Functor.Contravariant (Predicate (getPredicate, Predicate))
+import Utils (uintPredicates, testPredicates, bytesPredicates)
 
 type Parser = Parsec Void Text
 
@@ -157,11 +159,30 @@ identifier = lex $ cons <$> satisfy isAlpha <*> takeWhileP Nothing isAlphaNum
 
 type' :: Parser Type
 type' =  backtrack
-    [ keyword "address" AddressT
+    [ UIntT <$> sizedType "uint" uintPredicates
+    , BytesT <$> sizedType "bytes" bytesPredicates
+    , keyword "address" AddressT
     , keyword "bool" BoolT
     , keyword "bytes" DynamicBytesT
     , keyword "string" StringT
     ]
+          
+
+sizedType :: Text -> [Int -> Bool] -> Parser Int
+sizedType name ps = do
+    chunk name
+    size <- uintRaw
+    guard $ testPredicates size ps 
+    return size
+
+uintType :: Parser Type
+uintType = do
+    chunk "uint"
+    size <- uintRaw
+    guard $ size `mod` 8 == 0
+    return $ UIntT size
+
+
 
 lex :: Parser a -> Parser a
 lex = lexeme spaceOrComment
@@ -171,8 +192,8 @@ stringRaw :: Parser Text
 stringRaw = pack <$> (char '\"' *> manyTill charLiteral (char '\"'))
 
 
--- uintRaw :: Parser Word
--- uintRaw = lex decimal
+uintRaw :: Parser Int
+uintRaw = lex decimal
 
 -- boolRaw :: Parser Bool
 -- boolRaw = lex $ True <$ chunk "true" <|> False <$ chunk "false"
