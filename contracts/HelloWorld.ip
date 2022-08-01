@@ -1,20 +1,28 @@
 import "HelloNether.ip";
 import "Ownable.ip";
 
-closed proxy Market for Primary, Secondary {
-    @       * pub       uint64 test; @Secondary pub bytes y;@Secondary pub bytes y;@Secondary pub bytes y;@Secondary pub bytes y;@Secondary pub bytes y;
-    @ Primary pvt const string x; 
+open proxy Market for Primary, Secondary {
+    @       *   pub       bytes32 test;
+    @ Primary   pvt const string x; 
+    @ Primary   pub       uint256[][5][] v;
+    @ Secondary pvt       mapping (uint256 => mapping (string => address[][])) m;
 }
 
 facet Primary to Market {
     pub $ fn doSomething (address x) => string {
-        body
+        return expr;
     }
 }
 
 facet Secondary to Market {
-    pvt ! proc doSomethingElse (string memory a, bytes memory b) => bool {
-        body
+    pvt ! proc doSomethingElse (string memory a, string memory b) => bool {
+        string memory bCopy = expr;
+        if (expr) {
+            return expr;    
+        } else {
+            return expr;
+        }
+        return expr;
     }
 }
 

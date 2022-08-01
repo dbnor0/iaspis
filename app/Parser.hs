@@ -52,14 +52,14 @@ semicolon = reserved ";"
 comma :: Parser ()
 comma = reserved ","
 
-statement :: Parser a -> Parser a
-statement = flip (<*) semicolon
+endsIn :: Text -> Parser a -> Parser a
+endsIn t = flip (<*) (reserved t)
 
 keyword :: Text -> a -> Parser a
 keyword k = (<$ reserved k)
 
 importStmt :: Parser Import
-importStmt = Import <$> statement import'
+importStmt = Import <$> endsIn ";" import'
     where import' = reserved "import" *> stringRaw
 
 decl :: Parser Declaration
@@ -69,7 +69,7 @@ struct :: Parser Declaration
 struct = StructDecl <$> (Struct <$> name <*> fields)
     where name      = reserved "struct" *> identifier
           fields    = block $ many fieldDecl
-          fieldDecl = statement arg
+          fieldDecl = endsIn ";" arg
 
 enum :: Parser Declaration
 enum = EnumDecl <$> (Enum <$> name <*> fields)
@@ -104,14 +104,17 @@ memberList = block $ many memberDecl
 memberDecl :: Parser MemberDecl
 memberDecl = backtrack [fieldDecl, functionDecl]
 
+
 fieldDecl :: Parser MemberDecl
-fieldDecl = statement field
+fieldDecl = endsIn ";" field
     where field      = FieldDecl <$> proxyKind <*> visibility <*> modifiers <*> type' <*> identifier
           modifiers  = many modifier
 
 proxyKind :: Parser ProxyMemberKind
-proxyKind = reserved "@" *> facetId
-    where facetId = backtrack [ keyword "*" SharedProxyMember, UniqueProxyMember <$> identifier ]
+proxyKind = reserved "@" *> backtrack
+    [ keyword "*" SharedProxyMember
+    , UniqueProxyMember <$> identifier
+    ]
 
 visibility :: Parser MemberVisibility
 visibility = backtrack
@@ -125,8 +128,8 @@ modifier :: Parser FieldModifier
 modifier = backtrack [keyword "const" ConstMod]
 
 functionDecl :: Parser MemberDecl
-functionDecl = FunctionDecl <$> visibility <*> payability <*> functionKind' <*> identifier <*> functionSig' <* body
-    where body = block $ reserved "body"
+functionDecl = FunctionDecl <$> visibility <*> payability <*> functionKind' <*> identifier <*> functionSig' <*> body
+    where body = many statement
 
 payability :: Parser PayabilityKind
 payability = backtrack
@@ -157,32 +160,74 @@ memoryLocation = backtrack
 identifier :: Parser Text
 identifier = lex $ cons <$> satisfy isAlpha <*> takeWhileP Nothing isAlphaNum
 
-type' :: Parser Type
-type' =  backtrack
-    [ UIntT <$> sizedType "uint" uintPredicates
-    , BytesT <$> sizedType "bytes" bytesPredicates
-    , keyword "address" AddressT
-    , keyword "bool" BoolT
-    , keyword "bytes" DynamicBytesT
-    , keyword "string" StringT
-    ]
-          
+sizedType :: forall a . (Int -> Type) -> [Int -> Bool] -> Parser Type
+sizedType c ps = c <$> typeSize ps
 
-sizedType :: Text -> [Int -> Bool] -> Parser Int
-sizedType name ps = do
-    chunk name
+type' :: Parser Type
+type' = backtrack [arrayType, mappingType, primitiveType]
+
+primitiveType :: Parser Type
+primitiveType =  backtrack
+    [ keyword "address" AddressT
+    , keyword "bool" BoolT
+    , keyword "string" StringT
+    , chunk "uint" *> sizedType UIntT uintPredicates
+    , chunk "bytes" *> sizedType BytesT bytesPredicates
+    , keyword "bytes" BytesDynamicT
+    ]
+
+arrayType :: Parser Type
+arrayType = ArrayT <$> primitiveType <*> dimensions
+    where dimensions = many $ reserved "[" *> optional uintRaw <* reserved "]"
+
+mappingType :: Parser Type
+mappingType = MappingT <$> key <*> value
+    where key   = reserved "mapping" *> reserved "(" *> type' <* reserved "=>"
+          value = type' <* reserved ")"
+
+typeSize :: [Int -> Bool] -> Parser Int
+typeSize ps = do
     size <- uintRaw
-    guard $ testPredicates size ps 
+    guard $ testPredicates size ps
     return size
 
-uintType :: Parser Type
-uintType = do
-    chunk "uint"
-    size <- uintRaw
-    guard $ size `mod` 8 == 0
-    return $ UIntT size
+statement :: Parser Statement
+statement = backtrack 
+    [ varDeclStmt
+    , returnStmt
+    , storageAssignmentStmt
+    , memoryAssignmentStmt
+    , blockStmt
+    , ifStmt
+    ]
 
+varDeclStmt :: Parser Statement
+varDeclStmt = endsIn ";" stmt
+    where stmt = VarDeclStmt <$> arg <*> optional (reserved "=" *> expression)
 
+returnStmt :: Parser Statement
+returnStmt = endsIn ";" stmt
+    where stmt = ReturnStmt <$> (reserved "return" *> expression)
+
+storageAssignmentStmt :: Parser Statement
+storageAssignmentStmt = endsIn ";" stmt
+    where stmt = MemoryAssignmentStmt <$> (identifier <* reserved "=") <*> expression
+
+memoryAssignmentStmt :: Parser Statement
+memoryAssignmentStmt = endsIn ";" stmt
+    where stmt = MemoryAssignmentStmt <$> (identifier <* reserved "<-") <*> expression
+
+blockStmt :: Parser Statement
+blockStmt = BlockStmt <$> block (many statement)
+
+ifStmt :: Parser Statement
+ifStmt = IfStmt <$> cond <*> ifBranch <*> elseBranch
+    where cond = reserved "if" *> between (reserved "(") (reserved ")") expression
+          ifBranch = statement
+          elseBranch = optional $ reserved "else" *> statement  
+
+expression :: Parser Expression
+expression = reserved "expr" $> Expression
 
 lex :: Parser a -> Parser a
 lex = lexeme spaceOrComment

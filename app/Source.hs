@@ -52,8 +52,8 @@ data MemberDecl
     , functionKind :: FunctionKind
     , functionName :: Identifier
     , functionSig :: FunctionSignature
-    }
-    deriving (Eq, Show)
+    , functionBody :: [Statement]
+    } deriving (Eq, Show)
 
 data ProxyMemberKind 
     = SharedProxyMember
@@ -86,7 +86,7 @@ data Arg = Arg
     } deriving (Eq, Show)
 
 data FunctionSignature = 
-    FunctionSignature { inputArgs :: [Arg], returnType :: Type}
+    FunctionSignature { inputArgs :: [Arg], returnType :: Type }
     deriving (Eq, Show)
 
 data MemoryLocation 
@@ -95,11 +95,16 @@ data MemoryLocation
     deriving (Eq, Show)
 
 data Statement
-    = VarDeclStatement Type Identifier (Maybe Expression)
-    | MemoryAssignment Identifier Expression
-    | StorageAssignment Identifier Expression
+    = VarDeclStmt Arg (Maybe Expression)
+    | MemoryAssignmentStmt Identifier Expression 
+    | StorageAssignmentStmt Identifier Expression
+    | ReturnStmt Expression
+    | IfStmt Expression Statement (Maybe Statement)
+    | BlockStmt [Statement]
+    deriving (Eq, Show)
 
-data Expression
+data Expression = Expression
+    deriving (Eq, Show)
 
 data Struct = Struct 
     { structName :: Identifier, structFields :: [Arg] } 
@@ -114,11 +119,26 @@ data Source = Source
     , declarations :: [Declaration] 
     } deriving (Eq, Show)
 
-data Type 
-    = AddressT
+data Type
+    = AddressT 
     | BoolT
     | BytesT Int
-    | DynamicBytesT
+    | BytesDynamicT
     | UIntT Int
-    | StringT 
-    deriving (Eq, Show)
+    | StringT
+    | UserDefinedT Identifier
+    | ArrayT Type [Maybe Int]
+    | MappingT Type Type
+    deriving Eq
+
+instance Show Type where
+    show AddressT = "address"
+    show BoolT = "bool"
+    show (BytesT n) = "bytes" ++ show n
+    show BytesDynamicT = "bytes"
+    show (UIntT n) = "uint" ++ show n
+    show StringT = "string"
+    show (UserDefinedT name) = unpack name
+    show (ArrayT t dimensions) = show t ++ Prelude.concatMap showDim  dimensions
+        where showDim n = "[" ++ maybe "" show n ++ "]"
+    show (MappingT k v) = "mapping (" ++ show k ++ " => " ++ show v ++ ")"
