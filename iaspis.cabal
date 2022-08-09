@@ -26,9 +26,7 @@ executable iaspis
     other-modules:
         Parser
         Source
-        Type
         Utils
-        Value
     other-extensions:
         OverloadedStrings
     build-depends:    

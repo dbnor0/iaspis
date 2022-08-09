@@ -103,7 +103,10 @@ data Statement
     | BlockStmt [Statement]
     deriving (Eq, Show)
 
-data Expression = Expression
+data Expression = 
+    LiteralE Value
+    | IdentifierE Identifier
+    | FunctionCallE Identifier [Expression]
     deriving (Eq, Show)
 
 data Struct = Struct 
@@ -142,3 +145,13 @@ instance Show Type where
     show (ArrayT t dimensions) = show t ++ Prelude.concatMap showDim  dimensions
         where showDim n = "[" ++ maybe "" show n ++ "]"
     show (MappingT k v) = "mapping (" ++ show k ++ " => " ++ show v ++ ")"
+
+data Value
+    = AddressV Text
+    | BoolV Bool
+    | BytesV Text
+    | UIntV Int
+    | StringV Text
+    | StructV [Value]
+    | EnumV Identifier
+    deriving (Eq, Show)

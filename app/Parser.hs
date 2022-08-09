@@ -12,7 +12,6 @@ import Numeric (showHex)
 import Prelude hiding (length, lex, Enum)
 import Control.Monad (guard, void, when)
 import Text.Megaparsec.Char (char, space1)
-import Value (Value (..))
 import Source
 import Data.Functor.Contravariant (Predicate (getPredicate, Predicate))
 import Utils (uintPredicates, testPredicates, bytesPredicates)
@@ -160,7 +159,7 @@ memoryLocation = backtrack
 identifier :: Parser Text
 identifier = lex $ cons <$> satisfy isAlpha <*> takeWhileP Nothing isAlphaNum
 
-sizedType :: forall a . (Int -> Type) -> [Int -> Bool] -> Parser Type
+sizedType :: (Int -> Type) -> [Int -> Bool] -> Parser Type
 sizedType c ps = c <$> typeSize ps
 
 type' :: Parser Type
@@ -192,7 +191,7 @@ typeSize ps = do
     return size
 
 statement :: Parser Statement
-statement = backtrack 
+statement = backtrack
     [ varDeclStmt
     , returnStmt
     , storageAssignmentStmt
@@ -224,10 +223,21 @@ ifStmt :: Parser Statement
 ifStmt = IfStmt <$> cond <*> ifBranch <*> elseBranch
     where cond = reserved "if" *> between (reserved "(") (reserved ")") expression
           ifBranch = statement
-          elseBranch = optional $ reserved "else" *> statement  
+          elseBranch = optional $ reserved "else" *> statement
 
 expression :: Parser Expression
-expression = reserved "expr" $> Expression
+expression = backtrack [functionCallExpr, literalExpr, identifierExpr]
+
+literalExpr :: Parser Expression
+literalExpr = LiteralE <$> literal
+
+identifierExpr :: Parser Expression
+identifierExpr = IdentifierE <$> identifier
+
+functionCallExpr :: Parser Expression
+functionCallExpr = FunctionCallE <$> identifier <*> argList
+    where argList = between (reserved "(") (reserved ")") args
+          args = sepBy expression (reserved ",")
 
 lex :: Parser a -> Parser a
 lex = lexeme spaceOrComment
@@ -236,34 +246,38 @@ lex = lexeme spaceOrComment
 stringRaw :: Parser Text
 stringRaw = pack <$> (char '\"' *> manyTill charLiteral (char '\"'))
 
-
 uintRaw :: Parser Int
 uintRaw = lex decimal
 
--- boolRaw :: Parser Bool
--- boolRaw = lex $ True <$ chunk "true" <|> False <$ chunk "false"
+boolRaw :: Parser Bool
+boolRaw = lex $ True <$ chunk "true" <|> False <$ chunk "false"
 
--- hexRaw :: Parser Text
--- hexRaw = takeWhile1P Nothing isHexDigit
+hexRaw :: Parser Text
+hexRaw = chunk "0x" *> takeWhile1P Nothing isHexDigit
 
--- bytesRaw :: Parser Text
--- bytesRaw = lex hexRaw
+bytesRaw :: Parser Text
+bytesRaw = lex hexRaw
 
--- addressLit :: Parser Value
--- addressLit = AddressV <$> bytesRaw
+addressLit :: Parser Value
+addressLit = AddressV <$> bytesRaw
 
--- boolLit :: Parser Value
--- boolLit = BoolV <$> boolRaw
+boolLit :: Parser Value
+boolLit = BoolV <$> boolRaw
 
--- bytesLit :: Parser Value
--- bytesLit = BytesV <$> bytesRaw
+bytesLit :: Parser Value
+bytesLit = BytesV <$> bytesRaw
 
--- stringLit :: Parser Value
--- stringLit = StringV <$> stringRaw
+stringLit :: Parser Value
+stringLit = StringV <$> stringRaw
 
--- uintLit :: Parser Value
--- uintLit = UIntV <$> uintRaw
-
+uintLit :: Parser Value
+uintLit = UIntV <$> uintRaw
 
 literal :: Parser Value
-literal = undefined
+literal = backtrack
+    [ addressLit
+    , boolLit
+    , bytesLit
+    , stringLit
+    , uintLit
+    ]

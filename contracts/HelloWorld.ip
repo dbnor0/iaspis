@@ -10,19 +10,19 @@ open proxy Market for Primary, Secondary {
 
 facet Primary to Market {
     pub $ fn doSomething (address x) => string {
-        return expr;
+        return x;
     }
 }
 
 facet Secondary to Market {
     pvt ! proc doSomethingElse (string memory a, string memory b) => bool {
-        string memory bCopy = expr;
-        if (expr) {
-            return expr;    
+        string memory bCopy = b;
+        if (true) {
+            return 5;    
         } else {
-            return expr;
+            return 5;
         }
-        return expr;
+        return functionCall(1, abc, functionCall(123, 456));
     }
 }
 
