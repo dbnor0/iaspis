@@ -194,27 +194,25 @@ statement :: Parser Statement
 statement = backtrack
     [ varDeclStmt
     , returnStmt
-    , storageAssignmentStmt
-    , memoryAssignmentStmt
+    , assignmentStmt
     , blockStmt
     , ifStmt
     ]
 
 varDeclStmt :: Parser Statement
 varDeclStmt = endsIn ";" stmt
-    where stmt = VarDeclStmt <$> arg <*> optional (reserved "=" *> expression)
+    where stmt = VarDeclStmt <$> arg <*> optional ((,) <$> assignmentSymbol <*> expression)
 
 returnStmt :: Parser Statement
 returnStmt = endsIn ";" stmt
     where stmt = ReturnStmt <$> (reserved "return" *> expression)
 
-storageAssignmentStmt :: Parser Statement
-storageAssignmentStmt = endsIn ";" stmt
-    where stmt = MemoryAssignmentStmt <$> (identifier <* reserved "=") <*> expression
+assignmentStmt :: Parser Statement
+assignmentStmt = endsIn ";" stmt
+    where stmt = AssignmentStmt <$> identifier <*> assignmentSymbol <*> expression
 
-memoryAssignmentStmt :: Parser Statement
-memoryAssignmentStmt = endsIn ";" stmt
-    where stmt = MemoryAssignmentStmt <$> (identifier <* reserved "<-") <*> expression
+assignmentSymbol :: Parser MemoryLocation
+assignmentSymbol = reserved "<-" $> Storage <|> reserved ":=" $> Memory
 
 blockStmt :: Parser Statement
 blockStmt = BlockStmt <$> block (many statement)
@@ -226,7 +224,14 @@ ifStmt = IfStmt <$> cond <*> ifBranch <*> elseBranch
           elseBranch = optional $ reserved "else" *> statement
 
 expression :: Parser Expression
-expression = backtrack [functionCallExpr, literalExpr, identifierExpr]
+expression = backtrack [functionCallExpr, literalExpr, identifierExpr, binaryExpr]
+
+-- precedence
+
+binaryExpr :: Parser Expression
+binaryExpr = BinaryE <$> factor <*> op <*> expression
+    where factor = literalExpr <|> identifierExpr
+          op     = reserved "+" $> AdditionOp <|> reserved "-" $> SubtractionOp
 
 literalExpr :: Parser Expression
 literalExpr = LiteralE <$> literal

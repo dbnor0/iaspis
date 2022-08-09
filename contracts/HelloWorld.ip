@@ -16,13 +16,13 @@ facet Primary to Market {
 
 facet Secondary to Market {
     pvt ! proc doSomethingElse (string memory a, string memory b) => bool {
-        string memory bCopy = b;
+        string memory bCopy := b;
         if (true) {
             return 5;    
         } else {
             return 5;
         }
-        return functionCall(1, abc, functionCall(123, 456));
+        return functionCall(1, abc, functionCall(123 + 12, 456));
     }
 }
 

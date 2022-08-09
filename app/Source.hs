@@ -95,18 +95,42 @@ data MemoryLocation
     deriving (Eq, Show)
 
 data Statement
-    = VarDeclStmt Arg (Maybe Expression)
-    | MemoryAssignmentStmt Identifier Expression 
-    | StorageAssignmentStmt Identifier Expression
+    = VarDeclStmt Arg (Maybe (MemoryLocation, Expression))
+    | AssignmentStmt Identifier MemoryLocation Expression 
     | ReturnStmt Expression
     | IfStmt Expression Statement (Maybe Statement)
     | BlockStmt [Statement]
     deriving (Eq, Show)
 
-data Expression = 
-    LiteralE Value
+data Expression 
+    = LiteralE Value
     | IdentifierE Identifier
+    | BinaryE Expression BinaryOp Expression
+    | UnaryE UnaryOp Expression
     | FunctionCallE Identifier [Expression]
+    deriving (Eq, Show)
+
+data BinaryOp 
+    = AdditionOp
+    | SubtractionOp
+    | MultiplicationOp
+    | DivisionOp
+    | ConjunctionOp
+    | DisjunctionOp
+    | EqualityOp
+    | InequalityOp
+    | LessThanOp
+    | GreaterThanOp
+    | LessThanEqualOp
+    | GreaterThanEqualOp
+    | LeftShiftOp
+    | RightShiftOp
+    deriving (Eq, Show)
+
+data UnaryOp
+    = NegationOp
+    | IncrementOp
+    | DecrementOp
     deriving (Eq, Show)
 
 data Struct = Struct 
