@@ -189,6 +189,7 @@ primitiveType =  backtrack
     , chunk "uint" *> sizedType UIntT uintPredicates
     , chunk "bytes" *> sizedType BytesT bytesPredicates
     , keyword "bytes" BytesDynamicT
+    , UserDefinedT <$> identifier
     ]
 
 arrayType :: Parser Type
@@ -377,6 +378,15 @@ stringLit = StringV <$> stringRaw
 uintLit :: Parser Value
 uintLit = UIntV <$> uintRaw
 
+arrayLit :: Parser Value
+arrayLit = ArrayV <$> between (reserved "[") (reserved "]") values
+    where values = sepBy1 expression (reserved ",")
+
+structLit :: Parser Value
+structLit = StructV <$> between (reserved "{") (reserved "}") fields
+    where fields = sepBy1 field (reserved ",")
+          field = (,) <$> identifier <*> (reserved ":" *> expression) 
+
 literal :: Parser Value
 literal = backtrack
     [ addressLit
@@ -384,4 +394,6 @@ literal = backtrack
     , bytesLit
     , stringLit
     , uintLit
+    , arrayLit
+    , structLit
     ]

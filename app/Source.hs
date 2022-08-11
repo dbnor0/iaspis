@@ -187,6 +187,7 @@ data Value
     | BytesV Text
     | UIntV Int
     | StringV Text
-    | StructV [Value]
+    | StructV [(Identifier, Expression)]
+    | ArrayV [Expression]
     | EnumV Identifier
     deriving (Eq, Show)
