@@ -17,6 +17,8 @@ import Data.Functor.Contravariant (Predicate (getPredicate, Predicate))
 import Utils (uintPredicates, testPredicates, bytesPredicates)
 
 type Parser = Parsec Void Text
+type BinaryExpression = Expression -> Expression -> Expression
+type UnaryExpression = Expression -> Expression
 
 lineComment :: Parser ()
 lineComment = skipLineComment "//"
@@ -38,6 +40,21 @@ block = between (reserved "{") (reserved "}")
 
 backtrack :: [Parser a] -> Parser a
 backtrack = choice . (<$>) try
+
+chainr1 :: Parser a -> Parser (a -> a -> a) -> Parser a
+chainr1 p op =
+    scan where scan = do
+                    x <- p
+                    rest x
+               rest x = do
+                    f <- op
+                    y <- scan
+                    return (f x y)
+                    <|> return x
+
+many1 :: Parser a -> Parser [a]
+many1 p             = do{ x <- p; xs <- many p; return (x:xs) }
+
 
 source' :: Parser Source
 source' = Source <$> many (try importStmt) <*> many decl
@@ -102,7 +119,6 @@ memberList = block $ many memberDecl
 
 memberDecl :: Parser MemberDecl
 memberDecl = backtrack [fieldDecl, functionDecl]
-
 
 fieldDecl :: Parser MemberDecl
 fieldDecl = endsIn ";" field
@@ -197,7 +213,12 @@ statement = backtrack
     , assignmentStmt
     , blockStmt
     , ifStmt
+    , expressionStmt
     ]
+
+expressionStmt :: Parser Statement
+expressionStmt = endsIn ";" stmt
+    where stmt = ExpressionStmt <$> expression
 
 varDeclStmt :: Parser Statement
 varDeclStmt = endsIn ";" stmt
@@ -223,15 +244,78 @@ ifStmt = IfStmt <$> cond <*> ifBranch <*> elseBranch
           ifBranch = statement
           elseBranch = optional $ reserved "else" *> statement
 
+mkBinaryExpr :: Text -> BinaryOp -> Parser BinaryExpression
+mkBinaryExpr sym op = reserved sym $> BinaryE op
+
+mkUnaryExpr :: Text -> UnaryOp -> Parser UnaryExpression
+mkUnaryExpr sym op = reserved sym $> UnaryE op
+
 expression :: Parser Expression
-expression = backtrack [functionCallExpr, literalExpr, identifierExpr, binaryExpr]
+expression =
+    baseExpr
+    `chainr1` multiplicativeOps
+    `chainr1` additiveOps
+    `chainr1` shiftOps
+    `chainr1` comparisonOps
+    `chainr1` equalityOps
+    `chainr1` logicalOps
+    `chainr1` bitwiseOps
 
--- precedence
+baseExpr :: Parser Expression
+baseExpr = backtrack
+    [ memberExpr
+    , factor
+    , unaryExpr <*> expression
+    ]
 
-binaryExpr :: Parser Expression
-binaryExpr = BinaryE <$> factor <*> op <*> expression
-    where factor = literalExpr <|> identifierExpr
-          op     = reserved "+" $> AdditionOp <|> reserved "-" $> SubtractionOp
+memberExpr :: Parser Expression
+memberExpr = do
+    struct <- factor
+    members <- many1 $ Left <$> member <|> Right <$> subscript
+    return $ Prelude.foldl (\exp -> either (MemberAccessE exp) (SubscriptE exp)) struct members
+    where member = reserved "." *> identifier
+          subscript = between (reserved "[") (reserved "]") expression
+
+multiplicativeOps :: Parser BinaryExpression
+multiplicativeOps = choice $ uncurry mkBinaryExpr <$>
+    [ ("*", MultiplicationOp)
+    , ("/", DivisionOp)
+    , ("%", ModuloOp)
+    ]
+
+additiveOps :: Parser BinaryExpression
+additiveOps = choice $ uncurry mkBinaryExpr <$> [ ("+", AdditionOp), ("-", SubtractionOp) ]
+
+shiftOps :: Parser BinaryExpression
+shiftOps = choice $ uncurry mkBinaryExpr <$> [ (">>", RightShiftOp), ("<<", LeftShiftOp) ]
+
+comparisonOps :: Parser BinaryExpression
+comparisonOps = choice $ try . uncurry mkBinaryExpr <$>
+    [ ("<=", LessThanEqualOp)
+    , (">=", GreaterThanEqualOp)
+    , ("<", LessThanOp)
+    , (">", GreaterThanOp)
+    ]
+
+equalityOps :: Parser BinaryExpression
+equalityOps = choice $ uncurry mkBinaryExpr <$> [ ("!=", InequalityOp), ("==", EqualityOp) ]
+
+logicalOps :: Parser BinaryExpression
+logicalOps = choice $ uncurry mkBinaryExpr <$> [ ("&&", ConjunctionOp), ("||", DisjunctionOp) ]
+
+bitwiseOps :: Parser BinaryExpression
+bitwiseOps = choice $ uncurry mkBinaryExpr <$>
+    [ ("&", BitwiseConjunctionOp)
+    , ("|", BitwiseDisjunctionOp)
+    , ("^", BitwiseExclDisjunctionOp)
+    ]
+
+factor :: Parser Expression
+factor =
+    between (reserved "(") (reserved ")") expression
+    <|> try functionCallExpr
+    <|> literalExpr
+    <|> identifierExpr
 
 literalExpr :: Parser Expression
 literalExpr = LiteralE <$> literal
@@ -243,6 +327,21 @@ functionCallExpr :: Parser Expression
 functionCallExpr = FunctionCallE <$> identifier <*> argList
     where argList = between (reserved "(") (reserved ")") args
           args = sepBy expression (reserved ",")
+
+ternaryExpr :: Parser Expression
+ternaryExpr = TernaryE <$> cond <*> exp1 <*> exp2
+    where cond = factor <* reserved "?"
+          exp1 = expression <* reserved ":"
+          exp2 = expression
+
+unaryExpr :: Parser UnaryExpression
+unaryExpr = choice $ uncurry mkUnaryExpr <$>
+    [ ("++", IncrementOp)
+    , ("--", DecrementOp)
+    , ("-", ArithmeticNegationOp)
+    , ("!", LogicalNegationOp)
+    , ("~", BitwiseNegationOp)
+    ]
 
 lex :: Parser a -> Parser a
 lex = lexeme spaceOrComment

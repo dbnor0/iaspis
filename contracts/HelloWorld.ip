@@ -1,7 +1,7 @@
-import "HelloNether.ip";
+import "ERC721.ip";
 import "Ownable.ip";
 
-open proxy Market for Primary, Secondary {
+/*open proxy Market for Primary, Secondary {
     @       *   pub       bytes32 test;
     @ Primary   pvt const string x; 
     @ Primary   pub       uint256[][5][] v;
@@ -12,21 +12,15 @@ facet Primary to Market {
     pub $ fn doSomething (address x) => string {
         return x;
     }
-}
+}*/
 
 facet Secondary to Market {
-    pvt ! proc doSomethingElse (string memory a, string memory b) => bool {
-        string memory bCopy := b;
-        if (true) {
-            return 5;    
-        } else {
-            return 5;
-        }
-        return functionCall(1, abc, functionCall(123 + 12, 456));
+    pvt ! proc doSomethingElse () => bool {
+        return !--v[0][1][2].x[3] + x.y.s.f[2];
     }
 }
 
-struct test1 {
+/*struct test1 {
     string x;
     address y;
 }
@@ -34,4 +28,4 @@ struct test1 {
 enum test2 {
     VALUE1,
     VALUE2
-}
+}*/

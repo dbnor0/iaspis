@@ -33,6 +33,7 @@ data Contract
     , facetDecls :: [MemberDecl] 
     }
     deriving (Eq, Show)
+
 data ProxyKind 
     = ProxyOpen 
     | ProxyClosed
@@ -100,14 +101,18 @@ data Statement
     | ReturnStmt Expression
     | IfStmt Expression Statement (Maybe Statement)
     | BlockStmt [Statement]
+    | ExpressionStmt Expression
     deriving (Eq, Show)
 
 data Expression 
     = LiteralE Value
     | IdentifierE Identifier
-    | BinaryE Expression BinaryOp Expression
-    | UnaryE UnaryOp Expression
+    | SubscriptE Expression Expression
+    | MemberAccessE Expression Identifier
     | FunctionCallE Identifier [Expression]
+    | UnaryE UnaryOp Expression
+    | BinaryE BinaryOp Expression Expression
+    | TernaryE Expression Expression Expression
     deriving (Eq, Show)
 
 data BinaryOp 
@@ -115,6 +120,7 @@ data BinaryOp
     | SubtractionOp
     | MultiplicationOp
     | DivisionOp
+    | ModuloOp
     | ConjunctionOp
     | DisjunctionOp
     | EqualityOp
@@ -125,10 +131,15 @@ data BinaryOp
     | GreaterThanEqualOp
     | LeftShiftOp
     | RightShiftOp
+    | BitwiseConjunctionOp
+    | BitwiseDisjunctionOp
+    | BitwiseExclDisjunctionOp
     deriving (Eq, Show)
 
 data UnaryOp
-    = NegationOp
+    = ArithmeticNegationOp
+    | LogicalNegationOp
+    | BitwiseNegationOp
     | IncrementOp
     | DecrementOp
     deriving (Eq, Show)
