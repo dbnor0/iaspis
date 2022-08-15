@@ -2,11 +2,13 @@ module Source where
 
 import Prelude hiding (Enum)
 import Data.Text
+import Text.Megaparsec (State)
 
 type Identifier = Text
 
-newtype Import = Import 
-    { getPath :: Text } 
+newtype Module = Module Identifier
+    deriving (Eq, Show)
+newtype Import = Import Identifier
     deriving (Eq, Show)
 
 data Declaration 
@@ -41,8 +43,8 @@ data ProxyKind
 
 data MemberDecl
     = FieldDecl 
-    { fieldProxyKind :: ProxyMemberKind
-    , fieldVisibility :: MemberVisibility
+    { fieldProxyKind :: Maybe ProxyMemberKind
+    , fieldVisibility :: Maybe MemberVisibility
     , fieldModifiers :: [FieldModifier]
     , fieldType :: Type
     , fieldName :: Identifier
@@ -100,7 +102,12 @@ data Statement
     | AssignmentStmt Identifier MemoryLocation Expression 
     | ReturnStmt Expression
     | IfStmt Expression Statement (Maybe Statement)
+    | WhileStmt Expression Statement
+    | ForStmt (Maybe Statement) (Maybe Expression) (Maybe Expression) Statement
+    | ForEachStmt Identifier Expression Statement
     | BlockStmt [Statement]
+    | BreakStmt
+    | ContinueStmt
     | ExpressionStmt Expression
     deriving (Eq, Show)
 
@@ -153,7 +160,8 @@ data Enum = Enum
     deriving (Eq, Show)
 
 data Source = Source 
-    { imports :: [Import]
+    { moduleDecl :: Module
+    , imports :: [Import]
     , declarations :: [Declaration] 
     } deriving (Eq, Show)
 

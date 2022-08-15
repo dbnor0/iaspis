@@ -41,26 +41,30 @@ block = between (reserved "{") (reserved "}")
 backtrack :: [Parser a] -> Parser a
 backtrack = choice . (<$>) try
 
-chainr1 :: Parser a -> Parser (a -> a -> a) -> Parser a
-chainr1 p op =
-    scan where scan = do
-                    x <- p
-                    rest x
-               rest x = do
-                    f <- op
-                    y <- scan
-                    return (f x y)
-                    <|> return x
+chainl1 :: Parser a -> Parser (a -> a -> a) -> Parser a
+chainl1 p op = do
+    x <- p
+    rest x
+    where
+        rest x = do
+            f <- op
+            y <- p
+            rest (f x y)
+            <|> return x
+
 
 many1 :: Parser a -> Parser [a]
 many1 p             = do{ x <- p; xs <- many p; return (x:xs) }
 
 
 source' :: Parser Source
-source' = Source <$> many (try importStmt) <*> many decl
+source' = Source <$> module' <*> many (try importStmt) <*> many decl
 
 source :: Parser Source
 source = source' <* eof
+
+module' :: Parser Module
+module' = Module <$> (endsIn ";" $ (reserved "module" *> identifier))
 
 semicolon :: Parser ()
 semicolon = reserved ";"
@@ -76,7 +80,7 @@ keyword k = (<$ reserved k)
 
 importStmt :: Parser Import
 importStmt = Import <$> endsIn ";" import'
-    where import' = reserved "import" *> stringRaw
+    where import' = reserved "import" *> identifier
 
 decl :: Parser Declaration
 decl = backtrack [struct, enum, contract]
@@ -122,8 +126,11 @@ memberDecl = backtrack [fieldDecl, functionDecl]
 
 fieldDecl :: Parser MemberDecl
 fieldDecl = endsIn ";" field
-    where field      = FieldDecl <$> proxyKind <*> visibility <*> modifiers <*> type' <*> identifier
+    where field      = FieldDecl <$> optional proxyKind <*> optional visibility <*> modifiers <*> type' <*> identifier
           modifiers  = many modifier
+
+forFieldDecl :: Parser MemberDecl
+forFieldDecl = FieldDecl Nothing Nothing [] <$> type' <*> identifier
 
 proxyKind :: Parser ProxyMemberKind
 proxyKind = reserved "@" *> backtrack
@@ -179,7 +186,7 @@ sizedType :: (Int -> Type) -> [Int -> Bool] -> Parser Type
 sizedType c ps = c <$> typeSize ps
 
 type' :: Parser Type
-type' = backtrack [arrayType, mappingType, primitiveType]
+type' = backtrack [mappingType, arrayType, primitiveType]
 
 primitiveType :: Parser Type
 primitiveType =  backtrack
@@ -215,6 +222,11 @@ statement = backtrack
     , blockStmt
     , ifStmt
     , expressionStmt
+    , whileStmt
+    , forStmt
+    , forEachStmt
+    , breakStmt
+    , continueStmt
     ]
 
 expressionStmt :: Parser Statement
@@ -236,6 +248,33 @@ assignmentStmt = endsIn ";" stmt
 assignmentSymbol :: Parser MemoryLocation
 assignmentSymbol = reserved "<-" $> Storage <|> reserved ":=" $> Memory
 
+whileStmt :: Parser Statement
+whileStmt = WhileStmt <$> cond <*> body
+    where cond = reserved "while" *> reserved "(" *> expression <* reserved ")"
+          body = statement
+
+forStmt :: Parser Statement
+forStmt = ForStmt <$> decl <*> cond <*> step <*> body
+    where decl = reserved "for" *> reserved "(" *> optional stmt <* reserved ";"
+          stmt = VarDeclStmt <$> arg <*> optional ((,) <$> assignmentSymbol <*> expression)
+          cond = optional expression <* reserved ";"
+          step = optional expression <* reserved ")"
+          body = statement
+
+forEachStmt :: Parser Statement
+forEachStmt = ForEachStmt <$> id <*> container <*> body
+    where id = reserved "for" *> identifier <* reserved "in"
+          container = expression
+          body = statement
+
+breakStmt :: Parser Statement
+breakStmt = endsIn ";" stmt 
+    where stmt = reserved "break" $> BreakStmt
+
+continueStmt :: Parser Statement
+continueStmt = endsIn ";" stmt 
+    where stmt = reserved "continue" $> ContinueStmt
+
 blockStmt :: Parser Statement
 blockStmt = BlockStmt <$> block (many statement)
 
@@ -254,13 +293,13 @@ mkUnaryExpr sym op = reserved sym $> UnaryE op
 expression :: Parser Expression
 expression =
     baseExpr
-    `chainr1` multiplicativeOps
-    `chainr1` additiveOps
-    `chainr1` shiftOps
-    `chainr1` comparisonOps
-    `chainr1` equalityOps
-    `chainr1` logicalOps
-    `chainr1` bitwiseOps
+    `chainl1` multiplicativeOps
+    `chainl1` additiveOps
+    `chainl1` shiftOps
+    `chainl1` comparisonOps
+    `chainl1` equalityOps
+    `chainl1` logicalOps
+    `chainl1` bitwiseOps
 
 baseExpr :: Parser Expression
 baseExpr = backtrack
@@ -385,7 +424,7 @@ arrayLit = ArrayV <$> between (reserved "[") (reserved "]") values
 structLit :: Parser Value
 structLit = StructV <$> between (reserved "{") (reserved "}") fields
     where fields = sepBy1 field (reserved ",")
-          field = (,) <$> identifier <*> (reserved ":" *> expression) 
+          field = (,) <$> identifier <*> (reserved ":" *> expression)
 
 literal :: Parser Value
 literal = backtrack

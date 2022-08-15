@@ -1,27 +1,47 @@
-import "ERC721.ip";
-import "Ownable.ip";
+module Market;
 
-/*open proxy Market for Primary, Secondary {
+import ERC721;
+import Ownable;
+
+open proxy Market for Primary, Secondary {
     @       *   pub       bytes32 test;
     @ Primary   pvt const string x; 
     @ Primary   pub       uint256[][5][] v;
-    @ Secondary pvt       mapping (uint256 => mapping (string => address[][])) m;
+    @ Secondary pvt       mapping (uint256 => mapping (string => uint16[][5])) m;
 }
 
 facet Primary to Market {
-    pub $ fn doSomething (address x) => string {
-        return x;
+    pub $ fn doSomething (uint256 x) => string {
+        uint256 c := x;
+        uint256 a := 0;
+        while (c != 0) {
+            c := c / 10;
+            ++x;
+        }
+        for (uint256 i := 0; i < 10; ++i) {
+            if (i == 3) {
+                continue;
+            }
+            if (i == 5) {
+                // Exit loop with break
+                break;
+            }
+        }
+        for break in container {
+            y[i] <- x;
+        }
+        return c;
     }
-}*/
+}
 
 facet Secondary to Market {
     pvt ! proc doSomethingElse () => bool {
         test1 memory t := { x: "123", y: 456 };
-        test[2] memory tests := [ { x: "1", y: 1}, { x: "1", y: 1 }];
+        test[2] memory tests := [ { x: "1", y: 1 + 2 * 4 }, { x: "1", y: 1 } ];
     }
 }
 
-/*struct test1 {
+struct test1 {
     string x;
     uint256 y;
 }
@@ -29,4 +49,4 @@ facet Secondary to Market {
 enum test2 {
     VALUE1,
     VALUE2
-}*/
+}
