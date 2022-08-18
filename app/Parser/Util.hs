@@ -1,4 +1,5 @@
-module Utils where
+module Parser.Util where
+
 
 uintPredicates :: [Int -> Bool]
 uintPredicates = [(>= 8), (<= 256), (== 0) . (`mod` 8)]

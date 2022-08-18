@@ -24,11 +24,15 @@ executable iaspis
     main-is:
         Main.hs
     other-modules:
-        CommandLine
-        ModuleLoader
-        Parser
-        Source
-        Utils
+        CLI.Commands
+        CLI.Parser
+        CLI.Types
+        CLI.Util
+        Iaspis.Source
+        Parser.Base
+        Parser.Source
+        Parser.Types
+        Parser.Util
     other-extensions:
         OverloadedStrings
         RecordWildCards
