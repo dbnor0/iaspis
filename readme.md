@@ -25,16 +25,16 @@ In addition to the usual contracts & interfaces Ethereum developers are used to,
 
 ```
 open proxy Base for Facet1, Facet2 {
-  @      * pub       bytes32 b;
-  @ Facet1 pvt const string s; 
-  @ Facet2 pub       uint256[] a;
-  @ Facet2 pvt       mapping (uint256 => bytes32) m;
+  @      * public  mut bytes32 b;
+  @ Facet1 private mut string s; 
+  @ Facet2 public  mut uint256[] a;
+  @ Facet2 private mut mapping (uint256 => bytes32) m;
 }
 ```
 
 ```
 facet Facet1 to Base {
-  pub $ fn f1 () => bytes32 {
+  public fn f1 () -> bytes32 {
     b <- keccak256(s);
     return b;
   }
@@ -43,10 +43,9 @@ facet Facet1 to Base {
 
 ```
 facet Facet2 to Base {
-  pvt ! fn f2 (uint256 i) => bytes32 {
+  private fn f2 (uint256 i) {
     uint256 x := a[0]++;
     m[i] <- b;
-    return b;
   }
 }
 ```

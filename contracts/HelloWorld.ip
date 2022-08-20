@@ -1,19 +1,32 @@
-module Market;
+module Proxy;
 
 import ERC721;
 import Ownable;
 
-open proxy Market for Primary, Secondary {
-    @       *   pub       bytes32 test;
-    @ Primary   pvt const string x; 
-    @ Primary   pub       uint256[][5][] v;
-    @ Secondary pvt       mapping (uint256 => mapping (string => uint16[][5])) m;
+interface ITest {
+    public fn test (uint256 a, string b, bool c) -> uint256;
 }
 
-facet Primary to Market {
-    pub $ fn doSomething (uint256 x) => string {
-        uint256 c := x;
-        uint256 a := 0;
+abstract contract Contract {
+    public  uint256 a;
+    private string x;
+
+    public mut fn f1 () override {
+        return;
+    }
+}
+
+open proxy Proxy for Facet1, Facet2 {
+    @      *   public      bytes32 test;
+    @ Facet1   private mut string x; 
+    @ Facet1   public  mut uint256[][5][] v;
+    @ Facet2   private     mapping (uint256 => mapping (string => uint16[][5])) m;
+}
+
+facet Facet1 to Proxy {
+    public mut fn f1 (uint256 x) -> string {
+        mut uint256 c := x;
+        mut uint256  a := 0;
         while (c != 0) {
             c := c / 10;
             ++x;
@@ -23,7 +36,6 @@ facet Primary to Market {
                 continue;
             }
             if (i == 5) {
-                // Exit loop with break
                 break;
             }
         }
@@ -34,10 +46,14 @@ facet Primary to Market {
     }
 }
 
-facet Secondary to Market {
-    pvt ! proc doSomethingElse () => bool {
-        test1 memory t := { x: "123", y: 456 };
-        test[2] memory tests := [ { x: "1", y: 1 + 2 * 4 }, { x: "1", y: 1 } ];
+facet Facet2 to Proxy {
+    private pay mut fn f2 () -> bool {
+        test1 memory t := test1("123", 456);
+        test[2] memory tests := [test1("1", 2), test1("3", 4)];
+        1 - 2;
+        [1, 2, 3];
+        test1("x", 1);
+        return true;
     }
 }
 

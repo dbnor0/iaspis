@@ -15,48 +15,69 @@ newtype Import = Import Identifier
 
 data Declaration 
   = ContractDecl Contract 
+  | InterfaceDecl Interface
   | StructDecl Struct
   | EnumDecl Enum
   deriving (Eq, Show)
 
 data Contract 
   = ImmutableContract 
-  { contractName :: Identifier
-  , inheritanceList :: [Identifier]
+  { abstractSpeicifer :: Bool
+  , contractName :: Identifier
+  , cInheritanceList :: [Identifier]
   , contractDecls :: [MemberDecl] 
   }
   | ProxyContract 
   { proxyContractKind :: ProxyKind
   , proxyName :: Identifier
   , facetList :: [Identifier]
-  , proxyDecls :: [MemberDecl] 
+  , proxyDecls :: [Field] 
   }
   | FacetContract 
   { facetName :: Identifier
   , proxyList :: [Identifier]
-  , facetDecls :: [MemberDecl] 
+  , facetDecls :: [Function] 
   }
   deriving (Eq, Show)
+
+data Interface = Interface
+  { interfaceName :: Identifier
+  , iInheritanceList :: [Identifier]
+  , interfaceDecls :: [FunctionHeader]
+  } deriving (Eq, Show)
 
 data ProxyKind 
   = ProxyOpen 
   | ProxyClosed
   deriving (Eq, Show)
 
-data MemberDecl
-  = FieldDecl 
+data MemberDecl 
+  = FieldDecl Field 
+  | FunctionDecl FunctionHeader
+  | FunctionImpl Function
+  deriving (Eq, Show)
+
+data Field = Field
   { fieldProxyKind :: Maybe ProxyMemberKind
   , fieldVisibility :: Maybe MemberVisibility
-  , fieldModifiers :: [FieldModifier]
+  , fieldMutability :: Mutability
   , fieldType :: Type
+  , fieldLocation :: Maybe MemoryLocation
   , fieldName :: Identifier
-  }
-  | FunctionDecl 
+  } deriving (Eq, Show)
+
+data FunctionHeader = FunctionHeader
   { functionVisibility :: MemberVisibility
   , functionPayability :: PayabilityKind
-  , functionKind :: FunctionKind
+  , functionMutability :: Mutability
   , functionName :: Identifier
-  , functionSig :: FunctionSignature
+  , functionArgs :: [Field]
+  , functionReturnType :: Maybe Type
+  , overrideSpecifier :: Bool
+  } deriving (Eq, Show)
+
+data Function = Function
+  { functionHeader :: FunctionHeader 
   , functionBody :: [Statement]
   } deriving (Eq, Show)
 
@@ -80,19 +101,9 @@ data PayabilityKind
   | NonPayable
   deriving (Eq, Show)
 
-data FunctionKind
-  = Function
-  | Procedure
-  deriving (Eq, Show)
-
-data Arg = Arg 
-  { argType :: Type
-  , argLocation :: Maybe MemoryLocation
-  , argName :: Identifier 
-  } deriving (Eq, Show)
-
-data FunctionSignature = 
-  FunctionSignature { inputArgs :: [Arg], returnType :: Type }
+data Mutability
+  = Mutable
+  | View
   deriving (Eq, Show)
 
 data MemoryLocation 
@@ -101,9 +112,9 @@ data MemoryLocation
   deriving (Eq, Show)
 
 data Statement
-  = VarDeclStmt Arg (Maybe (MemoryLocation, Expression))
+  = VarDeclStmt Field (Maybe (MemoryLocation, Expression))
   | AssignmentStmt Identifier MemoryLocation Expression 
-  | ReturnStmt Expression
+  | ReturnStmt (Maybe Expression)
   | IfStmt Expression Statement (Maybe Statement)
   | WhileStmt Expression Statement
   | ForStmt (Maybe Statement) (Maybe Expression) (Maybe Expression) Statement
@@ -155,7 +166,7 @@ data UnaryOp
   deriving (Eq, Show)
 
 data Struct = Struct 
-  { structName :: Identifier, structFields :: [Arg] } 
+  { structName :: Identifier, structFields :: [Field] } 
   deriving (Eq, Show)
 
 data Enum = Enum 
@@ -186,7 +197,6 @@ data Value
   | BytesV Text
   | UIntV Int
   | StringV Text
-  | StructV [(Identifier, Expression)]
   | ArrayV [Expression]
   | EnumV Identifier
   deriving (Eq, Show)
