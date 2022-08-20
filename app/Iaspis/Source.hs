@@ -122,6 +122,7 @@ data Statement
   | BlockStmt [Statement]
   | BreakStmt
   | ContinueStmt
+  | RequireStmt Expression (Maybe Expression)
   | ExpressionStmt Expression
   deriving (Eq, Show)
 

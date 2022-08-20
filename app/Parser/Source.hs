@@ -164,6 +164,7 @@ statement = backtrack
   [ varDeclStmt
   , returnStmt
   , assignmentStmt
+  , requireStmt
   , expressionStmt
   , blockStmt
   , ifStmt
@@ -226,6 +227,12 @@ ifStmt :: Parser Statement
 ifStmt = IfStmt <$> cond <*> statement <*> elseBranch
   where cond       = reserved "if" *> parens expression
         elseBranch = optional $ reserved "else" *> statement
+
+requireStmt :: Parser Statement
+requireStmt = endsIn ";" stmt
+  where stmt = RequireStmt <$> exp <*> msg <* reserved ")" 
+        exp  = reserved "require" *> reserved "(" *> expression
+        msg  = optional (comma *> expression)
 
 -- expressions
 

@@ -17,6 +17,7 @@ abstract contract Contract {
     }
 
     mut receive() {
+        require(msg.value > 5);
         a <- 1;
         x <- "1";
     }
