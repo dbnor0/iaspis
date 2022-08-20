@@ -12,6 +12,7 @@ import Iaspis.Source hiding (moduleDecl, fieldProxyKind, functionHeader, overrid
 import Text.Megaparsec
 import Text.Megaparsec.Char (char)
 import Text.Megaparsec.Char.Lexer (decimal, charLiteral)
+import Data.Functor (($>))
 
 
 module' :: Parser Module
@@ -89,12 +90,38 @@ function = Function <$> functionHeader <*> body
   where body = many1 statement
 
 functionHeader :: Parser FunctionHeader
-functionHeader
+functionHeader = backtrack
+  [ constructorHeader
+  , receiveHeader
+  , fallbackHeader
+  , userDefinedHeader
+  ]
+
+userDefinedHeader :: Parser FunctionHeader
+userDefinedHeader
   = FunctionHeader <$> visibility <*> payability <*> mutability <*> name <*> argList <*> returnType <*> overrideSpecifier
   where name       = reserved "fn" *> identifier
         body       = many statement
         argList    = parens (sepBy fieldDecl comma)
         returnType = optional $ reserved "->" *> type'
+
+constructorHeader :: Parser FunctionHeader
+constructorHeader
+  = FunctionHeader Public <$> payability <*> pure Mutable <*> name <*> argList <*> pure Nothing <*> pure False
+  where name    = lexeme' "constructor"
+        argList = parens (sepBy fieldDecl comma)
+
+receiveHeader :: Parser FunctionHeader
+receiveHeader
+  = FunctionHeader External Payable <$> mutability <*> name <*> argList <*> pure Nothing <*> pure False
+  where name    = lexeme' "receive"
+        argList = parens spaceOrComment $> []
+
+fallbackHeader :: Parser FunctionHeader
+fallbackHeader
+  = FunctionHeader External NonPayable <$> mutability <*> name <*> argList <*> pure Nothing <*> pure False
+  where name    = lexeme' "fallback"
+        argList = parens spaceOrComment $> []
 
 -- syntax elements
 

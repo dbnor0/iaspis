@@ -11,6 +11,21 @@ abstract contract Contract {
     public  uint256 a;
     private string x;
 
+    constructor() {
+        a <- 0;
+        x <- "0";
+    }
+
+    mut receive() {
+        a <- 1;
+        x <- "1";
+    }
+
+    mut fallback() {
+        a <- 2;
+        x <- "2";
+    }
+
     public mut fn f1 () override {
         return;
     }
