@@ -2,16 +2,28 @@
 
 module Main where
 
-import CLI.Commands (build)
-import CLI.Parser (buildCommand)
-import Options.Applicative
+import Data.Text.IO as T
 import Parser.Source (module')
-import System.Directory (getDirectoryContents, getCurrentDirectory, doesDirectoryExist)
 import Text.Megaparsec
-import Text.Megaparsec.Char.Lexer (decimal)
+import Control.Monad
+import System.Directory
+
+extension :: FilePath
+extension = ".ip"
+
+getContractFiles :: FilePath -> IO [FilePath]
+getContractFiles dir = do
+  isDir <- doesDirectoryExist dir
+  if isDir then do
+    contents <- listDirectory dir
+    join <$> traverse getContractFiles (withRelativePath <$> contents)
+  else
+    return [dir]
+  where withRelativePath = (++) (dir ++ "\\")
 
 
 main :: IO ()
 main = do
-  build =<< execParser opts
-  where opts = info (buildCommand <**> helper) (fullDesc <> progDesc "Iaspis compiler")
+  contracts <- getContractFiles "./contracts"
+  contents <- traverse T.readFile contracts
+  print $ runParser module' "" <$> contents
