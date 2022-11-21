@@ -158,8 +158,7 @@ newtype Declaration
 
 data Contract 
   = ImmutableContract 
-  { abstractSpeicifer :: Bool
-  , contractName :: Identifier
+  { contractName :: Identifier
   , contractDecls :: [MemberDecl] 
   }
   | ProxyContract 

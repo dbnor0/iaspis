@@ -3,7 +3,7 @@
 module Main where
 
 import Data.Text.IO as T
-import Parser.Source (module')
+import Parser.Source
 import Text.Megaparsec
 import Control.Monad
 import System.Directory

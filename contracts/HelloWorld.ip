@@ -1,8 +1,6 @@
 module Proxy;
 
-import ERC721;
-
-abstract contract Contract {
+contract Contract {
     public  uint256 a;
     private string x;
 
@@ -10,9 +8,7 @@ abstract contract Contract {
         a <- 0;
         x <- "0";
     }
-
     mut receive() {
-        require(msg.value > 5);
         a <- 1;
         x <- "1";
     }
@@ -21,7 +17,6 @@ abstract contract Contract {
         a <- 2;
         x <- "2";
     }
-
     public mut fn f1 () override {
         return;
     }

@@ -24,11 +24,14 @@ executable iaspis
     main-is:
         Main.hs
     other-modules:
+        Analysis.NameResolver
+        Analysis.Utils
         Iaspis.Source
+        Iaspis.Utils
         Parser.Base
         Parser.Source
         Parser.Types
-        Parser.Util
+        Parser.Utils
     other-extensions:
         ApplicativeDo
         BlockArguments
@@ -81,11 +84,7 @@ executable iaspis
         , data-fix
         , deriving-compat
         , directory
-        , free
         , text
         , megaparsec
-        , mtl
-        , recursion-schemes
-        , optparse-applicative
     hs-source-dirs:   app
     default-language: Haskell2010

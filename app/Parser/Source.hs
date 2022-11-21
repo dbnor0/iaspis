@@ -7,7 +7,7 @@ import Data.Char (isHexDigit, isAlpha, isAlphaNum)
 import Data.Text
 import Parser.Base
 import Parser.Types
-import Parser.Util
+import Parser.Utils
 import Iaspis.Source hiding (moduleDecl, fieldProxyKind, functionHeader, overrideSpecifier)
 import Text.Megaparsec
 import Text.Megaparsec.Char (char)
@@ -32,7 +32,7 @@ contract :: Parser Declaration
 contract = ContractDecl <$> backtrack [immutableContract, proxyContract, facetContract]
 
 immutableContract :: Parser Contract
-immutableContract = ImmutableContract <$> abstractSpecifier <*> name <*> memberList
+immutableContract = ImmutableContract <$> name <*> memberList
   where name            = reserved "contract" *> identifier
         memberList      = block $ many member
         member          = backtrack [FieldDecl <$> endsIn ";" fieldDecl, FunctionImpl <$> function]
@@ -49,9 +49,6 @@ facetContract = FacetContract <$> name <*> proxyList <*> memberList
   where name       = reserved "facet" *> identifier
         proxyList  = reserved "to" *> sepBy identifier comma
         memberList = block $ many function
-
-abstractSpecifier :: Parser Bool
-abstractSpecifier = option False (reserved' "abstract" True)
 
 -- field declarations
 
