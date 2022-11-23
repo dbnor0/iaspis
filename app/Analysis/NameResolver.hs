@@ -1,3 +1,4 @@
+{-# LANGUAGE DerivingStrategies #-}
 module Analysis.NameResolver where
 
 import Iaspis.Source
@@ -7,6 +8,7 @@ import Analysis.Utils (unique)
 
 data ResolverError
   = DupContracts
+  deriving stock (Eq, Show)
 
 uniqueContracts :: Module -> Either ResolverError ()
 uniqueContracts m

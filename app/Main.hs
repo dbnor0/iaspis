@@ -7,6 +7,8 @@ import Parser.Source
 import Text.Megaparsec
 import Control.Monad
 import System.Directory
+import Control.Monad.State
+import Analysis.Environment (buildEnv, prelude)
 
 extension :: FilePath
 extension = ".ip"
@@ -24,6 +26,7 @@ getContractFiles dir = do
 
 main :: IO ()
 main = do
-  contracts <- getContractFiles "./contracts"
-  contents <- traverse T.readFile contracts
-  print $ runParser module' "" <$> contents
+  contract <- T.readFile "./contracts/HelloWorld.ip"
+  case runParser module' "" contract of
+    Left pe -> print $ "Parser error " <> show pe
+    Right ast -> print $ execState (buildEnv ast) prelude

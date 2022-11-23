@@ -24,6 +24,7 @@ executable iaspis
     main-is:
         Main.hs
     other-modules:
+        Analysis.Environment
         Analysis.NameResolver
         Analysis.Utils
         Iaspis.Source
@@ -80,11 +81,14 @@ executable iaspis
         -Wunused-packages
     build-depends:    
         base ^>=4.14.3.0
+        , bytestring-trie
         , containers
         , data-fix
         , deriving-compat
         , directory
-        , text
         , megaparsec
+        , microlens-platform
+        , mtl
+        , text
     hs-source-dirs:   app
     default-language: Haskell2010

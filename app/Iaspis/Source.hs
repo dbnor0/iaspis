@@ -72,32 +72,29 @@ type Expression = Fix ExpressionF
 data MemoryLocation 
   = Storage
   | Memory
-  deriving stock Show
+  deriving stock (Eq, Show)
 
 data ProxyMemberKind 
   = SharedProxyMember
   | UniqueProxyMember Identifier
-  deriving stock Show
+  deriving stock (Eq, Show)
 
 data MemberVisibility
   = Public
   | Private
   | Internal
   | External
-  deriving stock Show
-
-data FieldModifier = ConstMod
-  deriving stock Show
+  deriving stock (Eq, Show)
 
 data PayabilityKind
   = Payable
   | NonPayable
-  deriving stock Show
+  deriving stock (Eq, Show)
 
 data Mutability
   = Mutable
   | View
-  deriving stock Show
+  deriving stock (Eq, Show)
 
 data Field = Field
   { fieldProxyKind :: Maybe ProxyMemberKind
