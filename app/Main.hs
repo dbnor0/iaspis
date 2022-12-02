@@ -8,7 +8,11 @@ import Text.Megaparsec
 import Control.Monad
 import System.Directory
 import Control.Monad.State
-import Analysis.Environment (buildEnv, prelude)
+import Analysis.Environment (buildEnv, prelude, BuildError, BuildEnv, Scope, Environment)
+import Control.Monad.Except (runExceptT)
+import Iaspis.Source
+import Control.Monad.Reader (runReader)
+import qualified Data.Text as T
 
 extension :: FilePath
 extension = ".ip"
@@ -23,10 +27,16 @@ getContractFiles dir = do
     return [dir]
   where withRelativePath = (++) (dir ++ "\\")
 
+validate :: Module -> (Either BuildError (), (Scope, Environment))
+validate m = runState (runExceptT $ buildEnv m) ("", prelude)
 
 main :: IO ()
 main = do
-  contract <- T.readFile "./contracts/HelloWorld.ip"
+  contract <- T.readFile "./contracts/Test.ip"
   case runParser module' "" contract of
-    Left pe -> print $ "Parser error " <> show pe
-    Right ast -> print $ execState (buildEnv ast) prelude
+    Left pe -> print $ "Parser error: " <> show pe
+    Right ast ->
+      case validate ast of
+        (Left err, _) -> print $ "Compiler error: " <> show err
+        (_, (_, env)) -> print env
+      

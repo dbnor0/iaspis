@@ -81,7 +81,6 @@ executable iaspis
         -Wunused-packages
     build-depends:    
         base ^>=4.14.3.0
-        , bytestring-trie
         , containers
         , data-fix
         , deriving-compat
