@@ -14,6 +14,7 @@ import Text.Megaparsec.Char (char)
 import Text.Megaparsec.Char.Lexer (decimal, charLiteral)
 import Data.Functor (($>))
 import Data.Fix
+import Data.Either
 
 
 module' :: Parser Module
@@ -32,10 +33,10 @@ contract :: Parser Declaration
 contract = ContractDecl <$> backtrack [immutableContract, proxyContract, facetContract]
 
 immutableContract :: Parser Contract
-immutableContract = ImmutableContract <$> name <*> memberList
-  where name            = reserved "contract" *> identifier
-        memberList      = block $ many member
-        member          = backtrack [FieldDecl <$> endsIn ";" fieldDecl, FunctionImpl <$> function]
+immutableContract = do
+  name <- reserved "contract" *> identifier
+  memberList <- block $ many (backtrack [Left <$> endsIn ";" fieldDecl, Right <$> function])
+  return $ ImmutableContract name (lefts memberList) (rights memberList)   
 
 proxyContract :: Parser Contract
 proxyContract = ProxyContract <$> proxyKind' <*> name  <*> facetList <*> memberList

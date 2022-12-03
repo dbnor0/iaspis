@@ -1,6 +1,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-partial-fields #-}
+{-# LANGUAGE DeriveFunctor #-}
 
 module Iaspis.Source where
 
@@ -19,7 +20,7 @@ data Type
   | BytesDynamicT
   | UIntT Int
   | StringT
-  deriving stock Show
+  deriving stock (Eq, Show)
 
 data Value
   = AddressV Text
@@ -64,6 +65,7 @@ data ExpressionF a
   | FunctionCallE Identifier [a]
   | UnaryE UnaryOp a
   | BinaryE BinaryOp a a
+  deriving stock (Functor)
   
 deriveShow1 ''ExpressionF
 
@@ -103,7 +105,7 @@ data Field = Field
   , fieldType :: Type
   , fieldLocation :: Maybe MemoryLocation
   , fieldName :: Identifier
-  } deriving stock Show
+  } deriving stock (Eq, Show)
 
 
 data StatementF a
@@ -115,7 +117,7 @@ data StatementF a
   | BreakStmt
   | ContinueStmt
   | ExpressionStmt Expression
-  deriving stock Show
+  deriving stock (Functor)
 
 deriveShow1 ''StatementF
 
@@ -156,7 +158,8 @@ newtype Declaration
 data Contract 
   = ImmutableContract 
   { contractName :: Identifier
-  , contractDecls :: [MemberDecl] 
+  , contractFields :: [Field]
+  , contractFns :: [Function] 
   }
   | ProxyContract 
   { proxyContractKind :: ProxyKind

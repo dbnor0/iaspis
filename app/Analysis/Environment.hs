@@ -14,11 +14,13 @@ import Data.Map as M
 import Iaspis.Source
 import Data.Foldable (traverse_)
 import Lens.Micro.Platform
-import Control.Monad.Error.Class
+import Control.Monad.Error.Class ( MonadError(throwError) )
 import Control.Monad
 import Data.Bifunctor
+import Data.Functor.Foldable (Recursive(cata))
 
-type EnvironmentType = ()
+
+type Scope = T.Text
 
 newtype ContractEntry = ContractEntry
   { contractId :: Identifier
@@ -34,33 +36,18 @@ data FacetEntry = FacetEntry
   , proxyList :: [Identifier]
   } deriving stock (Eq, Show)
 
-data VarEntry = FieldEntry
-  { fieldId :: Identifier
-  , fieldType :: EnvironmentType
-  , fieldMutability :: Mutability
-  , fieldVisibility :: MemberVisibility
-  , fieldLocation :: MemoryLocation
-  , fieldProxyKind :: Maybe ProxyMemberKind
+data Entry a = Entry
+  { scope :: Scope
+  , entry :: a
   } deriving stock (Eq, Show)
-
-data FnEntry = FnEntry
-  { fnId :: Identifier
-  , fnArgTypes :: [EnvironmentType]
-  , fnReturnType :: EnvironmentType
-  , fnMutability :: Mutability
-  , fnVisibility :: MemberVisibility
-  , fnPayability :: PayabilityKind
-  } deriving stock (Eq, Show)
-
-type Scope = T.Text
 
 data Environment = Environment
   { _contracts :: [ContractEntry]
   , _proxies :: [ProxyEntry]
   , _facets :: [FacetEntry]
-  , _varEntries :: M.Map Scope (M.Map Identifier VarEntry)
-  , _fnEntries :: M.Map Scope (M.Map Identifier FnEntry)
-  } deriving stock (Eq, Show)
+  , _varEntries :: M.Map Identifier (Entry Field)
+  , _fnEntries :: M.Map Identifier (Entry Function)
+  } deriving stock Show
 
 makeLenses ''Environment
 
@@ -79,7 +66,11 @@ data BuildError
   = DupContract Identifier
   | DupProxy Identifier
   | DupFacet Identifier
+  | DupContractFn Identifier
+  | DupContractField Identifier
   | DupProxyField Identifier
+  | DupFacetFn Identifier
+  | DupFnArg Identifier Identifier
   deriving stock (Eq, Show)
 
 buildEnv :: (MonadState BuildEnv m, MonadError BuildError m) => Module -> m ()
@@ -92,21 +83,21 @@ addDecls = \case
 addContract :: (MonadState BuildEnv m, MonadError BuildError m) => Contract -> m ()
 addContract =
   \case
-    ImmutableContract cId cMembers -> do
+    ImmutableContract cId cFields cFns -> do
       env <- gets (^. _2)
       uniqueId cId (contractId <$> env ^. contracts) DupContract
       modify (& (_2 . contracts) <>~ [ContractEntry cId])
-      withScope cId $ traverse_ addCMem cMembers
-    ProxyContract _ pId facetList pMembers -> do
+      withScope cId $ traverse_ addField cFields >> traverse_ addFn cFns
+    ProxyContract _ pId facetList pFields -> do
       env <- gets (^. _2)
       uniqueId pId (proxyId <$> env ^. proxies) DupProxy
       modify (& (_2 . proxies) <>~ [ProxyEntry pId facetList])
-      withScope pId $ traverse_ addPMem pMembers
-    FacetContract fId proxyList fMembers -> do
+      withScope pId $ traverse_ addField pFields
+    FacetContract fId proxyList fFns -> do
       env <- gets (^. _2)
       uniqueId fId (facetId <$> env ^. facets) DupFacet
       modify (& (_2 . facets) <>~ [FacetEntry fId proxyList])
-      withScope fId $ traverse_ addFMem fMembers
+      withScope fId $ traverse_ addFn fFns
     where withScope s f = do
             enterScope s
             _ <- f
@@ -114,51 +105,44 @@ addContract =
           uniqueId id env errC
             = when (id `elem` env) (throwError $ errC id)
 
-{-
-  void f() {
-    int x;
-    while (true) {
-      int y;
-      while (false) {
-        int z;
-      }
-    }
-  }
--} 
+currentScope :: Scope -> M.Map Identifier (Entry a) -> M.Map Identifier (Entry a)
+currentScope s = M.filter ((== s) . scope)
 
-{-
-  Proxy::a
-  Proxy::b
-  Contract::f1::x1
-  Contract::f1::1::x2
-  Contract::f1::1::x3
-  Contract::f1::2::x4
-
-
-  M.Map Scope (M.Map Identifier Entry)
--}
-
-shallowScope :: Scope -> M.Map Scope a -> M.Map Scope a
-shallowScope s = M.filterWithKey (\k _ -> s `isPrefixOf` k)
-
-addCMem :: (MonadState BuildEnv m, MonadError BuildError m) => MemberDecl -> m ()
-addCMem = \case
-  FieldDecl fi -> return ()
-  FunctionImpl func -> return ()
-
-addPMem :: (MonadState BuildEnv m, MonadError BuildError m) => Field -> m ()
-addPMem Field{ fieldName } = do
-  (scope, vars) <- gets (second (^. varEntries))
-  uniqueId fieldName (scopeIds vars scope) DupProxyField
-  modify (& (_2 . varEntries) %~ M.insert (scope <> "::" <> fieldName) undefined)
+addField :: (MonadState BuildEnv m, MonadError BuildError m) => Field -> m ()
+addField f@Field{ fieldName } = do
+  (s, vars) <- gets (second (^. varEntries))
+  uniqueId fieldName (M.keys $ currentScope s vars) DupProxyField
+  modify (& (_2 . varEntries) %~ M.insert fieldName (Entry s f))
   where uniqueId id env errC
           = when (id `elem` env) (throwError $ errC id)
 
-addFMem :: (MonadState BuildEnv m, MonadError BuildError m) => Function -> m ()
-addFMem _ = return ()
+addFn :: (MonadState BuildEnv m, MonadError BuildError m) => Function -> m ()
+addFn f@Function{ functionHeader, functionBody } = do
+  (s, fns) <- gets (second (^. fnEntries))
+  uniqueId fnName (M.keys $ currentScope s fns) DupFacetFn
+  modify (& (_2 . fnEntries) %~ M.insert fnName (Entry s f))
+  withScope fnName $ traverse_ addField fnArgs >> traverse_ addStmt functionBody
+  where uniqueId id env errC
+          = when (id `elem` env) (throwError $ errC id)
+        fnName = functionName functionHeader
+        fnArgs = functionArgs functionHeader
+        withScope s f = do
+          enterScope s
+          _ <- f
+          exitScope
+
+addStmt :: (MonadState BuildEnv m, MonadError BuildError m) => Statement -> m ()
+addStmt = cata $
+  \case
+    VarDeclStmt _ _ -> undefined
+    AssignmentStmt _ _ _ -> undefined
+    ReturnStmt _ -> undefined
+    IfStmt _ _ _ -> undefined
+    BlockStmt _ -> undefined
+    _ -> undefined
 
 enterScope :: (MonadState BuildEnv m) => Scope -> m ()
-enterScope scope = modify (& _1 %~ (<> "::" <> scope))
+enterScope scope = modify (& _1 <>~ ("::" <> scope))
 
 exitScope :: (MonadState BuildEnv m) => m ()
 exitScope = modify (& _1 %~ (intercalate "::" . Prelude.init . splitOn "::"))
