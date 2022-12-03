@@ -8,10 +8,12 @@ import Text.Megaparsec
 import Control.Monad
 import System.Directory
 import Control.Monad.State
-import Analysis.Environment
 import Control.Monad.Except (runExceptT)
 import Iaspis.Source
 import Text.Pretty.Simple
+import Analysis.Environment.Error
+import Analysis.Environment.Build
+import Lens.Micro.Platform
 
 extension :: FilePath
 extension = ".ip"
@@ -26,8 +28,8 @@ getContractFiles dir = do
     return [dir]
   where withRelativePath = (++) (dir ++ "\\")
 
-validate :: Module -> (Either BuildError (), (Scope, Environment))
-validate m = runState (runExceptT $ buildEnv m) ("", prelude)
+validate :: Module -> (Either BuildError (), BuildEnv)
+validate m = runState (runExceptT $ buildEnv m) mkEnv
 
 main :: IO ()
 main = do
@@ -37,5 +39,5 @@ main = do
     Right ast ->
       case validate ast of
         (Left err, _) -> print $ "Compiler error: " <> show err
-        (_, (_, env)) -> pPrint env
+        (_, e) -> pPrint $ e ^. env
       

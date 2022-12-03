@@ -24,7 +24,9 @@ executable iaspis
     main-is:
         Main.hs
     other-modules:
-        Analysis.Environment
+        Analysis.Environment.Build
+        Analysis.Environment.Environment
+        Analysis.Environment.Error
         Analysis.Utils
         Iaspis.Source
         Parser.Base
