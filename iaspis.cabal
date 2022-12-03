@@ -25,10 +25,8 @@ executable iaspis
         Main.hs
     other-modules:
         Analysis.Environment
-        Analysis.NameResolver
         Analysis.Utils
         Iaspis.Source
-        Iaspis.Utils
         Parser.Base
         Parser.Source
         Parser.Types

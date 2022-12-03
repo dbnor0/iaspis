@@ -46,7 +46,7 @@ data Environment = Environment
   , _proxies :: [ProxyEntry]
   , _facets :: [FacetEntry]
   , _varEntries :: M.Map Identifier (Entry Field)
-  , _fnEntries :: M.Map Identifier (Entry Function)
+  , _fnEntries :: M.Map Identifier (Entry FunctionHeader)
   } deriving stock Show
 
 makeLenses ''Environment
@@ -120,7 +120,7 @@ addFn :: (MonadState BuildEnv m, MonadError BuildError m) => Function -> m ()
 addFn f@Function{ functionHeader, functionBody } = do
   (s, fns) <- gets (second (^. fnEntries))
   uniqueId fnName (M.keys $ currentScope s fns) DupFacetFn
-  modify (& (_2 . fnEntries) %~ M.insert fnName (Entry s f))
+  modify (& (_2 . fnEntries) %~ M.insert fnName (Entry s functionHeader))
   withScope fnName $ traverse_ addField fnArgs >> traverse_ addStmt functionBody
   where uniqueId id env errC
           = when (id `elem` env) (throwError $ errC id)
