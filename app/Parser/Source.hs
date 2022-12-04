@@ -13,7 +13,6 @@ import Text.Megaparsec
 import Text.Megaparsec.Char (char)
 import Text.Megaparsec.Char.Lexer (decimal, charLiteral)
 import Data.Functor (($>))
-import Data.Fix
 import Data.Either
 
 
@@ -65,7 +64,7 @@ fieldDecl =
 
 function :: Parser Function
 function = Function <$> functionHeader <*> body
-  where body = many1 statement
+  where body = block $ many1 statement
 
 functionHeader :: Parser FunctionHeader
 functionHeader = backtrack
@@ -150,36 +149,36 @@ statement = backtrack
 
 expressionStmt :: Parser Statement
 expressionStmt = endsIn ";" stmt
-  where stmt = Fix <$> (ExpressionStmt <$> expression)
+  where stmt = ExpressionStmt <$> expression
 
 varDeclStmt :: Parser Statement
 varDeclStmt = endsIn ";" stmt
-  where stmt = Fix <$> (VarDeclStmt <$> fieldDecl <*> optional ((,) <$> assignmentSymbol <*> expression))
+  where stmt = VarDeclStmt <$> fieldDecl <*> optional ((,) <$> assignmentSymbol <*> expression)
 
 returnStmt :: Parser Statement
 returnStmt = endsIn ";" stmt
-  where stmt = Fix . ReturnStmt <$> optional (reserved "return" *> expression)
+  where stmt = ReturnStmt <$> optional (reserved "return" *> expression)
 
 assignmentStmt :: Parser Statement
 assignmentStmt = endsIn ";" stmt
-  where stmt = Fix <$> (AssignmentStmt <$> identifier <*> assignmentSymbol <*> expression)
+  where stmt = AssignmentStmt <$> identifier <*> assignmentSymbol <*> expression
 
 assignmentSymbol :: Parser MemoryLocation
 assignmentSymbol = reserved' "<-" Storage <|> reserved' ":=" Memory
 
 breakStmt :: Parser Statement
 breakStmt = endsIn ";" stmt
-  where stmt = Fix <$> reserved' "break" BreakStmt
+  where stmt = reserved' "break" BreakStmt
 
 continueStmt :: Parser Statement
 continueStmt = endsIn ";" stmt
-  where stmt = Fix <$> reserved' "continue" ContinueStmt
+  where stmt = reserved' "continue" ContinueStmt
 
 blockStmt :: Parser Statement
-blockStmt = Fix . BlockStmt <$> block (many statement)
+blockStmt = BlockStmt <$> block (many statement)
 
 ifStmt :: Parser Statement
-ifStmt = Fix <$> (IfStmt <$> cond <*> statement <*> elseBranch)
+ifStmt = IfStmt <$> cond <*> statement <*> elseBranch
   where cond       = reserved "if" *> parens expression
         elseBranch = optional $ reserved "else" *> statement
 
@@ -220,20 +219,20 @@ factor =
   <|> identifierExpr
 
 literalExpr :: Parser Expression
-literalExpr = Fix . LiteralE <$> literal
+literalExpr = LiteralE <$> literal
 
 identifierExpr :: Parser Expression
-identifierExpr = Fix . IdentifierE <$> identifier
+identifierExpr = IdentifierE <$> identifier
 
 functionCallExpr :: Parser Expression
-functionCallExpr = Fix <$> (FunctionCallE <$> identifier <*> argList)
+functionCallExpr = FunctionCallE <$> identifier <*> argList
   where argList = parens (sepBy expression comma)
 
 mkBinaryExpr :: Text -> BinaryOp -> Parser BinaryExpression
-mkBinaryExpr sym op = reserved' sym (\e1 e2 -> Fix $ BinaryE op e1 e2)
+mkBinaryExpr sym op = reserved' sym (BinaryE op)
 
 mkUnaryExpr :: Text -> UnaryOp -> Parser UnaryExpression
-mkUnaryExpr sym op = reserved' sym (Fix . UnaryE op)
+mkUnaryExpr sym op = reserved' sym (UnaryE op)
 
 -- operators
 

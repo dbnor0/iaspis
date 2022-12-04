@@ -1,14 +1,10 @@
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-partial-fields #-}
-{-# LANGUAGE DeriveFunctor #-}
 
 module Iaspis.Source where
 
-import Data.Fix
 import Data.Text
 import Prelude hiding (Enum)
-import Data.Deriving (deriveShow1)
 
 
 type Identifier = Text
@@ -28,7 +24,7 @@ data Value
   | BytesV Text
   | UIntV Int
   | StringV Text
-  deriving stock Show
+  deriving stock (Eq, Show)
 
 data BinaryOp 
   = AdditionOp
@@ -49,7 +45,7 @@ data BinaryOp
   | BitwiseConjunctionOp
   | BitwiseDisjunctionOp
   | BitwiseExclDisjunctionOp
-  deriving stock Show
+  deriving stock (Eq, Show)
 
 data UnaryOp
   = ArithmeticNegationOp
@@ -57,20 +53,16 @@ data UnaryOp
   | BitwiseNegationOp
   | IncrementOp
   | DecrementOp
-  deriving stock Show
+  deriving stock (Eq, Show)
 
-data ExpressionF a
+data Expression
   = LiteralE Value
   | IdentifierE Identifier
-  | FunctionCallE Identifier [a]
-  | UnaryE UnaryOp a
-  | BinaryE BinaryOp a a
-  deriving stock (Functor)
+  | FunctionCallE Identifier [Expression]
+  | UnaryE UnaryOp Expression
+  | BinaryE BinaryOp Expression Expression
+  deriving stock (Eq, Show)
   
-deriveShow1 ''ExpressionF
-
-type Expression = Fix ExpressionF
-
 data MemoryLocation 
   = Storage
   | Memory
@@ -107,21 +99,16 @@ data Field = Field
   , fieldName :: Identifier
   } deriving stock (Eq, Show)
 
-
-data StatementF a
+data Statement
   = VarDeclStmt Field (Maybe (MemoryLocation, Expression))
   | AssignmentStmt Identifier MemoryLocation Expression 
   | ReturnStmt (Maybe Expression)
-  | IfStmt Expression a (Maybe a)
-  | BlockStmt [a]
+  | IfStmt Expression Statement (Maybe Statement)
+  | BlockStmt [Statement]
   | BreakStmt
   | ContinueStmt
   | ExpressionStmt Expression
-  deriving stock (Functor)
-
-deriveShow1 ''StatementF
-
-type Statement = Fix StatementF
+  deriving stock (Eq, Show)
 
 data FunctionHeader = FunctionHeader
   { functionVisibility :: MemberVisibility

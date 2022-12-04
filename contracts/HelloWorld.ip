@@ -30,7 +30,9 @@ open proxy Proxy for Facet1, Facet2 {
 facet Facet1 to Proxy {
     public mut fn f1 (uint256 x, uint256 y) -> string {
         mut uint256 c := x;
-        mut uint256  a := 0;
+        mut uint256  a := 0; {
+            mut uint256 scoped := 0;
+        }
         return c;
     }
 }
