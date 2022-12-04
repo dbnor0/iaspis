@@ -19,7 +19,7 @@ import Control.Monad
 import Iaspis.Source
 import Iaspis.Prelude
 import Analysis.Environment.Error
-import Utils.Text
+import Utils.Text ( showT )
 
 
 data BuildEnv = BuildEnv
@@ -69,13 +69,13 @@ currentScope s = M.filter ((== s) . entryScope)
 addField :: (MonadState BuildEnv m, MonadError BuildError m) => Field -> m ()
 addField f@Field{ fieldName } = do
   e <- get
-  uniqueId fieldName (M.keys $ currentScope (e ^. scope) (e ^. (env . varEntries))) DupProxyField
+  uniqueId (e ^. scope <> "::" <> fieldName) (M.keys $ currentScope (e ^. scope) (e ^. (env . varEntries))) DupProxyField
   modify (& (env . varEntries) %~ M.insert (e ^. scope <> "::" <> fieldName) (Entry (e ^. scope) f))
 
 addFn :: (MonadState BuildEnv m, MonadError BuildError m) => Function -> m ()
 addFn Function{ functionHeader, functionBody } = do
   e <- get
-  uniqueId fnName (M.keys $ currentScope (e ^. scope) (e ^. (env . fnEntries))) DupFacetFn
+  uniqueId (e ^. scope <> "::" <> fnName) (M.keys $ currentScope (e ^. scope) (e ^. (env . fnEntries))) DupFacetFn
   modify (& (env . fnEntries) %~ M.insert (e ^. scope <> "::" <> fnName) (Entry (e ^. scope) functionHeader))
   withScope fnName $ traverse_ addField fnArgs >> traverse_ addStmt functionBody
   where fnName = functionName functionHeader
