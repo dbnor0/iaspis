@@ -24,9 +24,11 @@ executable iaspis
     main-is:
         Main.hs
     other-modules:
+        Analysis.ContractCheck
         Analysis.Environment.Build
         Analysis.Environment.Environment
         Analysis.Environment.Error
+        Analysis.MemoryCheck
         Analysis.Utils
         Iaspis.Source
         Iaspis.Prelude
@@ -34,6 +36,7 @@ executable iaspis
         Parser.Source
         Parser.Types
         Parser.Utils
+        Utils.Error
         Utils.Text
     other-extensions:
         ApplicativeDo
@@ -85,6 +88,7 @@ executable iaspis
         base ^>=4.14.3.0
         , containers
         , directory
+        , either
         , megaparsec
         , microlens-platform
         , mtl

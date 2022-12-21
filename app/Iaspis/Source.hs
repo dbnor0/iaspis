@@ -95,12 +95,12 @@ data Field = Field
   , fieldVisibility :: Maybe MemberVisibility
   , fieldMutability :: Mutability
   , fieldType :: Type
-  , fieldLocation :: Maybe MemoryLocation
+  , fieldLocation :: MemoryLocation
   , fieldName :: Identifier
   } deriving stock (Eq, Show)
 
 data Statement
-  = VarDeclStmt Field (Maybe (MemoryLocation, Expression))
+  = VarDeclStmt Field MemoryLocation Expression
   | AssignmentStmt Identifier MemoryLocation Expression 
   | ReturnStmt (Maybe Expression)
   | IfStmt Expression Statement (Maybe Statement)

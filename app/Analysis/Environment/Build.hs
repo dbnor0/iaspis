@@ -20,6 +20,7 @@ import Iaspis.Source
 import Iaspis.Prelude
 import Analysis.Environment.Error
 import Utils.Text ( showT )
+import Data.Maybe
 
 
 data BuildEnv = BuildEnv
@@ -68,15 +69,19 @@ currentScope s = M.filter ((== s) . entryScope)
 
 addField :: (MonadState BuildEnv m, MonadError BuildError m) => Field -> m ()
 addField f@Field{ fieldName } = do
-  e <- get
-  uniqueId (e ^. scope <> "::" <> fieldName) (M.keys $ currentScope (e ^. scope) (e ^. (env . varEntries))) DupProxyField
-  modify (& (env . varEntries) %~ M.insert (e ^. scope <> "::" <> fieldName) (Entry (e ^. scope) f))
+  s <- gets (^. scope)
+  e <- gets (^. env)
+  let scopedName = s <> "::" <> fieldName
+      field = Entry s f
+  uniqueId scopedName (M.keys $ currentScope s (e ^. varEntries)) (DupField s)
+  modify (& (env . varEntries) %~ M.insert scopedName field)
 
 addFn :: (MonadState BuildEnv m, MonadError BuildError m) => Function -> m ()
 addFn Function{ functionHeader, functionBody } = do
-  e <- get
-  uniqueId (e ^. scope <> "::" <> fnName) (M.keys $ currentScope (e ^. scope) (e ^. (env . fnEntries))) DupFacetFn
-  modify (& (env . fnEntries) %~ M.insert (e ^. scope <> "::" <> fnName) (Entry (e ^. scope) functionHeader))
+  s <- gets (^. scope)
+  e <- gets (^. env)
+  uniqueId (s <> "::" <> fnName) (M.keys $ currentScope s (e ^. fnEntries)) (DupFn s)
+  modify (& (env . fnEntries) %~ M.insert (s <> "::" <> fnName) (Entry s functionHeader))
   withScope fnName $ traverse_ addField fnArgs >> traverse_ addStmt functionBody
   where fnName = functionName functionHeader
         fnArgs = functionArgs functionHeader
@@ -84,7 +89,7 @@ addFn Function{ functionHeader, functionBody } = do
 addStmt :: (MonadState BuildEnv m, MonadError BuildError m) => Statement -> m ()
 addStmt = 
   \case
-    VarDeclStmt f _ -> addField f
+    VarDeclStmt f _ _ -> addField f
     BlockStmt stmts -> do
       bs <- gets (showT . ( ^. blockDepth))
       withScope bs $ traverse_ addStmt stmts
@@ -92,10 +97,10 @@ addStmt =
     _ -> return ()
 
 enterScope :: MonadState BuildEnv m => Scope -> m ()
-enterScope s = modify (& scope <>~ ("::" <> s))
+enterScope s = modify (\e -> e & scope <>~ ("::" <> s) & blockDepth +~ 1)
 
 exitScope :: MonadState BuildEnv m => m ()
-exitScope = modify (& scope %~ (intercalate "::" . Prelude.init . splitOn "::"))
+exitScope = modify (\e -> e & scope %~ (intercalate "::" . Prelude.init . splitOn "::") & blockDepth -~ 1)
 
 uniqueId :: MonadError BuildError m => Identifier -> [Identifier] -> (Identifier -> BuildError) -> m ()
 uniqueId id env errC = when (id `elem` env) (throwError $ errC id)
@@ -103,7 +108,17 @@ uniqueId id env errC = when (id `elem` env) (throwError $ errC id)
 withScope :: MonadState BuildEnv m => Scope -> m a -> m ()
 withScope s f = do
   enterScope s
-  modify (& blockDepth +~ 1)
   _ <- f
-  modify (& blockDepth -~ 1)
   exitScope
+
+getField :: MonadState BuildEnv m => MonadError BuildError m => Identifier -> m Field
+getField id = do
+  bd <- gets (^. blockDepth)
+  s <- gets (^. scope)
+  e <- gets (^. env)
+  let scopes = Prelude.scanl (\t n -> intercalate "::" $ Prelude.take n $ splitOn "::" t) s (Prelude.reverse [1..bd])
+      fields = (\s -> M.lookup (s <> "::" <> id) (e ^. varEntries)) <$> scopes
+  if Prelude.all isNothing fields then
+    throwError $ UndefField s id
+  else
+    (return . entry . Prelude.head . catMaybes) fields

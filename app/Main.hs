@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Main where
 
@@ -8,12 +9,14 @@ import Text.Megaparsec
 import Control.Monad
 import System.Directory
 import Control.Monad.State
-import Control.Monad.Except (runExceptT)
 import Iaspis.Source
-import Text.Pretty.Simple
-import Analysis.Environment.Error
 import Analysis.Environment.Build
-import Lens.Micro.Platform
+import Utils.Error
+import Analysis.ContractCheck
+import Text.Pretty.Simple
+import Analysis.MemoryCheck (memCheck)
+import Analysis.Environment.Error
+import Control.Monad.Except
 
 extension :: FilePath
 extension = ".ip"
@@ -28,8 +31,11 @@ getContractFiles dir = do
     return [dir]
   where withRelativePath = (++) (dir ++ "\\")
 
-validate :: Module -> (Either BuildError (), BuildEnv)
-validate m = runState (runExceptT $ buildEnv m) mkEnv
+validate :: MonadState BuildEnv m => MonadError BuildError m => Module -> m ()
+validate m = do
+  buildEnv m
+  checkContracts
+  memCheck m
 
 main :: IO ()
 main = do
@@ -37,7 +43,7 @@ main = do
   case runParser module' "" contract of
     Left pe -> print $ "Parser error: " <> show pe
     Right ast ->
-      case validate ast of
-        (Left err, _) -> print $ "Compiler error: " <> show err
-        (_, e) -> pPrint $ e ^. env
-      
+      let (err, env) = runState (runExceptT $ validate ast) mkEnv in case err of
+        Left be -> do
+          print $ showErr be
+        Right _ -> pPrint env

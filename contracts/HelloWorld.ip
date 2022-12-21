@@ -3,7 +3,7 @@ module Proxy;
 contract Contract {
     public  uint256 a;
     private string x;
-
+ 
     constructor() {
         a <- 0;
         x <- "0";
@@ -30,9 +30,7 @@ open proxy Proxy for Facet1, Facet2 {
 facet Facet1 to Proxy {
     public mut fn f1 (uint256 x, uint256 y) -> string {
         mut uint256 c := x;
-        mut uint256 c := 0; {
-            mut uint256 scoped := 0;
-        }
+        mut string storage q <- "abc";
         return c;
     }
 }

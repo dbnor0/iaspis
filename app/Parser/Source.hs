@@ -34,15 +34,15 @@ contract = ContractDecl <$> backtrack [immutableContract, proxyContract, facetCo
 immutableContract :: Parser Contract
 immutableContract = do
   name <- reserved "contract" *> identifier
-  memberList <- block $ many (backtrack [Left <$> endsIn ";" fieldDecl, Right <$> function])
-  return $ ImmutableContract name (lefts memberList) (rights memberList)   
+  memberList <- block $ many (backtrack [Left <$> endsIn ";" contractFieldDecl, Right <$> function])
+  return $ ImmutableContract name (lefts memberList) (rights memberList)
 
 proxyContract :: Parser Contract
 proxyContract = ProxyContract <$> proxyKind' <*> name  <*> facetList <*> memberList
   where proxyKind' = proxyKind <* reserved "proxy"
         name       = identifier <* reserved "for"
         facetList  = sepBy identifier comma
-        memberList = block $ many (endsIn ";" fieldDecl)
+        memberList = block $ many (endsIn ";" contractFieldDecl)
 
 facetContract :: Parser Contract
 facetContract = FacetContract <$> name <*> proxyList <*> memberList
@@ -52,14 +52,24 @@ facetContract = FacetContract <$> name <*> proxyList <*> memberList
 
 -- field declarations
 
-fieldDecl :: Parser Field
-fieldDecl =
+fnFieldDecl :: Parser Field
+fnFieldDecl =
   Field
   <$> optional fieldProxyKind
   <*> optional visibility
   <*> mutability
   <*> type'
-  <*> optional memoryLocation
+  <*> option Memory memoryLocation
+  <*> identifier
+
+contractFieldDecl :: Parser Field
+contractFieldDecl =
+  Field
+  <$> optional fieldProxyKind
+  <*> optional visibility
+  <*> mutability
+  <*> type'
+  <*> pure Storage
   <*> identifier
 
 function :: Parser Function
@@ -78,14 +88,14 @@ userDefinedHeader :: Parser FunctionHeader
 userDefinedHeader
   = FunctionHeader <$> visibility <*> payability <*> mutability <*> name <*> argList <*> returnType <*> overrideSpecifier
   where name       = reserved "fn" *> identifier
-        argList    = parens (sepBy fieldDecl comma)
+        argList    = parens (sepBy fnFieldDecl comma)
         returnType = optional $ reserved "->" *> type'
 
 constructorHeader :: Parser FunctionHeader
 constructorHeader
   = FunctionHeader Public <$> payability <*> pure Mutable <*> name <*> argList <*> pure Nothing <*> pure False
   where name    = lexeme' "constructor"
-        argList = parens (sepBy fieldDecl comma)
+        argList = parens (sepBy fnFieldDecl comma)
 
 receiveHeader :: Parser FunctionHeader
 receiveHeader
@@ -153,7 +163,7 @@ expressionStmt = endsIn ";" stmt
 
 varDeclStmt :: Parser Statement
 varDeclStmt = endsIn ";" stmt
-  where stmt = VarDeclStmt <$> fieldDecl <*> optional ((,) <$> assignmentSymbol <*> expression)
+  where stmt = VarDeclStmt <$> fnFieldDecl <*> assignmentSymbol <*> expression
 
 returnStmt :: Parser Statement
 returnStmt = endsIn ";" stmt
