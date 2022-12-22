@@ -29,6 +29,7 @@ executable iaspis
         Analysis.Environment.Environment
         Analysis.Environment.Error
         Analysis.MemoryCheck
+        Analysis.MutabilityCheck
         Analysis.Utils
         Iaspis.Source
         Iaspis.Prelude

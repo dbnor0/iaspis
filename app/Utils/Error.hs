@@ -24,5 +24,6 @@ instance IaspisError BuildError where
     InvalidAssignOp f loc -> "Cannot use " <> showT loc <> " assignemnt operator to assign to " <> f
     InvalidMemoryLocationType f t -> "Invalid storage specifier for " <> f <> " of type " <> showT t
     MissingProxyMemberKind f -> "Missing proxy member kind for " <> f
+    IllegalStorageAssig vId fId -> "Cannot storage assign to " <> vId <> " in " <> fId
 
 

@@ -19,4 +19,5 @@ data BuildError
   | InvalidAssignOp Identifier MemoryLocation
   | InvalidMemoryLocationType Identifier Type
   | MissingProxyMemberKind Identifier
+  | IllegalStorageAssig Identifier Identifier
   deriving stock (Eq, Show)
