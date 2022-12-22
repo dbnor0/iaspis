@@ -1,5 +1,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -Wno-unused-do-bind #-}
 
 module Analysis.ContractCheck where
 
@@ -11,6 +14,8 @@ import Control.Monad
 import Analysis.Environment.Error
 import Control.Monad.State.Class
 import Analysis.Environment.Build
+import Iaspis.Source hiding (facetList, proxyList)
+import Data.Maybe
 
 
 validProxyList :: (MonadState BuildEnv m, MonadError BuildError m) => m ()
@@ -19,13 +24,28 @@ validProxyList = do
   traverse_ (\p -> traverse_ (checkProxy e p) (facetList p)) (e ^. proxies)
   where checkProxy e p f = unless (f `elem` (facetId <$> e ^. facets)) (throwError $ UndefFacet (proxyId p) f)
 
-validFacetList :: (MonadState BuildEnv m, MonadError BuildError m) => m ()
+validFacetList :: MonadState BuildEnv m => MonadError BuildError m => m ()
 validFacetList = do
   e <- gets (^. env)
   traverse_ (\f -> traverse_ (checkFacet e f) (proxyList f)) (e ^. facets)
   where checkFacet e f p = unless (p `elem` (proxyId <$> e ^. proxies)) (throwError $ UndefProxy (facetId f) p)
 
-checkContracts :: (MonadState BuildEnv m, MonadError BuildError m) =>  m ()
+checkContracts :: MonadState BuildEnv m => MonadError BuildError m =>  m ()
 checkContracts = do
   validFacetList
   validProxyList
+  validProxyMembers
+
+validProxyMembers :: MonadState BuildEnv m => MonadError BuildError m => m ()
+validProxyMembers = do
+  be <- get
+  e <- gets (^. env)
+  let scopedPs = scopeProxy <$> e ^. proxies
+      proxyDepth = 2
+      pMembers = scopedPs >>= getTopLevelFields be proxyDepth
+      checkPMember pMem = unless (isJust $ fieldProxyKind pMem)
+        (throwError $ MissingProxyMemberKind (fieldName pMem))
+  traverse_ checkPMember pMembers
+
+scopeProxy :: ProxyEntry -> Scope
+scopeProxy ProxyEntry { proxyId, proxyScope } = proxyScope <> "::" <> proxyId

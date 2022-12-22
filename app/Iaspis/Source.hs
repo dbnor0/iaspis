@@ -162,6 +162,6 @@ data Contract
   deriving stock Show
 
 data Module = Module 
-  { moduleDecl :: ModuleDecl
+  { moduleDecl :: Identifier
   , declarations :: [Declaration] 
   } deriving stock Show

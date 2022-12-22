@@ -12,17 +12,20 @@ import Data.Text as T
 type Scope = T.Text
 type Bindings a = M.Map Identifier (Entry a)
 
-newtype ContractEntry = ContractEntry
+data ContractEntry = ContractEntry
   { contractId :: Identifier
+  , contractScope :: Scope
   } deriving stock (Eq, Show)
 
 data ProxyEntry = ProxyEntry
   { proxyId :: Identifier
+  , proxyScope :: Scope
   , facetList :: [Identifier]
   } deriving stock (Eq, Show)
 
 data FacetEntry = FacetEntry
   { facetId :: Identifier
+  , facetScope :: Scope
   , proxyList :: [Identifier]
   } deriving stock (Eq, Show)
 

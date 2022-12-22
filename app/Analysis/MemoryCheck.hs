@@ -13,7 +13,7 @@ import Analysis.Environment.Error
 
 
 memCheck :: MonadState BuildEnv m => MonadError BuildError m => Module -> m ()
-memCheck Module{ declarations } = traverse_ memCheckDecl declarations
+memCheck Module{ moduleDecl, declarations } = withScope moduleDecl $ traverse_ memCheckDecl declarations
 
 memCheckDecl :: MonadState BuildEnv m => MonadError BuildError m => Declaration -> m ()
 memCheckDecl = \case

@@ -22,8 +22,8 @@ module' = module'' <* eof
 
 -- top level elements
 
-moduleDecl :: Parser ModuleDecl
-moduleDecl = ModuleDecl <$> endsIn ";" (reserved "module" *> identifier)
+moduleDecl :: Parser Identifier
+moduleDecl = endsIn ";" (reserved "module" *> identifier)
 
 decl :: Parser Declaration
 decl = contract

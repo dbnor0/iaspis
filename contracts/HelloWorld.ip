@@ -1,4 +1,4 @@
-module Proxy;
+module HelloWorld;
 
 contract Contract {
     public  uint256 a;
@@ -8,6 +8,7 @@ contract Contract {
         a <- 0;
         x <- "0";
     }
+
     mut receive() {
         a <- 1;
         x <- "1";
@@ -17,6 +18,7 @@ contract Contract {
         a <- 2;
         x <- "2";
     }
+
     public mut fn f1 () override {
         return;
     }
@@ -24,7 +26,7 @@ contract Contract {
 
 open proxy Proxy for Facet1, Facet2 {
     @      *   public      bytes32 test;
-    @ Facet1   private mut string x; 
+    private mut string x; 
 }
 
 facet Facet1 to Proxy {

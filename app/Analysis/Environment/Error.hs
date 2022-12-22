@@ -18,4 +18,5 @@ data BuildError
   | UndefFacet Identifier Identifier
   | InvalidAssignOp Identifier MemoryLocation
   | InvalidMemoryLocationType Identifier Type
+  | MissingProxyMemberKind Identifier
   deriving stock (Eq, Show)
