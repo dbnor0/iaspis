@@ -23,7 +23,7 @@ maintainer:         dbnor0@gmail.com
 executable iaspis
   main-is:
     Main.hs
- other-modules:
+  other-modules:
     Analysis.ContractCheck
     Analysis.Environment.Build
     Analysis.Environment.Environment
@@ -32,11 +32,12 @@ executable iaspis
     Analysis.MutabilityCheck
     Analysis.TypeCheck
     Analysis.Utils
-    Iaspis.Source
+    Codegen.Types
+    Iaspis.Grammar
     Iaspis.Prelude
     Iaspis.TypeUtils
     Parser.Base
-    Parser.Grammar
+    Parser.Source
     Parser.Types
     Parser.Utils
     Solidity.Grammar
