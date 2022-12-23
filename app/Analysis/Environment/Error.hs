@@ -2,7 +2,7 @@
 
 module Analysis.Environment.Error where
 
-import Iaspis.Source
+import Iaspis.Grammar
 import Analysis.Environment.Environment
 import Data.Text
 

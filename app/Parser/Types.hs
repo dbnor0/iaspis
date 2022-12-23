@@ -2,7 +2,7 @@ module Parser.Types where
 
 import Data.Text
 import Data.Void
-import Iaspis.Source (Expression)
+import Iaspis.Grammar (Expression)
 import Text.Megaparsec
 
 

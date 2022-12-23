@@ -8,7 +8,7 @@ import Data.Text
 import Parser.Base
 import Parser.Types
 import Parser.Utils
-import Iaspis.Source hiding (moduleDecl, fieldProxyKind, functionHeader, overrideSpecifier)
+import Iaspis.Grammar hiding (moduleDecl, fieldProxyKind, functionHeader, overrideSpecifier)
 import Text.Megaparsec
 import Text.Megaparsec.Char (char)
 import Text.Megaparsec.Char.Lexer (decimal, charLiteral)

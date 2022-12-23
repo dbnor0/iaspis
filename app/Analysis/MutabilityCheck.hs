@@ -5,7 +5,7 @@ module Analysis.MutabilityCheck where
 import Control.Monad.State.Class
 import Analysis.Environment.Build
 import Analysis.Environment.Error
-import Iaspis.Source
+import Iaspis.Grammar
 import Data.Foldable
 import Control.Monad.Error.Class
 import Control.Monad ( when )

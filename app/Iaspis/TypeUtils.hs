@@ -2,7 +2,7 @@
 
 module Iaspis.TypeUtils where
   
-import Iaspis.Source
+import Iaspis.Grammar
 
 isNumeric :: Type -> Bool
 isNumeric = \case

@@ -1,7 +1,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# OPTIONS_GHC -Wno-partial-fields #-}
 
-module Iaspis.Source where
+module Iaspis.Grammar where
 
 import Data.Text
 import Prelude hiding (Enum)

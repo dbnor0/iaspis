@@ -8,7 +8,7 @@ import Control.Monad.State.Class
 import Control.Monad.Error.Class
 import Analysis.Environment.Error
 import Analysis.Environment.Build
-import Iaspis.Source
+import Iaspis.Grammar
 import Data.Foldable
 import Control.Monad
 import Utils.Text

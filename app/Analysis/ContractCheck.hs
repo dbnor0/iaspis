@@ -14,7 +14,7 @@ import Control.Monad
 import Analysis.Environment.Error
 import Control.Monad.State.Class
 import Analysis.Environment.Build
-import Iaspis.Source hiding (facetList, proxyList)
+import Iaspis.Grammar hiding (facetList, proxyList)
 import Data.Maybe
 
 

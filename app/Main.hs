@@ -9,7 +9,7 @@ import Text.Megaparsec
 import Control.Monad
 import System.Directory
 import Control.Monad.State
-import Iaspis.Source
+import Iaspis.Grammar
 import Analysis.Environment.Build
 import Utils.Error
 import Analysis.ContractCheck

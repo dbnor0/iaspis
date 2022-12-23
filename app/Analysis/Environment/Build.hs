@@ -17,7 +17,7 @@ import Data.Foldable (traverse_)
 import Lens.Micro.Platform
 import Control.Monad.Error.Class ( MonadError(throwError) )
 import Control.Monad
-import Iaspis.Source
+import Iaspis.Grammar
 import Iaspis.Prelude
 import Analysis.Environment.Error
 import Utils.Text ( showT )

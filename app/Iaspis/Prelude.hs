@@ -2,7 +2,7 @@ module Iaspis.Prelude where
 
 import Analysis.Environment.Environment
 import Data.Map as M
-import Iaspis.Source
+import Iaspis.Grammar
 
 
 prelude :: Env

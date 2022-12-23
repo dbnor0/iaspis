@@ -5,7 +5,7 @@ module Analysis.Environment.Environment where
 
 import Lens.Micro.Platform
 import Data.Map as M
-import Iaspis.Source
+import Iaspis.Grammar
 import Data.Text as T
 
 

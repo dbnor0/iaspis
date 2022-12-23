@@ -4,7 +4,7 @@
 
 module Analysis.MemoryCheck where
 import Control.Monad.Error.Class
-import Iaspis.Source
+import Iaspis.Grammar
 import Data.Foldable
 import Control.Monad
 import Control.Monad.State.Class
