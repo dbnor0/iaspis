@@ -1,50 +1,50 @@
 module HelloWorld;
 
 contract Contract {
-    public  uint256 a;
-    private string x;
+  public  uint256 a;
+  private string x;
  
-    constructor() {
-        a <- 0;
-        x <- "0";
-    }
+  constructor() {
+    a <- 0;
+    x <- "0";
+  }
 
-    mut receive() {
-        a <- 1;
-        x <- "1";
-    }
+  mut receive() {
+    a <- 1;
+    x <- "1";
+  }
 
-    mut fallback() {
-        a <- 2;
-        x <- "2";
-    }
+  mut fallback() {
+    a <- 2;
+    x <- "2";
+  }
 
-    public mut fn f1 () override {
-        a <- 123;
-        return;
-    }
+  public mut fn f1 () override {
+    a <- 123;
+    return;
+  }
 }
 
 open proxy Proxy for Facet1, Facet2 {
-    @      *   public      bytes32 test;
-    @ Facet1   private mut string x; 
+  @      *   public      bytes32 test;
+  @ Facet1   private mut string x; 
 }
 
 facet Facet1 to Proxy {
-    public mut fn f1 (string x, uint256 y) -> string {
-        mut string c := x;
-        mut string q := "abc";
-        return c;
-    }
+  public mut fn f1 (string x, uint256 y) -> string {
+    mut string c := x;
+    mut string q := "abc";
+    return c;
+  }
 }
 
 facet Facet2 to Proxy {
-    private fn sq(uint256 x) -> uint256 {
-        return x * x;
-    }
+  private fn sq(uint256 x) -> uint256 {
+    return x * x;
+  }
 
-    private pay mut fn f2 () -> bool {
-        uint256 A := sq(25);
-        return true;
-    }
+  private pay mut fn f2 () -> bool {
+    uint256 A := sq(25);
+    return true;
+  }
 }
