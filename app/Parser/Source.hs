@@ -89,23 +89,23 @@ userDefinedHeader
   = FunctionHeader <$> visibility <*> payability <*> mutability <*> name <*> argList <*> returnType <*> overrideSpecifier
   where name       = reserved "fn" *> identifier
         argList    = parens (sepBy fnFieldDecl comma)
-        returnType = optional $ reserved "->" *> type'
+        returnType = option UnitT $ reserved "->" *> type'
 
 constructorHeader :: Parser FunctionHeader
 constructorHeader
-  = FunctionHeader Public <$> payability <*> pure Mutable <*> name <*> argList <*> pure Nothing <*> pure False
+  = FunctionHeader Public <$> payability <*> pure Mutable <*> name <*> argList <*> pure UnitT <*> pure False
   where name    = lexeme' "constructor"
         argList = parens (sepBy fnFieldDecl comma)
 
 receiveHeader :: Parser FunctionHeader
 receiveHeader
-  = FunctionHeader External Payable <$> mutability <*> name <*> argList <*> pure Nothing <*> pure False
+  = FunctionHeader External Payable <$> mutability <*> name <*> argList <*> pure UnitT <*> pure False
   where name    = lexeme' "receive"
         argList = parens spaceOrComment $> []
 
 fallbackHeader :: Parser FunctionHeader
 fallbackHeader
-  = FunctionHeader External NonPayable <$> mutability <*> name <*> argList <*> pure Nothing <*> pure False
+  = FunctionHeader External NonPayable <$> mutability <*> name <*> argList <*> pure UnitT <*> pure False
   where name    = lexeme' "fallback"
         argList = parens spaceOrComment $> []
 
@@ -167,7 +167,7 @@ varDeclStmt = endsIn ";" stmt
 
 returnStmt :: Parser Statement
 returnStmt = endsIn ";" stmt
-  where stmt = ReturnStmt <$> optional (reserved "return" *> expression)
+  where stmt = ReturnStmt <$> (reserved "return" *> optional expression)
 
 assignmentStmt :: Parser Statement
 assignmentStmt = endsIn ";" stmt

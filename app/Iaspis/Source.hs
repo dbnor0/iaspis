@@ -16,6 +16,7 @@ data Type
   | BytesDynamicT
   | UIntT Int
   | StringT
+  | UnitT
   deriving stock (Eq, Show)
 
 data Value
@@ -116,7 +117,7 @@ data FunctionHeader = FunctionHeader
   , functionMutability :: Mutability
   , functionName :: Identifier
   , functionArgs :: [Field]
-  , functionReturnType :: Maybe Type
+  , functionReturnType :: Type
   , overrideSpecifier :: Bool
   } deriving stock Show
 

@@ -25,5 +25,10 @@ instance IaspisError BuildError where
     InvalidMemoryLocationType f t -> "Invalid storage specifier for " <> f <> " of type " <> showT t
     MissingProxyMemberKind f -> "Missing proxy member kind for " <> f
     IllegalStorageAssig vId fId -> "Cannot storage assign to " <> vId <> " in " <> fId
+    InvalidAssigType fId t1 t2 -> "Cannot assign " <> showT t2 <> " to " <> fId <> " of type " <> showT t1
+    InvalidReturnType fId t1 t2 -> "Expected " <> showT t1 <> " as return type for " <> fId <> ", got " <> showT t2
+    InvalidExpressionType e t1 t2 -> "Expected " <> showT t1 <> " for " <> showT e <> ", got " <> showT t2
+    InvalidArgType f t1 t2 -> "Expected " <> showT t1 <> " for " <> showT f <> ", got " <> showT t2
+    InvalidOp -> "Internal: Invalid operator used"
 
 

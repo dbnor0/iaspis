@@ -31,16 +31,20 @@ open proxy Proxy for Facet1, Facet2 {
 }
 
 facet Facet1 to Proxy {
-    public mut fn f1 (uint256 x, uint256 y) -> string {
-        mut uint256 c := x;
-        mut string storage q <- "abc";
+    public mut fn f1 (string x, uint256 y) -> string {
+        mut string c := x;
+        mut string q := "abc";
         return c;
     }
 }
 
 facet Facet2 to Proxy {
+    private fn sq(uint256 x) -> uint256 {
+        return x * x;
+    }
+
     private pay mut fn f2 () -> bool {
-        test1("x", 1);
+        uint256 A := sq(25);
         return true;
     }
 }

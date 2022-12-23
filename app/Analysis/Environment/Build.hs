@@ -5,6 +5,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RankNTypes #-}
 
 module Analysis.Environment.Build where
 
@@ -119,16 +120,29 @@ withScope s f = do
   exitScope
 
 getField :: MonadState BuildEnv m => MonadError BuildError m => Identifier -> m Field
-getField id = do
+getField id = getEntry id varEntries UndefField
+
+getFn :: MonadState BuildEnv m => MonadError BuildError m => Identifier -> m FunctionHeader
+getFn id = getEntry id fnEntries UndefFn
+
+getEntry 
+  :: MonadState BuildEnv m 
+  => MonadError BuildError m 
+  => Identifier 
+  -> Lens' Env (Bindings b)
+  -> (Scope -> Identifier -> BuildError)
+  -> m b
+getEntry id g err = do
   bd <- gets (^. blockDepth)
   s <- gets (^. scope)
   e <- gets (^. env)
   let scopes = Prelude.scanl (\t n -> intercalate "::" $ Prelude.take n $ splitOn "::" t) s (Prelude.reverse [1..bd])
-      fields = (\s -> M.lookup (s <> "::" <> id) (e ^. varEntries)) <$> scopes
-  if Prelude.all isNothing fields then
-    throwError $ UndefField s id
+      entries = (\s -> M.lookup (s <> "::" <> id) (e ^. g)) <$> scopes
+  if Prelude.all isNothing entries then
+    throwError $ err s id
   else
-    (return . entry . Prelude.head . catMaybes) fields
+    (return . entry . Prelude.head . catMaybes) entries
+
 
 getTopLevelFields :: BuildEnv -> Int -> Scope -> [Field]
 getTopLevelFields e bd s = entry <$> M.elems fields

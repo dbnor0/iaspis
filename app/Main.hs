@@ -18,6 +18,7 @@ import Analysis.MemoryCheck (memCheck)
 import Analysis.Environment.Error
 import Control.Monad.Except
 import Analysis.MutabilityCheck
+import Analysis.TypeCheck (typeCheck)
 
 extension :: FilePath
 extension = ".ip"
@@ -38,6 +39,7 @@ validate m = do
   checkContracts
   memCheck m
   mutCheck m
+  typeCheck m
 
 main :: IO ()
 main = do

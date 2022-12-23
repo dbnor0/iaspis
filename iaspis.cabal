@@ -30,9 +30,11 @@ executable iaspis
         Analysis.Environment.Error
         Analysis.MemoryCheck
         Analysis.MutabilityCheck
+        Analysis.TypeCheck
         Analysis.Utils
         Iaspis.Source
         Iaspis.Prelude
+        Iaspis.TypeUtils
         Parser.Base
         Parser.Source
         Parser.Types

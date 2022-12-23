@@ -8,7 +8,7 @@ import Analysis.Environment.Error
 import Iaspis.Source
 import Data.Foldable
 import Control.Monad.Error.Class
-import Control.Monad
+import Control.Monad ( when )
 
 mutCheck :: MonadState BuildEnv m => MonadError BuildError m => Module -> m ()
 mutCheck Module{ moduleDecl, declarations } = withScope moduleDecl $ traverse_ mutCheckDecl declarations

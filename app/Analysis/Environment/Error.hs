@@ -4,6 +4,7 @@ module Analysis.Environment.Error where
 
 import Iaspis.Source
 import Analysis.Environment.Environment
+import Data.Text
 
 
 data BuildError
@@ -20,4 +21,9 @@ data BuildError
   | InvalidMemoryLocationType Identifier Type
   | MissingProxyMemberKind Identifier
   | IllegalStorageAssig Identifier Identifier
+  | InvalidAssigType Identifier Type Type
+  | InvalidReturnType Identifier Type Type
+  | InvalidExpressionType Expression (Either Type Text) Type
+  | InvalidArgType Field Type Type
+  | InvalidOp
   deriving stock (Eq, Show)
