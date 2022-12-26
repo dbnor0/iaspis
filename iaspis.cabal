@@ -43,6 +43,7 @@ executable iaspis
     Solidity.Grammar
     Utils.Error
     Utils.Text
+    Yul.Grammar
   other-extensions:
     ApplicativeDo
     BlockArguments

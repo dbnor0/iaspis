@@ -2,6 +2,7 @@
 module Solidity.Grammar where
 
 import Data.Text as T
+import qualified Yul.Grammar as Yul
 
 type Identifier = T.Text
 type ImportPath = T.Text
@@ -128,8 +129,64 @@ data ArrayType = ArrayType
   , arraySize :: Maybe Expression
   } deriving stock (Eq, Show)
 
-data Expression = Expression
+data Expression
+  = LiteralE Literal
+  | IdentifierE Identifier
+  | InlineArrayE [Expression]
+  | MemberAccessE Expression Expression
+  | SubscriptE Expression Expression
+  | FunctionCallE Expression [Expression]
+  | CastE Type Expression
+  | BinaryE BinaryOp Expression Expression
+  | UnaryE UnaryOp Expression
   deriving stock (Eq, Show)
 
-data Statement = Statement
+data BinaryOp
+  = AdditionOp
+  | SubtractionOp
+  | MultiplicationOp
+  | DivisionOp
+  | ModuloOp
+  | ConjunctionOp
+  | DisjunctionOp
+  | EqualityOp
+  | InequalityOp
+  | LessThanOp
+  | GreaterThanOp
+  | LessThanEqualOp
+  | GreaterThanEqualOp
+  | LeftShiftOp
+  | RightShiftOp
+  | BitwiseConjunctionOp
+  | BitwiseDisjunctionOp
+  | BitwiseExclDisjunctionOp
+  deriving stock (Eq, Show)
+
+data UnaryOp
+  = ArithmeticNegationOp
+  | LogicalNegationOp
+  | BitwiseNegationOp
+  | IncrementOp
+  | DecrementOp
+  deriving stock (Eq, Show)
+
+data Statement
+  = BlockStmt [Statement]
+  | VarDeclStmt Identifier MemoryLocation (Maybe Expression)
+  | ExpressionStmt Expression
+  | IfStmt Expression Statement (Maybe Statement)
+  | ForStmt Statement Statement Expression Statement
+  | WhileStmt Expression Statement
+  | ContinueStmt
+  | BreakStmt
+  | ReturnStmt (Maybe Expression)
+  | RevertStmt Expression
+  | AssemblyStmt Yul.Statement
+  deriving stock (Eq, Show)
+  
+data Literal
+  = StringLit T.Text
+  | NumberLit Int 
+  | BooleanLit Bool
+  | HexLit T.Text
   deriving stock (Eq, Show)
