@@ -13,12 +13,13 @@ import Iaspis.Grammar
 import Analysis.Environment.Build
 import Utils.Error
 import Analysis.ContractCheck
-import Text.Pretty.Simple
 import Analysis.MemoryCheck (memCheck)
 import Analysis.Environment.Error
 import Control.Monad.Except
 import Analysis.MutabilityCheck
 import Analysis.TypeCheck (typeCheck)
+import Data.Aeson (encode)
+import Data.ByteString.Lazy.Char8 (unpack)
 
 extension :: FilePath
 extension = ".ip"
@@ -50,4 +51,4 @@ main = do
       let (err, env) = runState (runExceptT $ validate ast) mkEnv in case err of
         Left be -> do
           print $ showErr be
-        Right _ -> pPrint env
+        Right _ -> Prelude.writeFile "output.env" (unpack $ encode env)

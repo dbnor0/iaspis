@@ -9,7 +9,8 @@ import Iaspis.Grammar
 
 prelude :: Env
 prelude = Env
-  { _contracts = []
+  { _modules = []
+  , _contracts = []
   , _proxies = []
   , _facets = []
   , _varEntries = preludeFields

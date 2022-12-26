@@ -1,10 +1,13 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# OPTIONS_GHC -Wno-partial-fields #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module Iaspis.Grammar where
 
 import Data.Text
 import Prelude hiding (Enum)
+import GHC.Generics
+import Data.Aeson hiding (Value)
 
 
 type Identifier = Text
@@ -18,7 +21,9 @@ data Type
   | StringT
   | UnitT
   | UserDefinedT Identifier
-  deriving stock (Eq, Show)
+  deriving stock (Eq, Show, Generic)
+
+instance ToJSON Type where
 
 data Value
   = AddressV Text
@@ -69,29 +74,39 @@ data Expression
 data MemoryLocation 
   = Storage
   | Memory
-  deriving stock (Eq, Show)
+  deriving stock (Eq, Show, Generic)
+
+instance ToJSON MemoryLocation where
 
 data ProxyMemberKind 
   = SharedProxyMember
   | UniqueProxyMember Identifier
-  deriving stock (Eq, Show)
+  deriving stock (Eq, Show, Generic)
+
+instance ToJSON ProxyMemberKind where
 
 data MemberVisibility
   = Public
   | Private
   | Internal
   | External
-  deriving stock (Eq, Show)
+  deriving stock (Eq, Show, Generic)
+
+instance ToJSON MemberVisibility where
 
 data PayabilityKind
   = Payable
   | NonPayable
-  deriving stock (Eq, Show)
+  deriving stock (Eq, Show, Generic)
+
+instance ToJSON PayabilityKind where
 
 data Mutability
   = Mutable
   | View
-  deriving stock (Eq, Show)
+  deriving stock (Eq, Show, Generic)
+
+instance ToJSON Mutability where
 
 data Field = Field
   { fieldProxyKind :: Maybe ProxyMemberKind
@@ -100,7 +115,9 @@ data Field = Field
   , fieldType :: Type
   , fieldLocation :: MemoryLocation
   , fieldName :: Identifier
-  } deriving stock (Eq, Show)
+  } deriving stock (Eq, Show, Generic)
+
+instance ToJSON Field where
 
 data Statement
   = VarDeclStmt Field MemoryLocation Expression
@@ -121,7 +138,9 @@ data FunctionHeader = FunctionHeader
   , functionArgs :: [Field]
   , functionReturnType :: Type
   , overrideSpecifier :: Bool
-  } deriving stock Show
+  } deriving stock (Show, Generic)
+
+instance ToJSON FunctionHeader where
 
 data Function = Function
   { functionHeader :: FunctionHeader 

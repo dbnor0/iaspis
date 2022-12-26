@@ -6,6 +6,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module Analysis.Environment.Build where
 
@@ -22,15 +23,20 @@ import Iaspis.Prelude
 import Analysis.Environment.Error
 import Utils.Text ( showT )
 import Data.Maybe
+import GHC.Generics
+import Data.Aeson
 
 
 data BuildEnv = BuildEnv
   { _scope :: Scope
   , _blockDepth :: Int
   , _env :: Env
-  } deriving stock Show
+  } deriving stock (Show, Generic)
 
 makeLenses ''BuildEnv
+
+instance ToJSON BuildEnv where
+
 
 mkEnv :: BuildEnv
 mkEnv = BuildEnv
@@ -40,7 +46,9 @@ mkEnv = BuildEnv
   }
 
 buildEnv :: (MonadState BuildEnv m, MonadError BuildError m) => Module -> m ()
-buildEnv Module{ moduleDecl, declarations } = withScope moduleDecl $ traverse_ addDecls declarations
+buildEnv Module{ moduleDecl, declarations } = do
+  modify (& (env . modules) %~ (ModuleEntry moduleDecl [] :))
+  withScope moduleDecl $ traverse_ addDecls declarations
 
 addDecls :: (MonadState BuildEnv m, MonadError BuildError m) => Declaration -> m ()
 addDecls = \case
