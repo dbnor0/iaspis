@@ -1,10 +1,19 @@
 module HelloWorld;
 
+contract C {
+  private uint256 a;
+  constructor(uint256 aa) {
+    a <- aa;
+  }
+}
+
 contract Contract {
   public  uint256 a;
   private string x;
+  private C myC;
  
   constructor() {
+    myC <- new C(10);
     a <- 0;
     x <- "0";
   }

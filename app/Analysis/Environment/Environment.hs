@@ -40,6 +40,7 @@ data Env = Env
   , _facets :: [FacetEntry]
   , _varEntries :: Bindings Field
   , _fnEntries :: Bindings FunctionHeader
+  , _typeEntries :: Bindings Type
   } deriving stock Show
 
 makeLenses ''Env

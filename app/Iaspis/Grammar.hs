@@ -17,6 +17,7 @@ data Type
   | UIntT Int
   | StringT
   | UnitT
+  | UserDefinedT Identifier
   deriving stock (Eq, Show)
 
 data Value
@@ -60,6 +61,7 @@ data Expression
   = LiteralE Value
   | IdentifierE Identifier
   | FunctionCallE Identifier [Expression]
+  | InstantiationE Identifier [Expression]
   | UnaryE UnaryOp Expression
   | BinaryE BinaryOp Expression Expression
   deriving stock (Eq, Show)

@@ -21,6 +21,7 @@ instance IaspisError BuildError where
     UndefFacet f p -> "Undefined proxy " <> p <> " at " <> f
     UndefField s f -> "Undefined field " <> f <> " in scope " <> s
     UndefFn s f -> "Undefined function " <> f <> " in scope " <> s
+    UndefType s t -> "Undefined type " <> t <> " in scope " <> s
     InvalidAssignOp f loc -> "Cannot use " <> showT loc <> " assignemnt operator to assign to " <> f
     InvalidMemoryLocationType f t -> "Invalid storage specifier for " <> f <> " of type " <> showT t
     MissingProxyMemberKind f -> "Missing proxy member kind for " <> f

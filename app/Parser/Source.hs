@@ -224,6 +224,7 @@ unaryExpr = choice $ uncurry mkUnaryExpr <$>
 factor :: Parser Expression
 factor =
   parens expression
+  <|> try instantiationExpr
   <|> try functionCallExpr
   <|> literalExpr
   <|> identifierExpr
@@ -236,6 +237,10 @@ identifierExpr = IdentifierE <$> identifier
 
 functionCallExpr :: Parser Expression
 functionCallExpr = FunctionCallE <$> identifier <*> argList
+  where argList = parens (sepBy expression comma)
+
+instantiationExpr :: Parser Expression
+instantiationExpr = InstantiationE <$> (reserved "new" *> identifier) <*> argList
   where argList = parens (sepBy expression comma)
 
 mkBinaryExpr :: Text -> BinaryOp -> Parser BinaryExpression
@@ -283,7 +288,9 @@ bitwiseOps = choice $ uncurry mkBinaryExpr <$>
 -- types
 
 type' :: Parser Type
-type' = primitiveType
+type' 
+  =   primitiveType
+  <|> UserDefinedT <$> identifier
 
 primitiveType :: Parser Type
 primitiveType = backtrack

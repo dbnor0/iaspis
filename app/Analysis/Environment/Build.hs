@@ -53,6 +53,7 @@ addContract =
       e <- gets (^. env)
       s <- gets (^. scope)
       uniqueId cId (contractId <$> e ^. contracts) DupContract
+      modify (& (env . typeEntries) %~ M.insert (s <> "::" <> cId) (Entry s (UserDefinedT cId)))
       modify (& (env . contracts) %~ (ContractEntry cId s :))
       withScope cId $ traverse_ addField cFields >> traverse_ addFn cFns
     ProxyContract _ pId facetList pFields -> do
@@ -124,6 +125,9 @@ getField id = getEntry id varEntries UndefField
 
 getFn :: MonadState BuildEnv m => MonadError BuildError m => Identifier -> m FunctionHeader
 getFn id = getEntry id fnEntries UndefFn
+
+getType :: MonadState BuildEnv m => MonadError BuildError m => Identifier -> m Type
+getType id = getEntry id typeEntries UndefType
 
 getEntry 
   :: MonadState BuildEnv m 

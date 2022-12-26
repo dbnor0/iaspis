@@ -77,6 +77,7 @@ typeCheckExpr = \case
               (throwError $ InvalidArgType arg (fieldType arg) t)
   UnaryE op e -> typeCheckUnaryExpr e op
   BinaryE op e1 e2 -> typeCheckBinaryExpr e1 e2 op
+  InstantiationE tId _ -> getType tId
 
 typeCheckLit :: Value -> Type
 typeCheckLit = \case

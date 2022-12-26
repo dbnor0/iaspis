@@ -15,6 +15,7 @@ data BuildError
   | DupField Scope Identifier
   | UndefField Scope Identifier
   | UndefFn Scope Identifier
+  | UndefType Scope Identifier
   | UndefProxy Identifier Identifier
   | UndefFacet Identifier Identifier
   | InvalidAssignOp Identifier MemoryLocation
