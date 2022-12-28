@@ -26,9 +26,28 @@ import Data.Maybe
 import GHC.Generics
 import Data.Aeson
 
+data ContractType
+  = Immutable
+  | Proxy
+  | Facet
+  deriving stock (Show, Generic)
+
+instance ToJSON ContractType where
+
+data ScopeInfo = ScopeInfo
+  { _module' :: Identifier
+  , _contract :: Maybe Identifier
+  , _contractType :: Maybe ContractType
+  , _fn :: Maybe Identifier
+  } deriving stock (Show, Generic)
+
+makeLenses ''ScopeInfo
+
+instance ToJSON ScopeInfo where
 
 data BuildEnv = BuildEnv
   { _scope :: Scope
+  , _scopeInfo :: ScopeInfo
   , _blockDepth :: Int
   , _env :: Env
   } deriving stock (Show, Generic)
@@ -37,10 +56,15 @@ makeLenses ''BuildEnv
 
 instance ToJSON BuildEnv where
 
-
 mkEnv :: BuildEnv
 mkEnv = BuildEnv
   { _scope = ""
+  , _scopeInfo = ScopeInfo
+    { _module' = ""
+    , _contract = Nothing
+    , _contractType = Nothing
+    , _fn = Nothing
+    }
   , _blockDepth = 0
   , _env = prelude
   }
@@ -50,6 +74,7 @@ buildEnv Module{ moduleDecl, imports, declarations } = do
   e <- gets (^. env)
   uniqueId moduleDecl (moduleId <$> e ^. modules) DupModule
   modify (& (env . modules) %~ (ModuleEntry moduleDecl imports :))
+  modify (& (scopeInfo . module') .~ moduleDecl)
   withScope moduleDecl $ traverse_ addDecls declarations
 
 addDecls :: MonadState BuildEnv m => MonadError BuildError m => Declaration -> m ()
@@ -65,18 +90,24 @@ addContract =
       uniqueId cId (contractId <$> e ^. contracts) DupContract
       modify (& (env . typeEntries) %~ M.insert (s <> "::" <> cId) (Entry s (UserDefinedT cId)))
       modify (& (env . contracts) %~ (ContractEntry cId s :))
+      modify (& (scopeInfo . contract) ?~ cId)
+      modify (& (scopeInfo . contractType) ?~ Immutable)
       withScope cId $ traverse_ addField cFields >> traverse_ addFn cFns
     ProxyContract _ pId facetList pFields -> do
       e <- gets (^. env)
       s <- gets (^. scope)
       uniqueId pId (proxyId <$> e ^. proxies) DupProxy
       modify (& (env . proxies) %~ (ProxyEntry pId s facetList :))
+      modify (& (scopeInfo . contract) ?~ pId)
+      modify (& (scopeInfo . contractType) ?~ Proxy)
       withScope pId $ traverse_ addField pFields
     FacetContract fId proxyList fFns -> do
       e <- gets (^. env)
       s <- gets (^. scope)
       uniqueId fId (facetId <$> e ^. facets) DupFacet
       modify (& (env . facets) %~ (FacetEntry fId s proxyList :))
+      modify (& (scopeInfo . contract) ?~ fId)
+      modify (& (scopeInfo . contractType) ?~ Facet)
       withScope fId $ traverse_ addFn fFns
 
 currentScope :: Scope -> Bindings a -> Bindings a
@@ -97,6 +128,7 @@ addFn Function{ functionHeader, functionBody } = do
   e <- gets (^. env)
   uniqueId (s <> "::" <> fnName) (M.keys $ currentScope s (e ^. fnEntries)) (DupFn s)
   modify (& (env . fnEntries) %~ M.insert (s <> "::" <> fnName) (Entry s functionHeader))
+  modify (& (scopeInfo . fn) ?~ fnName)
   withScope fnName $ traverse_ addField fnArgs >> traverse_ addStmt functionBody
   where fnName = functionName functionHeader
         fnArgs = functionArgs functionHeader

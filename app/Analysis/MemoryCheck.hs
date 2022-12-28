@@ -10,10 +10,13 @@ import Control.Monad
 import Control.Monad.State.Class
 import Analysis.Environment.Build
 import Analysis.Environment.Error
+import Lens.Micro.Platform
 
 
 memCheck :: MonadState BuildEnv m => MonadError BuildError m => Module -> m ()
-memCheck Module{ moduleDecl, declarations } = withScope moduleDecl $ traverse_ memCheckDecl declarations
+memCheck Module{ moduleDecl, declarations } = do
+  modify (& (scopeInfo . module') .~ moduleDecl)
+  withScope moduleDecl $ traverse_ memCheckDecl declarations
 
 memCheckDecl :: MonadState BuildEnv m => MonadError BuildError m => Declaration -> m ()
 memCheckDecl = \case
@@ -21,13 +24,20 @@ memCheckDecl = \case
 
 memCheckContract :: MonadState BuildEnv m => MonadError BuildError m => Contract -> m ()
 memCheckContract = \case
-  (ImmutableContract name _ fns) ->
+  (ImmutableContract name _ fns) -> do
+    modify (& (scopeInfo . contract) ?~ name)
+    modify (& (scopeInfo . contractType) ?~ Immutable)
     withScope name $ traverse_ memCheckFn fns
-  (FacetContract name _ fns) -> withScope name $ traverse_ memCheckFn fns
+  (FacetContract name _ fns) -> do
+    modify (& (scopeInfo . contract) ?~ name)
+    modify (& (scopeInfo . contractType) ?~ Facet)
+    withScope name $ traverse_ memCheckFn fns
   _ -> return ()
 
 memCheckFn :: MonadState BuildEnv m => MonadError BuildError m => Function -> m ()
-memCheckFn (Function hd stmts) = withScope (functionName hd) (traverse_ memCheckStmt stmts)
+memCheckFn (Function hd stmts) = do
+  modify (& (scopeInfo . fn) ?~ functionName hd)
+  withScope (functionName hd) (traverse_ memCheckStmt stmts)
 
 memCheckStmt :: MonadState BuildEnv m => MonadError BuildError m => Statement -> m ()
 memCheckStmt = \case

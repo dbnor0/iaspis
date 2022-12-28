@@ -30,12 +30,6 @@ validFacetList = do
   traverse_ (\f -> traverse_ (checkFacet e f) (proxyList f)) (e ^. facets)
   where checkFacet e f p = unless (p `elem` (proxyId <$> e ^. proxies)) (throwError $ UndefProxy (facetId f) p)
 
-checkContracts :: MonadState BuildEnv m => MonadError BuildError m =>  m ()
-checkContracts = do
-  validFacetList
-  validProxyList
-  validProxyMembers
-
 validProxyMembers :: MonadState BuildEnv m => MonadError BuildError m => m ()
 validProxyMembers = do
   be <- get
@@ -49,3 +43,10 @@ validProxyMembers = do
 
 scopeProxy :: ProxyEntry -> Scope
 scopeProxy ProxyEntry { proxyId, proxyScope } = proxyScope <> "::" <> proxyId
+
+checkContracts :: MonadState BuildEnv m => MonadError BuildError m =>  m ()
+checkContracts = do
+  validFacetList
+  validProxyList
+  validProxyMembers
+

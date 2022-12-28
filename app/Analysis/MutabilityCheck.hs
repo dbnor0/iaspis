@@ -9,9 +9,12 @@ import Iaspis.Grammar
 import Data.Foldable
 import Control.Monad.Error.Class
 import Control.Monad ( when )
+import Lens.Micro.Platform
 
 mutCheck :: MonadState BuildEnv m => MonadError BuildError m => Module -> m ()
-mutCheck Module{ moduleDecl, declarations } = withScope moduleDecl $ traverse_ mutCheckDecl declarations
+mutCheck Module{ moduleDecl, declarations } = do
+  modify (& (scopeInfo . module') .~ moduleDecl)
+  withScope moduleDecl $ traverse_ mutCheckDecl declarations
 
 mutCheckDecl :: MonadState BuildEnv m => MonadError BuildError m => Declaration -> m ()
 mutCheckDecl = \case
@@ -19,15 +22,22 @@ mutCheckDecl = \case
 
 mutCheckContract :: MonadState BuildEnv m => MonadError BuildError m => Contract -> m ()
 mutCheckContract = \case
-  (ImmutableContract name _ fns) ->
+  (ImmutableContract name _ fns) -> do
+    modify (& (scopeInfo . contract) ?~ name)
+    modify (& (scopeInfo . contractType) ?~ Immutable)
     withScope name $ traverse_ mutCheckFn fns
-  (FacetContract name _ fns) -> withScope name $ traverse_ mutCheckFn fns
+  (FacetContract name _ fns) -> do
+    modify (& (scopeInfo . contract) ?~ name)
+    modify (& (scopeInfo . contractType) ?~ Facet)
+    withScope name $ traverse_ mutCheckFn fns
   _ -> return ()
 
 mutCheckFn :: MonadState BuildEnv m => MonadError BuildError m => Function -> m ()
-mutCheckFn (Function hd stmts) =
-  when (functionMutability hd == View) 
-    (traverse_ (mutCheckStmt (functionName hd)) stmts)
+mutCheckFn (Function hd stmts) = do
+  modify (& (scopeInfo . fn) ?~ functionName hd)
+  withScope (functionName hd) $ 
+    when (functionMutability hd == View) 
+      (traverse_ (mutCheckStmt (functionName hd)) stmts)
 
 mutCheckStmt :: MonadState BuildEnv m => MonadError BuildError m => Identifier -> Statement -> m ()
 mutCheckStmt fId = \case  

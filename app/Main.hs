@@ -49,7 +49,7 @@ getContractFiles dir = do
 loadFile :: FilePath -> IO (Either T.Text Module)
 loadFile fp = do
   file <- T.readFile fp
-  return $ mapLeft showT $ runParser module' "" file
+  return $ mapLeft showT $ runParser Parser.Source.module' "" file
 
 validate :: MonadState BuildEnv m => MonadError BuildError m => Module -> m ()
 validate m = do

@@ -16,7 +16,9 @@ import Lens.Micro.Platform
 import Iaspis.TypeUtils
 
 typeCheck :: MonadState BuildEnv m => MonadError BuildError m => Module -> m ()
-typeCheck Module{ moduleDecl, declarations } = withScope moduleDecl $ traverse_ typeCheckDecl declarations
+typeCheck Module{ moduleDecl, declarations } = do
+  modify (& (scopeInfo . module') .~ moduleDecl)
+  withScope moduleDecl $ traverse_ typeCheckDecl declarations
 
 typeCheckDecl :: MonadState BuildEnv m => MonadError BuildError m => Declaration -> m ()
 typeCheckDecl = \case
@@ -24,13 +26,19 @@ typeCheckDecl = \case
 
 typeCheckContract :: MonadState BuildEnv m => MonadError BuildError m => Contract -> m ()
 typeCheckContract = \case
-  (ImmutableContract name _ fns) ->
+  (ImmutableContract name _ fns) -> do
+    modify (& (scopeInfo . contract) ?~ name)
+    modify (& (scopeInfo . contractType) ?~ Immutable)
     withScope name $ traverse_ typeCheckFn fns
-  (FacetContract name _ fns) -> withScope name $ traverse_ typeCheckFn fns
+  (FacetContract name _ fns) -> do
+    modify (& (scopeInfo . contract) ?~ name)
+    modify (& (scopeInfo . contractType) ?~ Facet)
+    withScope name $ traverse_ typeCheckFn fns
   _ -> return ()
 
 typeCheckFn :: MonadState BuildEnv m => MonadError BuildError m => Function -> m ()
-typeCheckFn (Function hd stmts) =
+typeCheckFn (Function hd stmts) = do
+  modify (& (scopeInfo . fn) ?~ functionName hd)
   withScope (functionName hd) $
     traverse_ (typeCheckStmt hd) stmts
 
