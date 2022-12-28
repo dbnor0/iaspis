@@ -1,0 +1,9 @@
+module Utils;
+
+contract C {
+  private uint256 a;
+
+  constructor(uint256 aa) {
+    a <- aa;
+  }
+}

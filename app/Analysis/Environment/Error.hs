@@ -11,6 +11,7 @@ data BuildError
   = DupContract Identifier
   | DupProxy Identifier
   | DupFacet Identifier
+  | DupModule Identifier
   | DupFn Scope Identifier
   | DupField Scope Identifier
   | UndefField Scope Identifier
@@ -18,6 +19,7 @@ data BuildError
   | UndefType Scope Identifier
   | UndefProxy Identifier Identifier
   | UndefFacet Identifier Identifier
+  | UndefImport Identifier Identifier
   | InvalidAssignOp Identifier MemoryLocation
   | InvalidMemoryLocationType Identifier Type
   | MissingProxyMemberKind Identifier

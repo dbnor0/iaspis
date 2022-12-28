@@ -18,12 +18,15 @@ import Data.Either
 
 module' :: Parser Module
 module' = module'' <* eof
-  where module'' = Module <$> moduleDecl <*> many decl
+  where module'' = Module <$> moduleDecl <*> many importStmt <*> many decl
 
 -- top level elements
 
 moduleDecl :: Parser Identifier
 moduleDecl = endsIn ";" (reserved "module" *> identifier)
+
+importStmt :: Parser Identifier
+importStmt = endsIn ";" (reserved "import" *> identifier)
 
 decl :: Parser Declaration
 decl = contract

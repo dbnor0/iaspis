@@ -45,16 +45,18 @@ mkEnv = BuildEnv
   , _env = prelude
   }
 
-buildEnv :: (MonadState BuildEnv m, MonadError BuildError m) => Module -> m ()
-buildEnv Module{ moduleDecl, declarations } = do
-  modify (& (env . modules) %~ (ModuleEntry moduleDecl [] :))
+buildEnv :: MonadState BuildEnv m => MonadError BuildError m => Module -> m ()
+buildEnv Module{ moduleDecl, imports, declarations } = do
+  e <- gets (^. env)
+  uniqueId moduleDecl (moduleId <$> e ^. modules) DupModule
+  modify (& (env . modules) %~ (ModuleEntry moduleDecl imports :))
   withScope moduleDecl $ traverse_ addDecls declarations
 
-addDecls :: (MonadState BuildEnv m, MonadError BuildError m) => Declaration -> m ()
+addDecls :: MonadState BuildEnv m => MonadError BuildError m => Declaration -> m ()
 addDecls = \case
   ContractDecl c -> addContract c
 
-addContract :: (MonadState BuildEnv m, MonadError BuildError m) => Contract -> m ()
+addContract :: MonadState BuildEnv m => MonadError BuildError m => Contract -> m ()
 addContract =
   \case
     ImmutableContract cId cFields cFns -> do
@@ -80,7 +82,7 @@ addContract =
 currentScope :: Scope -> Bindings a -> Bindings a
 currentScope s = M.filter ((== s) . entryScope)
 
-addField :: (MonadState BuildEnv m, MonadError BuildError m) => Field -> m ()
+addField :: MonadState BuildEnv m => MonadError BuildError m => Field -> m ()
 addField f@Field{ fieldName } = do
   s <- gets (^. scope)
   e <- gets (^. env)
@@ -89,7 +91,7 @@ addField f@Field{ fieldName } = do
   uniqueId scopedName (M.keys $ currentScope s (e ^. varEntries)) (DupField s)
   modify (& (env . varEntries) %~ M.insert scopedName field)
 
-addFn :: (MonadState BuildEnv m, MonadError BuildError m) => Function -> m ()
+addFn :: MonadState BuildEnv m => MonadError BuildError m => Function -> m ()
 addFn Function{ functionHeader, functionBody } = do
   s <- gets (^. scope)
   e <- gets (^. env)
@@ -99,7 +101,7 @@ addFn Function{ functionHeader, functionBody } = do
   where fnName = functionName functionHeader
         fnArgs = functionArgs functionHeader
 
-addStmt :: (MonadState BuildEnv m, MonadError BuildError m) => Statement -> m ()
+addStmt :: MonadState BuildEnv m => MonadError BuildError m => Statement -> m ()
 addStmt =
   \case
     VarDeclStmt f _ _ -> addField f
@@ -129,32 +131,54 @@ withScope s f = do
   exitScope
 
 getField :: MonadState BuildEnv m => MonadError BuildError m => Identifier -> m Field
-getField id = getEntry id varEntries UndefField
+getField id = do
+  scopes <- localScopes
+  getEntry id varEntries scopes UndefField
 
 getFn :: MonadState BuildEnv m => MonadError BuildError m => Identifier -> m FunctionHeader
-getFn id = getEntry id fnEntries UndefFn
+getFn id = do
+  scopes <- localScopes
+  getEntry id fnEntries scopes UndefFn
 
 getType :: MonadState BuildEnv m => MonadError BuildError m => Identifier -> m Type
-getType id = getEntry id typeEntries UndefType
+getType id = do
+  scopes <- importScopes
+  getEntry id typeEntries scopes UndefType
 
-getEntry 
-  :: MonadState BuildEnv m 
-  => MonadError BuildError m 
-  => Identifier 
+getEntry
+  :: MonadState BuildEnv m
+  => MonadError BuildError m
+  => Identifier
   -> Lens' Env (Bindings b)
+  -> [Scope]
   -> (Scope -> Identifier -> BuildError)
   -> m b
-getEntry id g err = do
-  bd <- gets (^. blockDepth)
+getEntry id g scopes err = do
   s <- gets (^. scope)
   e <- gets (^. env)
-  let scopes = Prelude.scanl (\t n -> intercalate "::" $ Prelude.take n $ splitOn "::" t) s (Prelude.reverse [1..bd])
-      entries = (\s -> M.lookup (s <> "::" <> id) (e ^. g)) <$> scopes
+  let entries = (\s -> M.lookup (s <> "::" <> id) (e ^. g)) <$> scopes
   if Prelude.all isNothing entries then
     throwError $ err s id
   else
     (return . entry . Prelude.head . catMaybes) entries
 
+localScopes :: MonadState BuildEnv m => m [Scope]
+localScopes = do
+  bd <- gets (^. blockDepth)
+  s <- gets (^. scope)
+  return $ Prelude.scanl localScope s (Prelude.reverse [1..bd])
+  where localScope t n = intercalate "::" $ Prelude.take n $ splitOn "::" t
+
+importScopes :: MonadState BuildEnv m => m [Scope]
+importScopes = do
+  s <- gets (^. scope)
+  e <- gets (^. env)
+  local <- localScopes
+  return $ local <> moduleImports (Prelude.head (ms s e))
+  where ms s e = Prelude.filter ((==) (scopeModule s) . moduleId) (e ^. modules)
+
+scopeModule :: Scope -> Identifier
+scopeModule = Prelude.head . T.splitOn "::"
 
 getTopLevelFields :: BuildEnv -> Int -> Scope -> [Field]
 getTopLevelFields e bd s = entry <$> M.elems fields

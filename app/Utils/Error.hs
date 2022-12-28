@@ -15,6 +15,7 @@ instance IaspisError BuildError where
     DupContract c -> "Duplicate contract identifier " <> c 
     DupProxy p -> "Duplicate proxy identifier " <> p
     DupFacet f -> "Duplicate facet identifier " <> f
+    DupModule m -> "Duplicate module " <> m
     DupFn s f -> "Duplicate function " <> f <> " in scope " <> s
     DupField s f -> "Duplicate field " <> f <> " in scope " <> s
     UndefProxy p f -> "Undefined facet " <> f <> " at " <> p
@@ -22,6 +23,7 @@ instance IaspisError BuildError where
     UndefField s f -> "Undefined field " <> f <> " in scope " <> s
     UndefFn s f -> "Undefined function " <> f <> " in scope " <> s
     UndefType s t -> "Undefined type " <> t <> " in scope " <> s
+    UndefImport i m -> "Undefined import " <> i <> " in module " <> m
     InvalidAssignOp f loc -> "Cannot use " <> showT loc <> " assignemnt operator to assign to " <> f
     InvalidMemoryLocationType f t -> "Invalid storage specifier for " <> f <> " of type " <> showT t
     MissingProxyMemberKind f -> "Missing proxy member kind for " <> f

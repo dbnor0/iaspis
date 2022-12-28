@@ -185,5 +185,6 @@ data Contract
 
 data Module = Module 
   { moduleDecl :: Identifier
+  , imports :: [Identifier]
   , declarations :: [Declaration] 
   } deriving stock Show

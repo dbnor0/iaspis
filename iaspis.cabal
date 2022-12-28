@@ -28,6 +28,7 @@ executable iaspis
     Analysis.Environment.Build
     Analysis.Environment.Environment
     Analysis.Environment.Error
+    Analysis.ImportCheck
     Analysis.MemoryCheck
     Analysis.MutabilityCheck
     Analysis.TypeCheck
@@ -97,6 +98,7 @@ executable iaspis
     , containers
     , directory
     , either
+    , filepath
     , megaparsec
     , microlens-platform
     , mtl

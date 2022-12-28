@@ -1,11 +1,6 @@
 module HelloWorld;
 
-contract C {
-  private uint256 a;
-  constructor(uint256 aa) {
-    a <- aa;
-  }
-}
+import Utils;
 
 contract Contract {
   public  uint256 a;

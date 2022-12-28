@@ -20,9 +20,21 @@ import Analysis.MutabilityCheck
 import Analysis.TypeCheck (typeCheck)
 import Data.Aeson (encode)
 import Data.ByteString.Lazy.Char8 (unpack)
+import Analysis.ImportCheck
+import System.FilePath
+import qualified Data.Text as T
+import Data.Either.Combinators
+import Utils.Text
+import Data.Either
+import Data.Foldable
+import Data.ByteString.Lazy.Char8 as BS
+
 
 extension :: FilePath
 extension = ".ip"
+
+iaspisFile :: FilePath -> FilePath -> Bool
+iaspisFile ex fp = snd (splitExtension fp) == ex
 
 getContractFiles :: FilePath -> IO [FilePath]
 getContractFiles dir = do
@@ -31,12 +43,17 @@ getContractFiles dir = do
     contents <- listDirectory dir
     join <$> traverse getContractFiles (withRelativePath <$> contents)
   else
-    return [dir]
+    return $ [dir | iaspisFile extension dir]
   where withRelativePath = (++) (dir ++ "\\")
+
+loadFile :: FilePath -> IO (Either T.Text Module)
+loadFile fp = do
+  file <- T.readFile fp
+  return $ mapLeft showT $ runParser module' "" file
 
 validate :: MonadState BuildEnv m => MonadError BuildError m => Module -> m ()
 validate m = do
-  buildEnv m
+  checkImports m
   checkContracts
   memCheck m
   mutCheck m
@@ -44,11 +61,23 @@ validate m = do
 
 main :: IO ()
 main = do
-  contract <- T.readFile "./contracts/HelloWorld.ip"
-  case runParser module' "" contract of
-    Left pe -> print $ "Parser error: " <> show pe
-    Right ast ->
-      let (err, env) = runState (runExceptT $ validate ast) mkEnv in case err of
-        Left be -> do
-          print $ showErr be
-        Right _ -> Prelude.writeFile "output.env" (unpack $ encode env)
+  files <- getContractFiles "./contracts"
+  parsed <- traverse loadFile files
+  if Prelude.null $ rights parsed then
+    print $ "Parser error(s): " <> show (lefts parsed)
+  else
+    let modules = rights parsed
+        (err, e) = runState (runExceptT $ traverse_ buildEnv modules) mkEnv
+    in
+      case err of
+        Left be -> print $ showErr be
+        Right _ -> do
+          let (err, env) = runState (runExceptT $ traverse_ validate modules) e
+          case err of
+            Left be -> do
+              print $ showErr be
+              Prelude.writeFile "output.json" (BS.unpack $ encode env)
+            Right _ -> do
+              Prelude.writeFile "output.json" (BS.unpack $ encode env)
+
+
