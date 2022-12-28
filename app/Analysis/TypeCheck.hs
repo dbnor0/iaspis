@@ -4,43 +4,40 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Analysis.TypeCheck where
+
 import Control.Monad.State.Class
 import Control.Monad.Error.Class
 import Analysis.Environment.Error
-import Analysis.Environment.Build
 import Iaspis.Grammar
 import Data.Foldable
 import Control.Monad
 import Utils.Text
 import Lens.Micro.Platform
 import Iaspis.TypeUtils
+import Analysis.Environment.Environment
+import Analysis.Environment.Utils
+import Analysis.Environment.Traversals
+
 
 typeCheck :: MonadState BuildEnv m => MonadError BuildError m => Module -> m ()
-typeCheck Module{ moduleDecl, declarations } = do
-  modify (& (scopeInfo . module') .~ moduleDecl)
-  withScope moduleDecl $ traverse_ typeCheckDecl declarations
+typeCheck m@Module{ declarations } = traverseModule m $ traverse_ typeCheckDecl declarations
 
 typeCheckDecl :: MonadState BuildEnv m => MonadError BuildError m => Declaration -> m ()
 typeCheckDecl = \case
   ContractDecl c -> typeCheckContract c
 
 typeCheckContract :: MonadState BuildEnv m => MonadError BuildError m => Contract -> m ()
-typeCheckContract = \case
-  (ImmutableContract name _ fns) -> do
-    modify (& (scopeInfo . contract) ?~ name)
-    modify (& (scopeInfo . contractType) ?~ Immutable)
-    withScope name $ traverse_ typeCheckFn fns
-  (FacetContract name _ fns) -> do
-    modify (& (scopeInfo . contract) ?~ name)
-    modify (& (scopeInfo . contractType) ?~ Facet)
-    withScope name $ traverse_ typeCheckFn fns
-  _ -> return ()
+typeCheckContract = traverseContract cFn pFn fFn
+  where cFn = \case
+          ImmutableContract _ _ fns -> traverse_ typeCheckFn fns
+          _ -> return ()
+        pFn = const $ return ()
+        fFn = \case
+          FacetContract _ _ fns -> traverse_ typeCheckFn fns
+          _ -> return ()
 
 typeCheckFn :: MonadState BuildEnv m => MonadError BuildError m => Function -> m ()
-typeCheckFn (Function hd stmts) = do
-  modify (& (scopeInfo . fn) ?~ functionName hd)
-  withScope (functionName hd) $
-    traverse_ (typeCheckStmt hd) stmts
+typeCheckFn f@(Function hd stmts) = traverseFn f $ traverse_ (typeCheckStmt hd) stmts
 
 typeCheckStmt :: MonadState BuildEnv m => MonadError BuildError m => FunctionHeader -> Statement -> m ()
 typeCheckStmt fn = \case

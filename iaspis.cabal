@@ -28,11 +28,12 @@ executable iaspis
     Analysis.Environment.Build
     Analysis.Environment.Environment
     Analysis.Environment.Error
+    Analysis.Environment.Traversals
+    Analysis.Environment.Utils
     Analysis.ImportCheck
     Analysis.MemoryCheck
     Analysis.MutabilityCheck
     Analysis.TypeCheck
-    Analysis.Utils
     Codegen.Types
     Iaspis.Grammar
     Iaspis.Prelude

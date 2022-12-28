@@ -4,6 +4,7 @@ module Iaspis.TypeUtils where
   
 import Iaspis.Grammar
 
+
 isNumeric :: Type -> Bool
 isNumeric = \case
   UIntT _ -> True

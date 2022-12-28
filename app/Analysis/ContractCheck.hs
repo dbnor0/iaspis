@@ -13,9 +13,9 @@ import Data.Foldable
 import Control.Monad
 import Analysis.Environment.Error
 import Control.Monad.State.Class
-import Analysis.Environment.Build
 import Iaspis.Grammar hiding (facetList, proxyList)
 import Data.Maybe
+import Analysis.Environment.Utils
 
 
 validProxyList :: (MonadState BuildEnv m, MonadError BuildError m) => m ()

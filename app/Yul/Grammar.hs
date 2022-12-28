@@ -1,7 +1,9 @@
 {-# LANGUAGE DerivingStrategies #-}
+
 module Yul.Grammar where
 
 import Data.Text as T
+
 
 type Identifier = T.Text
 

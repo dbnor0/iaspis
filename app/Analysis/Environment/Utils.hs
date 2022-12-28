@@ -1,0 +1,102 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
+
+module Analysis.Environment.Utils where
+
+import Control.Monad.State.Class
+import Analysis.Environment.Environment
+import Data.Text as T
+import Data.Function
+import Iaspis.Prelude
+import Lens.Micro.Platform
+import Iaspis.Grammar
+import Data.Map as M
+import Control.Monad.Error.Class
+import Analysis.Environment.Error
+import Data.Maybe
+
+
+enterScope :: MonadState BuildEnv m => Scope -> m ()
+enterScope s = modify (\e -> e & scope %~ updateScope s & blockDepth +~ 1)
+  where updateScope s' s = if T.length s == 0 then s' else s <> "::" <> s'
+
+exitScope :: MonadState BuildEnv m => m ()
+exitScope = modify (\e -> e & scope %~ (intercalate "::" . Prelude.init . splitOn "::") & blockDepth -~ 1)
+
+withScope :: MonadState BuildEnv m => Scope -> m a -> m ()
+withScope s f = do
+  enterScope s
+  _ <- f
+  exitScope
+
+mkEnv :: BuildEnv
+mkEnv = BuildEnv
+  { _scope = ""
+  , _scopeInfo = ScopeInfo
+    { _module' = ""
+    , _contract = Nothing
+    , _contractType = Nothing
+    , _fn = Nothing
+    }
+  , _blockDepth = 0
+  , _env = prelude
+  }
+
+getField :: MonadState BuildEnv m => MonadError BuildError m => Identifier -> m Field
+getField id = do
+  scopes <- localScopes
+  getEntry id varEntries scopes UndefField
+
+getFn :: MonadState BuildEnv m => MonadError BuildError m => Identifier -> m FunctionHeader
+getFn id = do
+  scopes <- localScopes
+  getEntry id fnEntries scopes UndefFn
+
+getType :: MonadState BuildEnv m => MonadError BuildError m => Identifier -> m Type
+getType id = do
+  scopes <- importScopes
+  getEntry id typeEntries scopes UndefType
+
+getEntry
+  :: MonadState BuildEnv m
+  => MonadError BuildError m
+  => Identifier
+  -> Lens' Env (Bindings b)
+  -> [Scope]
+  -> (Scope -> Identifier -> BuildError)
+  -> m b
+getEntry id g scopes err = do
+  s <- gets (^. scope)
+  e <- gets (^. env)
+  let entries = (\s -> M.lookup (s <> "::" <> id) (e ^. g)) <$> scopes
+  if Prelude.all isNothing entries then
+    throwError $ err s id
+  else
+    (return . entry . Prelude.head . catMaybes) entries
+
+localScopes :: MonadState BuildEnv m => m [Scope]
+localScopes = do
+  bd <- gets (^. blockDepth)
+  s <- gets (^. scope)
+  return $ Prelude.scanl localScope s (Prelude.reverse [1..bd])
+  where localScope t n = intercalate "::" $ Prelude.take n $ splitOn "::" t
+
+importScopes :: MonadState BuildEnv m => m [Scope]
+importScopes = do
+  s <- gets (^. scope)
+  e <- gets (^. env)
+  local <- localScopes
+  return $ local <> moduleImports (Prelude.head (ms s e))
+  where ms s e = Prelude.filter ((==) (scopeModule s) . moduleId) (e ^. modules)
+
+scopeModule :: Scope -> Identifier
+scopeModule = Prelude.head . T.splitOn "::"
+
+getTopLevelFields :: BuildEnv -> Int -> Scope -> [Field]
+getTopLevelFields e bd s = entry <$> M.elems fields
+  where fields = M.filter inScope (e ^. (env . varEntries))
+        inScope f = scopeDepth (entryScope f) == bd && s `isPrefixOf` entryScope f
+
+scopeDepth :: Scope -> Int
+scopeDepth = Prelude.length . splitOn "::"

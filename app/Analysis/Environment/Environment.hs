@@ -2,6 +2,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Analysis.Environment.Environment where
 
@@ -12,6 +13,11 @@ import Data.Text as T
 import GHC.Generics
 import Data.Aeson (ToJSON)
 
+
+data Entry a = Entry
+  { entryScope :: Scope
+  , entry :: a
+  } deriving stock (Eq, Show, Generic)
 
 type Scope = T.Text
 type Bindings a = M.Map Identifier (Entry a)
@@ -46,11 +52,6 @@ data FacetEntry = FacetEntry
 
 instance ToJSON FacetEntry where
 
-data Entry a = Entry
-  { entryScope :: Scope
-  , entry :: a
-  } deriving stock (Eq, Show, Generic)
-
 data Env = Env
   { _modules :: [ModuleEntry]
   , _contracts :: [ContractEntry]
@@ -70,3 +71,33 @@ instance ToJSON (Entry FunctionHeader) where
 instance ToJSON (Entry Type) where
 
 makeLenses ''Env
+
+data ContractType
+  = Immutable
+  | Proxy
+  | Facet
+  deriving stock (Show, Generic)
+
+instance ToJSON ContractType where
+
+data ScopeInfo = ScopeInfo
+  { _module' :: Identifier
+  , _contract :: Maybe Identifier
+  , _contractType :: Maybe ContractType
+  , _fn :: Maybe Identifier
+  } deriving stock (Show, Generic)
+
+makeLenses ''ScopeInfo
+
+instance ToJSON ScopeInfo where
+
+data BuildEnv = BuildEnv
+  { _scope :: Scope
+  , _scopeInfo :: ScopeInfo
+  , _blockDepth :: Int
+  , _env :: Env
+  } deriving stock (Show, Generic)
+
+makeLenses ''BuildEnv
+
+instance ToJSON BuildEnv where

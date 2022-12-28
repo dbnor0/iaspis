@@ -1,6 +1,9 @@
 {-# LANGUAGE DerivingStrategies #-}
+
 module Codegen.Types where
+
 import Solidity.Grammar
+
 
 data Module = Module
   { imports :: [Import]

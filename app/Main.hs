@@ -28,6 +28,8 @@ import Utils.Text
 import Data.Either
 import Data.Foldable
 import Data.ByteString.Lazy.Char8 as BS
+import Analysis.Environment.Environment
+import Analysis.Environment.Utils
 
 
 extension :: FilePath
