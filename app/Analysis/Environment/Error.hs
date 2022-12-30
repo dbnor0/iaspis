@@ -23,10 +23,12 @@ data BuildError
   | InvalidAssignOp Identifier MemoryLocation
   | InvalidMemoryLocationType Identifier Type
   | MissingProxyMemberKind Identifier
+  | UndeclaredFacet Identifier Identifier
   | IllegalStorageAssig Identifier Identifier
   | InvalidAssigType Identifier Type Type
   | InvalidReturnType Identifier Type Type
   | InvalidExpressionType Expression (Either Type Text) Type
   | InvalidArgType Field Type Type
+  | InvalidFieldRef Identifier Identifier
   | InvalidOp
   deriving stock (Eq, Show)

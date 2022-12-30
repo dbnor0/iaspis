@@ -15,6 +15,8 @@ import Data.Map as M
 import Control.Monad.Error.Class
 import Analysis.Environment.Error
 import Data.Maybe
+import qualified Data.List
+import Utils.Text
 
 
 enterScope :: MonadState BuildEnv m => Scope -> m ()
@@ -43,9 +45,17 @@ mkEnv = BuildEnv
   , _env = prelude
   }
 
+getProxy :: MonadState BuildEnv m => Identifier -> m (Maybe ProxyEntry)
+getProxy id = do
+  ps <- gets (^. (env . proxies))
+  return $ Data.List.find ((==) id . proxyId) ps
+    
 getField :: MonadState BuildEnv m => MonadError BuildError m => Identifier -> m Field
 getField id = do
-  scopes <- localScopes
+  ct <- gets (^. (scopeInfo . contractType))
+  ls <- localScopes
+  ps <- facetProxyScope
+  let scopes = if ct == Just Facet then ls <> [ps] else ls
   getEntry id varEntries scopes UndefField
 
 getFn :: MonadState BuildEnv m => MonadError BuildError m => Identifier -> m FunctionHeader
@@ -75,6 +85,21 @@ getEntry id g scopes err = do
   else
     (return . entry . Prelude.head . catMaybes) entries
 
+getFacetField :: MonadState BuildEnv m => MonadError BuildError m => Identifier -> m (ContractType, Field)
+getFacetField id = do
+  s <- gets (^. scope)
+  e <- gets (^. env)
+  ls <- localScopes
+  let le = (\s -> M.lookup (s <> "::" <> id) (e ^. varEntries)) <$> ls
+  if Prelude.all isNothing le then do
+    fs <- facetProxyScope
+    let f = M.lookup (fs <> "::" <> id) (e ^. varEntries)
+    case f of 
+      Nothing -> throwError $ UndefField s id
+      Just f' -> return (Proxy, entry f')
+  else
+    return (Immutable, (entry . Prelude.head . catMaybes) le)
+
 localScopes :: MonadState BuildEnv m => m [Scope]
 localScopes = do
   bd <- gets (^. blockDepth)
@@ -90,13 +115,15 @@ importScopes = do
   return $ local <> moduleImports (Prelude.head (ms s e))
   where ms s e = Prelude.filter ((==) (scopeModule s) . moduleId) (e ^. modules)
 
+facetProxyScope :: MonadState BuildEnv m => m Scope
+facetProxyScope = do
+  fId <- fromMaybe "" <$> gets (^. (scopeInfo . contract))
+  m <- gets (^. (scopeInfo . module'))
+  e <- gets (^. env)
+  return $ proxyScope m $ facetProxy $ findFacet fId e
+  where findFacet fId e = Prelude.filter ((==) fId . facetId) (e ^. facets)
+        facetProxy f = proxy $ Prelude.head f
+        proxyScope m p = m <> "::" <> p
+
 scopeModule :: Scope -> Identifier
 scopeModule = Prelude.head . T.splitOn "::"
-
-getTopLevelFields :: BuildEnv -> Int -> Scope -> [Field]
-getTopLevelFields e bd s = entry <$> M.elems fields
-  where fields = M.filter inScope (e ^. (env . varEntries))
-        inScope f = scopeDepth (entryScope f) == bd && s `isPrefixOf` entryScope f
-
-scopeDepth :: Scope -> Int
-scopeDepth = Prelude.length . splitOn "::"

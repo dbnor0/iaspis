@@ -27,11 +27,14 @@ instance IaspisError BuildError where
     InvalidAssignOp f loc -> "Cannot use " <> showT loc <> " assignemnt operator to assign to " <> f
     InvalidMemoryLocationType f t -> "Invalid storage specifier for " <> f <> " of type " <> showT t
     MissingProxyMemberKind f -> "Missing proxy member kind for " <> f
+    UndeclaredFacet facet field -> "Use of undeclared facet " <> facet <> " in declaration of " <> field
     IllegalStorageAssig vId fId -> "Cannot storage assign to " <> vId <> " in " <> fId
     InvalidAssigType fId t1 t2 -> "Cannot assign " <> showT t2 <> " to " <> fId <> " of type " <> showT t1
     InvalidReturnType fId t1 t2 -> "Expected " <> showT t1 <> " as return type for " <> fId <> ", got " <> showT t2
     InvalidExpressionType e t1 t2 -> "Expected " <> showT t1 <> " for " <> showT e <> ", got " <> showT t2
     InvalidArgType f t1 t2 -> "Expected " <> showT t1 <> " for " <> showT f <> ", got " <> showT t2
+    InvalidFieldRef field facet -> field <> " was not declared as a proxy field for facet " <> facet
+    CustomError i -> "Custom error " <> i
     InvalidOp -> "Internal: Invalid operator used"
 
 

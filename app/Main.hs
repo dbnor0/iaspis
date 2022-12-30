@@ -19,10 +19,9 @@ import Control.Monad.Except
 import Analysis.MutabilityCheck
 import Analysis.TypeCheck (typeCheck)
 import Data.Aeson (encode)
-import Data.ByteString.Lazy.Char8 (unpack)
 import Analysis.ImportCheck
 import System.FilePath
-import qualified Data.Text as T
+import Data.Text as T
 import Data.Either.Combinators
 import Utils.Text
 import Data.Either
@@ -56,7 +55,7 @@ loadFile fp = do
 validate :: MonadState BuildEnv m => MonadError BuildError m => Module -> m ()
 validate m = do
   checkImports m
-  checkContracts
+  checkContracts m
   memCheck m
   mutCheck m
   typeCheck m

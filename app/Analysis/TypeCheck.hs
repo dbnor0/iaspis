@@ -33,7 +33,8 @@ typeCheckContract = traverseContract cFn pFn fFn
           _ -> return ()
         pFn = const $ return ()
         fFn = \case
-          FacetContract _ _ fns -> traverse_ typeCheckFn fns
+          FacetContract _ _ fns -> do
+            traverse_ typeCheckFn fns
           _ -> return ()
 
 typeCheckFn :: MonadState BuildEnv m => MonadError BuildError m => Function -> m ()
@@ -70,7 +71,7 @@ typeCheckExpr :: MonadState BuildEnv m => MonadError BuildError m => Expression 
 typeCheckExpr = \case
   LiteralE l -> return $ typeCheckLit l
   IdentifierE id -> do
-    f <- getField id
+    f <- getField id 
     return $ fieldType f
   FunctionCallE id args -> do
     fn <- getFn id

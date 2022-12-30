@@ -48,9 +48,9 @@ proxyContract = ProxyContract <$> proxyKind' <*> name  <*> facetList <*> memberL
         memberList = block $ many (endsIn ";" contractFieldDecl)
 
 facetContract :: Parser Contract
-facetContract = FacetContract <$> name <*> proxyList <*> memberList
+facetContract = FacetContract <$> name <*> proxy <*> memberList
   where name       = reserved "facet" *> identifier
-        proxyList  = reserved "to" *> sepBy identifier comma
+        proxy  = reserved "to" *> identifier
         memberList = block $ many function
 
 -- field declarations

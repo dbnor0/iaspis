@@ -31,12 +31,14 @@ contract Contract {
 
 open proxy Proxy for Facet1, Facet2 {
   @      *   public      bytes32 test;
-  @ Facet1   private mut string x; 
+  @ Facet1   private mut string x;
+  @ Facet2   private mut string y; 
 }
 
 facet Facet1 to Proxy {
-  public mut fn f1 (string x, uint256 y) -> string {
-    mut string c := x;
+  public mut fn f1 (uint256 uh) -> string {
+    mut uint256 x := 123;
+    mut string c := "123";
     mut string q := "abc";
     return c;
   }
@@ -51,4 +53,8 @@ facet Facet2 to Proxy {
     uint256 A := sq(25);
     return true;
   }
+}
+
+facet Facet3 to Proxy {
+
 }

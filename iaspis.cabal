@@ -103,7 +103,6 @@ executable iaspis
     , megaparsec
     , microlens-platform
     , mtl
-    , pretty-simple
     , text
   hs-source-dirs:   app
   default-language: Haskell2010

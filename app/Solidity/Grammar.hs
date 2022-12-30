@@ -1,8 +1,10 @@
 {-# LANGUAGE DerivingStrategies #-}
+
 module Solidity.Grammar where
 
 import Data.Text as T
 import qualified Yul.Grammar as Yul
+
 
 type Identifier = T.Text
 type ImportPath = T.Text

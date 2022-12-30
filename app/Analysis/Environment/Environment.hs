@@ -47,7 +47,7 @@ instance ToJSON ProxyEntry where
 data FacetEntry = FacetEntry
   { facetId :: Identifier
   , facetScope :: Scope
-  , proxyList :: [Identifier]
+  , proxy :: Identifier
   } deriving stock (Eq, Show, Generic)
 
 instance ToJSON FacetEntry where
@@ -76,7 +76,7 @@ data ContractType
   = Immutable
   | Proxy
   | Facet
-  deriving stock (Show, Generic)
+  deriving stock (Eq, Show, Generic)
 
 instance ToJSON ContractType where
 

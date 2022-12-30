@@ -178,7 +178,7 @@ data Contract
   }
   | FacetContract 
   { facetName :: Identifier
-  , proxyList :: [Identifier]
+  , proxyList :: Identifier
   , facetDecls :: [Function] 
   }
   deriving stock Show
