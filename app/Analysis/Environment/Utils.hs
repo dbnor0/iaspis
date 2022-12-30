@@ -16,7 +16,6 @@ import Control.Monad.Error.Class
 import Analysis.Environment.Error
 import Data.Maybe
 import qualified Data.List
-import Utils.Text
 
 
 enterScope :: MonadState BuildEnv m => Scope -> m ()
