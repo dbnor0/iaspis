@@ -183,8 +183,15 @@ data Contract
   }
   deriving stock Show
 
+data Import = Import
+  { importIds :: [Identifier]
+  , importModule :: Identifier
+  } deriving stock (Eq, Show, Generic)
+
+instance ToJSON Import where
+
 data Module = Module 
   { moduleDecl :: Identifier
-  , imports :: [Identifier]
+  , imports :: [Import]
   , declarations :: [Declaration] 
   } deriving stock Show

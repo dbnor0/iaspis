@@ -15,5 +15,5 @@ import Analysis.Environment.Error
 checkImports :: MonadError BuildError m => MonadState BuildEnv m => Module -> m ()
 checkImports (Module m imports _) = do
   e <- gets (^. env)
-  traverse_ (checkImport (e ^. modules)) imports
+  traverse_ (checkImport (e ^. modules)) (importModule <$> imports)
   where checkImport ms i = unless (i `elem` (moduleId <$> ms)) (throwError $ UndefImport i m)

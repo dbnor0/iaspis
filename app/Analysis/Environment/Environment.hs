@@ -24,7 +24,7 @@ type Bindings a = M.Map Identifier (Entry a)
 
 data ModuleEntry = ModuleEntry 
   { moduleId :: Identifier
-  , moduleImports :: [Identifier]
+  , moduleImports :: [Import]
   } deriving stock (Eq, Show, Generic)
 
 instance ToJSON ModuleEntry where

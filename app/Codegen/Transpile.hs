@@ -17,9 +17,9 @@ transpile ms =
       fs = facetDecls =<< ms
   in catMaybes $ (transpileContract <$> cs) <> (transpileProxy <$> ps) <> (transpileFacet <$> fs)
 
-transpileContract :: ([I.Identifier], I.Contract) -> Maybe S.Module
+transpileContract :: ([I.Import], I.Contract) -> Maybe S.Module
 transpileContract (is, I.ImmutableContract { contractName, contractFields, contractFns }) =
-  Just $ S.Module { moduleId=contractName, S.imports=is, decls=[ContractDef contractDef] }
+  Just $ S.Module { moduleId=contractName, S.imports=importIds =<< is, decls=[ContractDef contractDef] }
   where contractDef =
           ContractDefinition
           { contractAbstractSpec = False
@@ -125,14 +125,14 @@ transpileBinaryOp = \case
   I.BitwiseDisjunctionOp -> S.BitwiseDisjunctionOp
   I.BitwiseExclDisjunctionOp -> S.BitwiseExclDisjunctionOp
 
-transpileProxy :: ([I.Identifier], I.Contract) -> Maybe S.Module
+transpileProxy :: ([I.Import], I.Contract) -> Maybe S.Module
 transpileProxy (is, I.ProxyContract { proxyName, facetList }) =
-  Just $ S.Module { moduleId=proxyName, S.imports=is <> facetList, decls=[] }
+  Just $ S.Module { moduleId=proxyName, S.imports=(importIds =<< is) <> facetList, decls=[] }
 transpileProxy _ = Nothing
 
-transpileFacet :: ([I.Identifier], I.Contract) -> Maybe S.Module
+transpileFacet :: ([I.Import], I.Contract) -> Maybe S.Module
 transpileFacet (is, I.FacetContract { facetName, proxyList }) =
-  Just $ S.Module { moduleId=facetName, S.imports=is <> [proxyList], decls=[] }
+  Just $ S.Module { moduleId=facetName, S.imports=(importIds =<< is) <> [proxyList], decls=[] }
 transpileFacet _ = Nothing
 
 transpileType :: I.Type -> S.Type

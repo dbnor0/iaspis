@@ -111,7 +111,7 @@ importScopes = do
   s <- gets (^. scope)
   e <- gets (^. env)
   local <- localScopes
-  return $ local <> moduleImports (Prelude.head (ms s e))
+  return $ local <> (importModule <$> moduleImports (Prelude.head (ms s e)))
   where ms s e = Prelude.filter ((==) (scopeModule s) . moduleId) (e ^. modules)
 
 facetProxyScope :: MonadState BuildEnv m => m Scope

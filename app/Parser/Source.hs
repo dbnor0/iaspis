@@ -25,8 +25,9 @@ module' = module'' <* eof
 moduleDecl :: Parser Identifier
 moduleDecl = endsIn ";" (reserved "module" *> identifier)
 
-importStmt :: Parser Identifier
-importStmt = endsIn ";" (reserved "import" *> identifier)
+importStmt :: Parser Import
+importStmt = endsIn ";" stmt
+  where stmt = Import <$> (reserved "import" *> sepBy1 identifier comma) <*> (reserved "from" *> identifier)
 
 decl :: Parser Declaration
 decl = contract
