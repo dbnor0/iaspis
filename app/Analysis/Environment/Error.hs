@@ -20,6 +20,7 @@ data BuildError
   | UndefProxy Identifier Identifier
   | UndefFacet Identifier Identifier
   | UndefImport Identifier Identifier
+  | UndefExport Identifier Identifier Identifier
   | InvalidAssignOp Identifier MemoryLocation
   | InvalidMemoryLocationType Identifier Type
   | MissingProxyMemberKind Identifier

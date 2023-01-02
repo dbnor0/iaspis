@@ -24,6 +24,7 @@ instance IaspisError BuildError where
     UndefFn s f -> "Undefined function " <> f <> " in scope " <> s
     UndefType s t -> "Undefined type " <> t <> " in scope " <> s
     UndefImport i m -> "Undefined import " <> i <> " in module " <> m
+    UndefExport id i m -> "Module " <> m <> " does not export " <> i <> " in " <> id
     InvalidAssignOp f loc -> "Cannot use " <> showT loc <> " assignemnt operator to assign to " <> f
     InvalidMemoryLocationType f t -> "Invalid storage specifier for " <> f <> " of type " <> showT t
     MissingProxyMemberKind f -> "Missing proxy member kind for " <> f

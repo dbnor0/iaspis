@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 module Analysis.Environment.Utils where
 
@@ -16,6 +17,7 @@ import Control.Monad.Error.Class
 import Analysis.Environment.Error
 import Data.Maybe
 import qualified Data.List
+import Utils.Text
 
 
 enterScope :: MonadState BuildEnv m => Scope -> m ()
@@ -98,6 +100,19 @@ getFacetField id = do
       Just f' -> return (Proxy, entry f')
   else
     return (Immutable, (entry . Prelude.head . catMaybes) le)
+
+isTopLevelEntry :: MonadState BuildEnv m => Identifier -> Identifier -> m Bool
+isTopLevelEntry id m = do
+  e <- gets (^. env)
+  return $ isEntryIn k (cWithScope <$> e ^. contracts) 
+        || isEntryIn k (pWithScope <$> e ^. proxies) 
+        || isEntryIn k (fWithScope <$> e ^. facets)
+  where isEntryIn k bs = k `elem` bs
+        k = m <> "::" <> id
+        cWithScope ContractEntry{ contractId, contractScope } = contractScope <> "::" <> contractId
+        pWithScope ProxyEntry{ proxyId, proxyScope } = proxyScope <> "::" <> proxyId
+        fWithScope FacetEntry{ facetId, facetScope } = facetScope <> "::" <> facetId
+
 
 localScopes :: MonadState BuildEnv m => m [Scope]
 localScopes = do
