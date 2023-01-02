@@ -119,6 +119,8 @@ data PrimitiveType
   | IntT Int
   | UintT Int
   | BytesDynamicT
+  | UnitT
+  | UserDefinedT Identifier
   deriving stock (Eq, Show)
 
 data MappingType = MappingType
@@ -175,6 +177,7 @@ data UnaryOp
 data Statement
   = BlockStmt [Statement]
   | VarDeclStmt Identifier MemoryLocation (Maybe Expression)
+  | AssignmentStmt Identifier Expression
   | ExpressionStmt Expression
   | IfStmt Expression Statement (Maybe Statement)
   | ForStmt Statement Statement Expression Statement

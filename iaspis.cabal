@@ -34,7 +34,11 @@ executable iaspis
     Analysis.MemoryCheck
     Analysis.MutabilityCheck
     Analysis.TypeCheck
+    Codegen.Generate
+    Codegen.Transpile
     Codegen.Types
+    Codegen.Utils
+    Iaspis.DeclUtils
     Iaspis.Grammar
     Iaspis.Prelude
     Iaspis.TypeUtils

@@ -23,9 +23,21 @@ contract Contract {
     x <- "2";
   }
 
+  public fn fact (uint256 n) -> uint256 {
+    if (n == 1) {
+      return 1;
+    }
+    return n * fact(n - 1);
+  }
+
   public mut fn f1 () override {
     a <- 123;
-    return;
+    if (true) {
+      return;
+    } else {
+      return;
+    }
+    a <- 256;
   }
 }
 

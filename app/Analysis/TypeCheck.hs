@@ -121,19 +121,22 @@ typeCheckBinaryExpr e1 e2 op = do
           (throwError $ InvalidExpressionType e1 (Right "numeric") t1)
         unless (isNumeric t2)
           (throwError $ InvalidExpressionType e2 (Right "numeric") t2)
-      | op `elem` eqOps ->
-        unless (t1 == t2) 
+        return t1
+      | op `elem` eqOps -> do
+        unless (t1 == t2)
           (throwError $ InvalidExpressionType e2 (Left t1) t2)
+        return BoolT
       | op `elem` logicalOps -> do
         unless (t1 == BoolT)
           (throwError $ InvalidExpressionType e1 (Left BoolT) t1)
         unless (t2 == BoolT)
           (throwError $ InvalidExpressionType e2 (Left BoolT) t2)
+        return t1
       | op `elem` bitwiseOps -> do
         unless (isBitwise t1)
           (throwError $ InvalidExpressionType e1 (Right "bitwise") t1)
         unless (isBitwise t2)
           (throwError $ InvalidExpressionType e2 (Right "bitwise") t2)
+        return t1
       | otherwise -> throwError InvalidOp
-  return t1
 

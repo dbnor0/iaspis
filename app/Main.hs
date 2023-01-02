@@ -18,7 +18,6 @@ import Analysis.Environment.Error
 import Control.Monad.Except
 import Analysis.MutabilityCheck
 import Analysis.TypeCheck (typeCheck)
-import Data.Aeson (encode)
 import Analysis.ImportCheck
 import System.FilePath
 import Data.Text as T
@@ -26,9 +25,10 @@ import Data.Either.Combinators
 import Utils.Text
 import Data.Either
 import Data.Foldable
-import Data.ByteString.Lazy.Char8 as BS
 import Analysis.Environment.Environment
 import Analysis.Environment.Utils
+import Codegen.Transpile (transpile)
+import Codegen.Generate
 
 
 extension :: FilePath
@@ -77,8 +77,6 @@ main = do
           case err of
             Left be -> do
               print $ showErr be
-              Prelude.writeFile "output.json" (BS.unpack $ encode env)
-            Right _ -> do
-              Prelude.writeFile "output.json" (BS.unpack $ encode env)
+            Right _ -> traverse_ (genFile ".\\output") (genModule <$> transpile modules)
 
 
