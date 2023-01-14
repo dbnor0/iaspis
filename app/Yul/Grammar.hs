@@ -13,9 +13,6 @@ data Statement
   | AssignmentStmt Expression Expression
   | IfStmt Expression Statement
   | SwitchStmt Expression [(Identifier, Statement)]
-  | LeaveStmt
-  | BreakStmt
-  | ContinueStmt
   deriving stock (Eq, Show)
 
 data Expression 

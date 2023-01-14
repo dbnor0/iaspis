@@ -40,7 +40,7 @@ mutCheckStmt :: MonadState BuildEnv m => MonadError BuildError m => Identifier -
 mutCheckStmt fId = \case  
   VarDeclStmt field loc _ -> when (loc == Storage) 
     (throwError $ IllegalStorageAssig (fieldName field) fId)
-  AssignmentStmt vId loc _ -> when (loc == Storage) 
+  AssignmentStmt (IdentifierE vId) loc _ -> when (loc == Storage) 
     (throwError $ IllegalStorageAssig vId fId)
   IfStmt _ b1 b2 -> do
     mutCheckStmt fId b1

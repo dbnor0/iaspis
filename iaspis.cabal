@@ -103,6 +103,7 @@ executable iaspis
     , containers
     , directory
     , either
+    , extra
     , filepath
     , megaparsec
     , microlens-platform

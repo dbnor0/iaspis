@@ -5,16 +5,18 @@
 
 module Codegen.Generate where
 
-import Codegen.Types
+import Codegen.Types as CG
 import Data.Text as T
 import Solidity.Grammar as S
 import Data.Text.IO as T
-import Control.Monad.State
+import Control.Monad.State ( State, modify, evalState )
 import Data.List qualified as L
 import Data.Function
 import Lens.Micro.Platform
+import Yul.Grammar as Y
 import Utils.Text
-import Codegen.Utils ( genText )
+import Codegen.Utils
+import qualified Data.List
 
 
 type SolTextGen = State GenState SolText
@@ -34,16 +36,16 @@ genModule Module{ moduleId, imports, decls } = (T.unpack moduleId, code)
 genLicense :: SolTextGen
 genLicense = return "// SPDX-License-Identifier: MIT\n"
 
-genImport :: Identifier -> SolTextGen
+genImport :: S.Identifier -> SolTextGen
 genImport i = return $ "import \"./" <> i <> ".sol\";\n"
 
 genDecl :: Declaration -> SolTextGen
 genDecl = \case
-  ContractDef cd -> genContract cd
-  InterfaceDef id -> genInterface id
-  LibraryDef ld -> genLibrary ld
-  StructTypeDef sd -> genStruct sd
-  EnumDef ed -> genEnum ed
+  CG.ContractDef cd -> genContract cd
+  CG.InterfaceDef id -> genInterface id
+  CG.LibraryDef ld -> genLibrary ld
+  CG.StructTypeDef sd -> genStruct sd
+  CG.EnumDef ed -> genEnum ed
 
 genContract :: ContractDefinition -> SolTextGen
 genContract (ContractDefinition as cId inhL b) = do
@@ -56,23 +58,28 @@ genContract (ContractDefinition as cId inhL b) = do
 
 genContractBodyElem :: ContractBodyElem -> SolTextGen
 genContractBodyElem = \case
-  StateVarDecl svd -> genStateVarDecl svd
-  ConstructorDef f -> genFunction f
-  FunctionDef f -> genFunction f
-  FallbackDef f -> genFunction f
-  ReceiveDef f -> genFunction f
-  StructDef _ -> return ""
+  S.StateVarDecl svd -> genStateVarDecl svd
+  S.ConstructorDef f -> genFunction f
+  S.FunctionDef f -> genFunction f
+  S.FallbackDef f -> genFunction f
+  S.ReceiveDef f -> genFunction f
+  S.StructDef s -> genStruct s
+  S.EnumDef e -> genEnum e
 
 genStateVarDecl :: StateVarDeclaration -> SolTextGen
-genStateVarDecl (StateVarDeclaration t v m id _) = genText decl
-  where decl = genType t <> " " <> genVisibility v <> " " <> genModifier m <> " " <> id <> ";\n"
+genStateVarDecl (StateVarDeclaration t v m id e) = genText decl
+  where decl = genType t <> " " <> genVisibility v <> " " <> genModifier m <> " " <> id <> init e <> ";\n"
+        init = maybe "" (\e -> " = " <> genExpr e)
 
 genFunction :: FunctionDefinition -> SolTextGen
 genFunction f@FunctionDefinition{ functionBody } = do
   h <- genFunctionHeader f
   b <- withIndent' genStmt functionBody  
   cb <- genText "}\n\n"
-  return $ h <> " {\n" <> b <> cb
+  if Data.List.null functionBody then
+    return $ h <> ";\n\n"
+  else
+    return $ h <> " {\n" <> b <> cb
 
 genFunctionHeader :: FunctionDefinition -> SolTextGen
 genFunctionHeader (FunctionDefinition id v m p vt o args rt _) = genText header
@@ -89,27 +96,27 @@ genFunctionHeader (FunctionDefinition id v m p vt o args rt _) = genText header
           | otherwise = "function "
 
 genFunctionArg :: FunctionArg -> SolText
-genFunctionArg (FunctionArg t loc id) = genType t <> " " <> genLocation loc <> " " <> id
+genFunctionArg (FunctionArg t loc id) = genType t <> " " <> genLocationWithType t loc <> " " <> id
 
 genReturnType :: [FunctionArg] -> SolText
 genReturnType [FunctionArg (PrimitiveT UnitT) _ _] = ""
-genReturnType [FunctionArg t _ _] = "returns (" <> genType t <> ")"
-genReturnType args = "returns (" <> T.concat (L.intersperse "," (genType . functionArgType <$> args)) <> ")"
+genReturnType [a] = "returns (" <> genFunctionArg a <> ")"
+genReturnType args = "returns (" <> T.concat (L.intersperse "," (genFunctionArg <$> args)) <> ")"
 
-genStmt :: Statement -> SolTextGen
+genStmt :: S.Statement -> SolTextGen
 genStmt = \case
-  BlockStmt stmts -> do
+  S.BlockStmt stmts -> do
     ob <- genText "{\n"
     ss <- withIndent' genStmt stmts
     cb <- genText "}\n"
     return $ ob <> ss <> cb
-  VarDeclStmt id ml e -> do
-    let decl = id <> " " <> genLocation ml
+  S.VarDeclStmt f e -> do
+    let decl = genType (functionArgType f) <> " " <> genLocationWithType (functionArgType f) (functionArgLocation f) <> " " <>  functionArgId f
         expr = maybe "" (\e -> " = " <> genExpr e) e
     genText $ decl <> expr <> ";\n"
-  AssignmentStmt id e -> genText $ id <> " = " <> genExpr e <> ";\n"
-  ExpressionStmt e -> genText $ genExpr e
-  IfStmt cond b1 b2 -> do
+  S.AssignmentStmt id e -> genText $ genExpr id <> " = " <> genExpr e <> ";\n"
+  S.ExpressionStmt e -> genText $ genExpr e <> ";\n"
+  S.IfStmt cond b1 b2 -> do
     c <- genText $ "if(" <> genExpr cond <> ") "
     b1' <- withIndent $ genStmt b1
     b2' <- maybe (return "") genElse b2
@@ -118,41 +125,72 @@ genStmt = \case
             e <- genText "else "
             b <- withIndent $ genStmt s
             genText $ e <> b
-  ForStmt s c i b -> do
+  S.ForStmt s c i b -> do
     s' <- genStmt s
     c' <- genStmt c
     let i' = genExpr i
     b' <- withIndent $ genStmt b
-    genText $ "for(" <> s' <> "; " <> c' <> "; " <> i' <> ")" <> b'
-  WhileStmt cond b -> do
+    return $ "for(" <> s' <> " " <> c' <> " " <> i' <> ")" <> b'
+  S.WhileStmt cond b -> do
     c <- genText $ "while(" <> genExpr cond <> ")"
     ss <- withIndent $ genStmt b
     cb <- genText "}"
     return $ c <> ss <> cb
-  ContinueStmt -> genText "continue;\n"
-  BreakStmt -> genText "break;\n"
-  ReturnStmt e -> genText $ "return " <> maybe "" genExpr e <> ";\n"
-  RevertStmt e -> genText $ "revert(" <> genExpr e <> ");\n"
-  AssemblyStmt _ -> genText "asm"
+  S.ContinueStmt -> genText "continue;\n"
+  S.BreakStmt -> genText "break;\n"
+  S.ReturnStmt e -> genText $ "return " <> maybe "" genExpr e <> ";\n"
+  S.RevertStmt e -> genText $ "revert(" <> genExpr e <> ");\n"
+  S.AssemblyStmt asm -> do
+    s <- genText "assembly {\n"
+    asm' <- withIndent $ genYulStmt asm
+    e <- genText "}\n"
+    return $ s <> asm' <> e
 
-genExpr :: Expression -> SolText
+genYulStmt :: Y.Statement -> SolTextGen
+genYulStmt = \case
+  Y.BlockStmt stmts -> do
+    s <- genText "{"
+    ss <- withIndent' genYulStmt stmts
+    e <- genText "}\n"
+    return $ s <> ss <> e
+  Y.VarDeclStmt id e -> genText $ "let " <> id <> " := " <> genYulExpr e <> "\n"
+  Y.AssignmentStmt lv e -> genText $ genYulExpr lv <> " := " <> genYulExpr e <> "\n" 
+  Y.IfStmt c b -> do
+    c' <- genText $ "if " <> genYulExpr c <> " {\n"
+    b' <- withIndent $ genYulStmt b
+    e <- genText "}\n"
+    return $ c' <> b' <> e
+  Y.SwitchStmt _ _ -> genText "case"
+
+genYulExpr :: Y.Expression -> SolText 
+genYulExpr = \case  
+  Y.IdentifierE id -> id
+  Y.BuiltinE b -> genYulBuiltin b
+  Y.PathE lv m -> genYulExpr lv <> "." <> genYulExpr m
+  Y.FunctionCallE id es -> genYulExpr id <> "(" <> T.concat (Data.List.intersperse "," (genYulExpr <$> es)) <> ")"
+
+genYulBuiltin :: Y.Builtin -> SolText
+genYulBuiltin = T.toLower . showT
+
+genExpr :: S.Expression -> SolText
 genExpr = \case
-  LiteralE lit -> genLit lit
-  IdentifierE id -> id
-  InlineArrayE es -> "[" <> T.concat (L.intersperse "," (genExpr <$> es)) <> "]"
-  MemberAccessE lv m -> genExpr lv <> "." <> genExpr m
-  SubscriptE lv i -> genExpr lv <> "[" <> genExpr i <> "]"
-  FunctionCallE id args -> genExpr id <> "(" <> T.concat (L.intersperse "," (genExpr <$> args)) <> ")"
-  CastE t e -> genType t <> "(" <> genExpr e <> ")"
-  BinaryE op e1 e2 -> genExpr e1 <> " " <> genBinaryOp op <> " " <> genExpr e2
-  UnaryE op e -> genUnaryOp op <> " " <> genExpr e
+  S.LiteralE lit -> genLit lit
+  S.IdentifierE id -> id
+  S.InlineArrayE es -> "[" <> T.concat (L.intersperse "," (genExpr <$> es)) <> "]"
+  S.MemberAccessE lv m -> genExpr lv <> "." <> genExpr m
+  S.SubscriptE lv i -> genExpr lv <> "[" <> genExpr i <> "]"
+  S.FunctionCallE id args -> genExpr id <> "(" <> T.concat (L.intersperse "," (genExpr <$> args)) <> ")"
+  S.InstantiationE id args -> "new " <> genExpr id <> "(" <> T.concat (L.intersperse "," (genExpr <$> args)) <> ")"
+  S.CastE t e -> genType t <> "(" <> genExpr e <> ")"
+  S.BinaryE op e1 e2 -> genExpr e1 <> " " <> genBinaryOp op <> " " <> genExpr e2
+  S.UnaryE op e -> genUnaryOp op <> " " <> genExpr e
 
-genLit :: Literal -> SolText
+genLit :: S.Literal -> SolText
 genLit = \case
-  StringLit v -> v
-  NumberLit n -> showT n
-  BooleanLit b -> T.toLower $ showT b
-  HexLit v -> v
+  S.StringLit v -> "\"" <> v <> "\""
+  S.NumberLit n -> showT n
+  S.BooleanLit b -> T.toLower $ showT b
+  S.HexLit v -> v
 
 genBinaryOp :: BinaryOp -> SolText
 genBinaryOp = \case
@@ -184,16 +222,38 @@ genUnaryOp = \case
   DecrementOp -> "--"
 
 genInterface :: InterfaceDefinition -> SolTextGen
-genInterface _ = return ""
+genInterface (InterfaceDefinition id inhL b) = do
+  let cs = T.concat $ L.intersperse ", " inhL
+      inhCs = if not $ Prelude.null inhL then " is " <> cs else ""
+      header = "interface " <> id <> inhCs <> "{\n"
+  es <- withIndent' genContractBodyElem b
+  return $ header <> es <> "}\n"
 
 genLibrary :: LibraryDefinition -> SolTextGen
-genLibrary _ = return ""
+genLibrary LibraryDefinition { libraryId, libraryBody } = do
+  es <- withIndent' genContractBodyElem libraryBody
+  genText $ "library " <> libraryId <> " {\n" <> es <> "}\n"
 
 genStruct :: StructDefinition -> SolTextGen
-genStruct _ = return ""
+genStruct StructDefinition{ structId, structMembers } = do
+  ms <- withIndent' genStructMember structMembers
+  cb <- genText "}\n"
+  genText $ "struct " <> structId <> " {\n" <> ms <> cb
+
+genStructMember :: StructMember -> SolTextGen
+genStructMember (StructMember t id) = do
+  genText $ genType t <> " " <> id <> ";\n"
 
 genEnum :: EnumDefinition -> SolTextGen
-genEnum _ = return ""
+genEnum EnumDefinition{ enumId, enumMembers } = do
+  modify (& indentation +~ 1)
+  ms <- traverse genText enumMembers
+  modify (& indentation -~ 1)
+  cb <- genText "}\n"
+  genText $ "enum " <> enumId <> " {\n" <> T.concat (Data.List.intersperse ",\n" ms) <> "\n" <> cb
+
+genEnumMember :: S.Identifier -> SolTextGen
+genEnumMember id = genText $ id <> ",\n"
 
 genType :: Type -> SolText
 genType = \case
@@ -207,7 +267,10 @@ genType = \case
   PrimitiveT BytesDynamicT -> "bytes"
   PrimitiveT UnitT -> ""
   PrimitiveT (UserDefinedT id) -> id
-  MappingT (MappingType k v) -> "mapping (" <> genType (PrimitiveT k) <> " => " <> genType v
+  PrimitiveT (StructT id) -> id
+  PrimitiveT (EnumT id) -> id
+  PrimitiveT (ContractT id) -> id
+  MappingT (MappingType k v) -> "mapping (" <> genType (PrimitiveT k) <> " => " <> genType v <> ")"
   ArrayT (ArrayType t e) -> genType t <> "[" <> maybe "" genExpr e <> "]"
 
 genVisibility :: Visibility -> SolText
@@ -216,6 +279,16 @@ genVisibility = \case
   Private -> "private"
   Internal -> "internal"
   External -> "external"
+
+genLocationWithType :: Type -> MemoryLocation -> SolText
+genLocationWithType t l =
+  case (t, l) of
+    (ArrayT _, l) -> genLocation l
+    (MappingT _, l) -> genLocation l
+    (PrimitiveT BytesDynamicT, l) -> genLocation l
+    (PrimitiveT (StructT _), l) -> genLocation l
+    (PrimitiveT (ContractT _), l) -> genLocation l
+    _ -> ""
 
 genLocation :: MemoryLocation -> SolText
 genLocation = \case
@@ -251,3 +324,4 @@ withIndent' f as = do
     r <- traverse f as
     modify (& indentation -~ 1)
     return $ T.concat r
+

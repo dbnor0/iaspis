@@ -46,7 +46,7 @@ typeCheckStmt fn = \case
     et <- typeCheckExpr ex
     unless (fieldType f == et)
       (throwError $ InvalidAssigType (fieldName f) (fieldType f) et)
-  AssignmentStmt fId _ ex -> do
+  AssignmentStmt (IdentifierE fId) _ ex -> do
     f <- getField fId
     et <- typeCheckExpr ex
     unless (fieldType f == et)

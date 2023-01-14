@@ -42,10 +42,12 @@ memCheckStmt = \case
     when (fieldLocation == Storage && not (canBeStorage fieldType)) 
       (throwError $ InvalidMemoryLocationType fieldName fieldType)
     unless (fieldLocation == assigLoc) (throwError $ InvalidAssignOp fieldName assigLoc)
-  AssignmentStmt id assignLoc _ -> do
+  AssignmentStmt (IdentifierE id) assignLoc _ -> do
     f <- getField id
     unless (fieldLocation f == assignLoc) 
       (throwError $ InvalidAssignOp (fieldName f) assignLoc)
+  AssignmentStmt e _ _ -> do
+    throwError $ InvalidLValue e
   IfStmt _ b1 b2 -> do
     memCheckStmt b1
     maybe (return ()) memCheckStmt b2

@@ -9,7 +9,7 @@ import Text.Megaparsec
 import Control.Monad
 import System.Directory
 import Control.Monad.State
-import Iaspis.Grammar
+import Iaspis.Grammar as I
 import Analysis.Environment.Build
 import Utils.Error
 import Analysis.ContractCheck
@@ -29,30 +29,29 @@ import Analysis.Environment.Environment
 import Analysis.Environment.Utils
 import Codegen.Transpile (transpile)
 import Codegen.Generate
+import Data.Aeson
+import Data.ByteString.Lazy.Char8 as BS (unpack)
 
 
-extension :: FilePath
-extension = ".ip"
+hasExt :: FilePath -> FilePath -> Bool
+hasExt ex fp = snd (splitExtension fp) == ex
 
-iaspisFile :: FilePath -> FilePath -> Bool
-iaspisFile ex fp = snd (splitExtension fp) == ex
-
-getContractFiles :: FilePath -> IO [FilePath]
-getContractFiles dir = do
+getContractFiles :: FilePath -> FilePath -> IO [FilePath]
+getContractFiles ext dir = do
   isDir <- doesDirectoryExist dir
   if isDir then do
     contents <- listDirectory dir
-    join <$> traverse getContractFiles (withRelativePath <$> contents)
+    join <$> traverse (getContractFiles ext) (withRelativePath <$> contents)
   else
-    return $ [dir | iaspisFile extension dir]
+    return $ [dir | hasExt ext dir]
   where withRelativePath = (++) (dir ++ "\\")
 
-loadFile :: FilePath -> IO (Either T.Text Module)
+loadFile :: FilePath -> IO (Either T.Text I.Module)
 loadFile fp = do
   file <- T.readFile fp
   return $ mapLeft showT $ runParser Parser.Source.module' "" file
 
-validate :: MonadState BuildEnv m => MonadError BuildError m => Module -> m ()
+validate :: MonadState BuildEnv m => MonadError BuildError m => I.Module -> m ()
 validate m = do
   checkImports m
   checkContracts m
@@ -60,9 +59,18 @@ validate m = do
   mutCheck m
   typeCheck m
 
+writeModules :: FilePath -> [I.Module] -> IO ()
+writeModules out ms = traverse_ (genFile out) (genModule <$> transpile ms)
+
+writeEIP2535 :: IO ()
+writeEIP2535 = do
+  fps <- getContractFiles ".sol" "./sol"
+  cs <- traverse T.readFile fps
+  traverse_ (uncurry T.writeFile) $ Prelude.zip (("./output/" <>) . takeFileName <$> fps) cs
+
 main :: IO ()
 main = do
-  files <- getContractFiles "./contracts"
+  files <- getContractFiles ".ip" "./contracts"
   parsed <- traverse loadFile files
   if Prelude.null $ rights parsed then
     print $ "Parser error(s): " <> show (lefts parsed)
@@ -76,7 +84,12 @@ main = do
           let (err, env) = runState (runExceptT $ traverse_ validate modules) e
           case err of
             Left be -> do
+              Prelude.writeFile "output.json" (BS.unpack $ encode env)
+              Prelude.writeFile "ast.json" (BS.unpack $ encode modules)
               print $ showErr be
-            Right _ -> traverse_ (genFile ".\\output") (genModule <$> transpile modules)
+            Right _ -> do
+              writeEIP2535
+              writeModules "./output" modules
+
 
 

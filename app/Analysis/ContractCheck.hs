@@ -73,7 +73,7 @@ contractCheckFn ids f@Function{ functionBody } = traverseFn f $ traverse_ (contr
 contractCheckStmt :: MonadState BuildEnv m => MonadError BuildError m => [Identifier] -> Statement -> m ()
 contractCheckStmt ids = \case
   VarDeclStmt _ _ e -> contractCheckExpr ids e
-  AssignmentStmt id _ e -> contractCheckId ids id >> contractCheckExpr ids e
+  AssignmentStmt id _ e -> contractCheckExpr ids id >> contractCheckExpr ids e
   ReturnStmt e -> maybe (return ()) (contractCheckExpr ids) e
   IfStmt cond b1 b2 -> do
     contractCheckExpr ids cond

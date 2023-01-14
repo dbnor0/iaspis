@@ -7,15 +7,67 @@ module Codegen.Transpile where
 import Iaspis.Grammar as I hiding (proxyDecls, facetDecls)
 import Codegen.Types as S
 import Solidity.Grammar as S
+import Yul.Grammar as Y
 import Iaspis.DeclUtils
 import Data.Maybe
+import Data.List.Extra
+import Codegen.Utils
 
 transpile :: [I.Module] -> [S.Module]
 transpile ms =
   let cs = contractDecls =<< ms
       ps = proxyDecls =<< ms
       fs = facetDecls =<< ms
-  in catMaybes $ (transpileContract <$> cs) <> (transpileProxy <$> ps) <> (transpileFacet <$> fs)
+      storageM = Just $ storageModule ps
+  in catMaybes $ (transpileContract <$> cs) <> (transpileProxy <$> ps) <> (transpileFacet <$> fs) <> [storageM]
+
+storageModule :: [([I.Import], I.Contract)] -> S.Module
+storageModule ps =
+  S.Module
+  { S.imports = importIds =<< (fst =<< ps)
+  , moduleId = "StorageStructs"
+  , decls = [S.LibraryDef libraryDef]
+  }
+  where libraryDef = LibraryDefinition "StorageStructs" (storageModuleElems . snd =<< ps)
+
+storageModuleElems :: Contract -> [S.ContractBodyElem]
+storageModuleElems (ProxyContract _ _ _ fs) = toElems . storageTuple =<< fieldMappings
+  where toElems = \(v, s, f) -> [StateVarDecl v, StructDef s, FunctionDef f]
+        fieldMappings = groupSort . catMaybes $ kindToFacetId <$> fs
+        kindToFacetId f@Field{ fieldProxyKind } =
+          case fieldProxyKind of
+            Nothing -> Nothing
+            (Just SharedProxyMember) -> Just ("global", f)
+            (Just (UniqueProxyMember id)) -> Just (id, f)
+storageModuleElems _ = []
+
+storageTuple :: (S.Identifier, [Field]) -> (StateVarDeclaration, StructDefinition, FunctionDefinition)
+storageTuple (sName, fs) = (ptrDecl, structDef, fnDef)
+  where ptrDecl = StateVarDeclaration
+                  { stateVarType = bytes 32
+                  , stateVarVisibility = S.Public
+                  , stateVarModifier = Just Constant
+                  , stateVarId = ptrName
+                  , stateVarInitializer = Just ptrExpr
+                  }
+        ptrName = sName <> "_storage_position"
+        ptrExpr = S.FunctionCallE (S.IdentifierE "keccak256") [S.LiteralE (S.StringLit (sName <> "_storage_struct"))]
+        structDef = S.StructDefinition (sName <> "_storage_struct") (structMember <$> fs)
+        structMember Field{fieldName, fieldType} = StructMember (transpileType fieldType) fieldName
+        fnDef = S.FunctionDefinition
+                { functionId = sName <> "Storage"
+                , S.functionVisibility = S.Internal
+                , S.functionMutability = S.Pure
+                , functionPayablity = False
+                , functionVirtualSpec = False
+                , functionOverrideSpec = False
+                , S.functionArgs = []
+                , S.functionReturnType = [S.FunctionArg (struct (sName <> "_storage_struct")) S.Storage "ds"]
+                , S.functionBody = fnBody
+                }
+        fnBody = [ S.VarDeclStmt (S.FunctionArg (bytes 32) S.Memory "position") (Just (S.IdentifierE ptrName))
+                 , S.AssemblyStmt (Y.AssignmentStmt (Y.PathE (Y.IdentifierE "ds") (Y.IdentifierE "slot")) (Y.IdentifierE "position"))
+                 ]
 
 transpileContract :: ([I.Import], I.Contract) -> Maybe S.Module
 transpileContract (is, I.ImmutableContract { contractName, contractFields, contractFns }) =
@@ -31,9 +83,6 @@ transpileContract (is, I.ImmutableContract { contractName, contractFields, contr
         fns f@(Function (FunctionHeader _ _ _ "fallback" _ _ _) _) = (FallbackDef . transpileFunctionDef) f
         fns f@(Function (FunctionHeader _ _ _ "receive" _ _ _) _) = (ReceiveDef . transpileFunctionDef) f
         fns f = (FunctionDef . transpileFunctionDef) f
-
-
-        
 transpileContract _ = Nothing
 
 transpileContractField :: I.Field -> S.StateVarDeclaration
@@ -46,7 +95,7 @@ transpileContractField Field{ fieldType, fieldVisibility, fieldName } =
     , stateVarInitializer = Nothing
     }
 
-transpileFunctionDef :: I.Function -> S.FunctionDefinition 
+transpileFunctionDef :: I.Function -> S.FunctionDefinition
 transpileFunctionDef Function{ functionHeader, I.functionBody } =
   FunctionDefinition
     { S.functionId = functionName functionHeader
@@ -62,7 +111,7 @@ transpileFunctionDef Function{ functionHeader, I.functionBody } =
 
 transpileFunctionArg :: I.Field -> S.FunctionArg
 transpileFunctionArg Field{fieldType, fieldLocation, fieldName} =
-  FunctionArg 
+  FunctionArg
     { functionArgType = transpileType fieldType
     , functionArgLocation = transpileLocation fieldLocation
     , functionArgId = fieldName
@@ -70,7 +119,7 @@ transpileFunctionArg Field{fieldType, fieldLocation, fieldName} =
 
 transpileReturnType :: I.Type -> S.FunctionArg
 transpileReturnType t =
-  FunctionArg 
+  FunctionArg
     { functionArgType = transpileType t
     , functionArgLocation = S.Memory
     , functionArgId = ""
@@ -78,8 +127,8 @@ transpileReturnType t =
 
 transpileStmt :: I.Statement -> S.Statement
 transpileStmt = \case
-  I.VarDeclStmt f ml _ -> S.VarDeclStmt (fieldName f) (transpileLocation ml) Nothing
-  I.AssignmentStmt id _ e -> S.AssignmentStmt id (transpileExpr e)
+  I.VarDeclStmt f _ e -> S.VarDeclStmt (transpileFunctionArg f) (Just $ transpileExpr e)
+  I.AssignmentStmt id _ e -> S.AssignmentStmt (transpileExpr id) (transpileExpr e)
   I.ReturnStmt e -> S.ReturnStmt $ transpileExpr <$> e
   I.IfStmt cond b1 b2 -> S.IfStmt (transpileExpr cond) (transpileStmt b1) (transpileStmt <$> b2)
   I.BlockStmt stmts -> S.BlockStmt $ transpileStmt <$> stmts
@@ -92,7 +141,7 @@ transpileExpr = \case
   I.LiteralE v -> S.LiteralE $ transpileValue v
   I.IdentifierE id -> S.IdentifierE id
   I.FunctionCallE id es -> S.FunctionCallE (S.IdentifierE id) (transpileExpr <$> es)
-  I.InstantiationE id es -> S.FunctionCallE (S.IdentifierE id) (transpileExpr <$> es)
+  I.InstantiationE id es -> S.InstantiationE (S.IdentifierE id) (transpileExpr <$> es)
   I.UnaryE op e -> S.UnaryE (transpileUnaryOp op) (transpileExpr e)
   I.BinaryE op e1 e2 -> S.BinaryE (transpileBinaryOp op) (transpileExpr e1) (transpileExpr e2)
 
@@ -145,6 +194,9 @@ transpileType = \case
   I.StringT -> S.PrimitiveT S.StringT
   I.UnitT -> S.PrimitiveT S.UnitT
   I.UserDefinedT id -> S.PrimitiveT $ S.UserDefinedT id
+  I.StructT id -> S.PrimitiveT $ S.StructT id
+  I.EnumT id -> S.PrimitiveT $ S.EnumT id
+  I.ContractT id -> S.PrimitiveT $ S.ContractT id
 
 transpileVisibility :: Maybe I.MemberVisibility -> S.Visibility
 transpileVisibility = \case
@@ -169,7 +221,7 @@ transpileLocation = \case
   I.Memory -> S.Memory
 
 transpileValue :: I.Value -> S.Literal
-transpileValue = \case  
+transpileValue = \case
   AddressV v -> S.HexLit v
   BoolV b -> S.BooleanLit b
   BytesV v -> S.HexLit v

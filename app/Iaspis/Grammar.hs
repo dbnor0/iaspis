@@ -21,6 +21,9 @@ data Type
   | StringT
   | UnitT
   | UserDefinedT Identifier
+  | StructT Identifier
+  | EnumT Identifier
+  | ContractT Identifier
   deriving stock (Eq, Show, Generic)
 
 instance ToJSON Type where
@@ -31,7 +34,9 @@ data Value
   | BytesV Text
   | UIntV Int
   | StringV Text
-  deriving stock (Eq, Show)
+  deriving stock (Eq, Show, Generic)
+
+instance ToJSON Value where
 
 data BinaryOp 
   = AdditionOp
@@ -52,7 +57,9 @@ data BinaryOp
   | BitwiseConjunctionOp
   | BitwiseDisjunctionOp
   | BitwiseExclDisjunctionOp
-  deriving stock (Eq, Show)
+  deriving stock (Eq, Show, Generic)
+
+instance ToJSON BinaryOp where
 
 data UnaryOp
   = ArithmeticNegationOp
@@ -60,7 +67,9 @@ data UnaryOp
   | BitwiseNegationOp
   | IncrementOp
   | DecrementOp
-  deriving stock (Eq, Show)
+  deriving stock (Eq, Show, Generic)
+
+instance ToJSON UnaryOp where
 
 data Expression
   = LiteralE Value
@@ -69,7 +78,9 @@ data Expression
   | InstantiationE Identifier [Expression]
   | UnaryE UnaryOp Expression
   | BinaryE BinaryOp Expression Expression
-  deriving stock (Eq, Show)
+  deriving stock (Eq, Show, Generic)
+
+instance ToJSON Expression where
   
 data MemoryLocation 
   = Storage
@@ -121,14 +132,17 @@ instance ToJSON Field where
 
 data Statement
   = VarDeclStmt Field MemoryLocation Expression
-  | AssignmentStmt Identifier MemoryLocation Expression 
+  | AssignmentStmt Expression MemoryLocation Expression 
   | ReturnStmt (Maybe Expression)
   | IfStmt Expression Statement (Maybe Statement)
   | BlockStmt [Statement]
   | BreakStmt
   | ContinueStmt
   | ExpressionStmt Expression
-  deriving stock (Eq, Show)
+  deriving stock (Eq, Show, Generic)
+
+instance ToJSON Statement where
+
 
 data FunctionHeader = FunctionHeader
   { functionVisibility :: MemberVisibility
@@ -145,12 +159,17 @@ instance ToJSON FunctionHeader where
 data Function = Function
   { functionHeader :: FunctionHeader 
   , functionBody :: [Statement]
-  } deriving stock Show
+  } deriving stock (Show, Generic)
+
+instance ToJSON Function where
 
 data ProxyKind 
   = ProxyOpen 
   | ProxyClosed
-  deriving stock Show
+  deriving stock (Show, Generic)
+
+instance ToJSON ProxyKind where
+
 
 data MemberDecl 
   = FieldDecl Field 
@@ -162,7 +181,9 @@ newtype ModuleDecl = ModuleDecl Identifier
 
 newtype Declaration 
   = ContractDecl Contract 
-  deriving stock Show
+  deriving stock (Show, Generic)
+
+instance ToJSON Declaration where
 
 data Contract 
   = ImmutableContract 
@@ -181,7 +202,9 @@ data Contract
   , proxyList :: Identifier
   , facetDecls :: [Function] 
   }
-  deriving stock Show
+  deriving stock (Show, Generic)
+
+instance ToJSON Contract where
 
 data Import = Import
   { importIds :: [Identifier]
@@ -194,4 +217,6 @@ data Module = Module
   { moduleDecl :: Identifier
   , imports :: [Import]
   , declarations :: [Declaration] 
-  } deriving stock Show
+  } deriving stock (Show, Generic)
+
+instance ToJSON Module where

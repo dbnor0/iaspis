@@ -31,5 +31,6 @@ data BuildError
   | InvalidExpressionType Expression (Either Type Text) Type
   | InvalidArgType Field Type Type
   | InvalidFieldRef Identifier Identifier
+  | InvalidLValue Expression
   | InvalidOp
   deriving stock (Eq, Show)

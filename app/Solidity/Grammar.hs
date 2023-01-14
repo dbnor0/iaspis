@@ -51,6 +51,7 @@ data ContractBodyElem
   | FallbackDef FunctionDefinition
   | ReceiveDef FunctionDefinition
   | StructDef StructDefinition
+  | EnumDef EnumDefinition
   | StateVarDecl StateVarDeclaration
   deriving stock (Eq, Show)
 
@@ -121,6 +122,9 @@ data PrimitiveType
   | BytesDynamicT
   | UnitT
   | UserDefinedT Identifier
+  | StructT Identifier
+  | EnumT Identifier
+  | ContractT Identifier
   deriving stock (Eq, Show)
 
 data MappingType = MappingType
@@ -140,6 +144,7 @@ data Expression
   | MemberAccessE Expression Expression
   | SubscriptE Expression Expression
   | FunctionCallE Expression [Expression]
+  | InstantiationE Expression [Expression]
   | CastE Type Expression
   | BinaryE BinaryOp Expression Expression
   | UnaryE UnaryOp Expression
@@ -176,8 +181,8 @@ data UnaryOp
 
 data Statement
   = BlockStmt [Statement]
-  | VarDeclStmt Identifier MemoryLocation (Maybe Expression)
-  | AssignmentStmt Identifier Expression
+  | VarDeclStmt FunctionArg (Maybe Expression)
+  | AssignmentStmt Expression Expression
   | ExpressionStmt Expression
   | IfStmt Expression Statement (Maybe Statement)
   | ForStmt Statement Statement Expression Statement

@@ -175,7 +175,7 @@ returnStmt = endsIn ";" stmt
 
 assignmentStmt :: Parser Statement
 assignmentStmt = endsIn ";" stmt
-  where stmt = AssignmentStmt <$> identifier <*> assignmentSymbol <*> expression
+  where stmt = AssignmentStmt <$> lvalueExpr <*> assignmentSymbol <*> expression
 
 assignmentSymbol :: Parser MemoryLocation
 assignmentSymbol = reserved' "<-" Storage <|> reserved' ":=" Memory
@@ -209,6 +209,9 @@ expression =
   `chainl1` logicalOps
   `chainl1` bitwiseOps
 
+lvalueExpr :: Parser Expression
+lvalueExpr = IdentifierE <$> identifier
+
 baseExpr :: Parser Expression
 baseExpr = backtrack
   [ factor
@@ -230,8 +233,8 @@ factor =
   parens expression
   <|> try instantiationExpr
   <|> try functionCallExpr
-  <|> literalExpr
-  <|> identifierExpr
+  <|> try literalExpr
+  <|> try identifierExpr
 
 literalExpr :: Parser Expression
 literalExpr = LiteralE <$> literal

@@ -35,6 +35,7 @@ instance IaspisError BuildError where
     InvalidExpressionType e t1 t2 -> "Expected " <> showT t1 <> " for " <> showT e <> ", got " <> showT t2
     InvalidArgType f t1 t2 -> "Expected " <> showT t1 <> " for " <> showT f <> ", got " <> showT t2
     InvalidFieldRef field facet -> field <> " was not declared as a proxy field for facet " <> facet
+    InvalidLValue e -> "Invalid lvalue " <> showT e
     InvalidOp -> "Internal: Invalid operator used"
 
 
