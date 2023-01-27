@@ -94,6 +94,7 @@ addStmt =
       bs <- gets (showT . ( ^. blockDepth))
       withScope bs $ traverse_ addStmt stmts
       return ()
+    AssignmentStmt (IdentifierE id) _ _ -> void $ getField id
     _ -> return ()
 
 uniqueId :: MonadError BuildError m => Identifier -> [Identifier] -> (Identifier -> BuildError) -> m ()
