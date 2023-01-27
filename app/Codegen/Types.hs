@@ -1,11 +1,12 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 
 module Codegen.Types where
 
 import Solidity.Grammar
 import Lens.Micro.Platform
-import qualified Data.Text as T
+import Data.Text qualified as T
 
 
 type SolText = T.Text

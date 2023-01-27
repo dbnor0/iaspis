@@ -16,7 +16,7 @@ import Lens.Micro.Platform
 import Yul.Grammar as Y
 import Utils.Text
 import Codegen.Utils
-import qualified Data.List
+import Data.List qualified
 
 
 type SolTextGen = State GenState SolText
@@ -145,28 +145,51 @@ genStmt = \case
     asm' <- withIndent $ genYulStmt asm
     e <- genText "}\n"
     return $ s <> asm' <> e
+  S.NoOpStmt -> return ""
 
 genYulStmt :: Y.Statement -> SolTextGen
 genYulStmt = \case
   Y.BlockStmt stmts -> do
-    s <- genText "{"
+    s <- genText "{\n"
     ss <- withIndent' genYulStmt stmts
     e <- genText "}\n"
     return $ s <> ss <> e
-  Y.VarDeclStmt id e -> genText $ "let " <> id <> " := " <> genYulExpr e <> "\n"
-  Y.AssignmentStmt lv e -> genText $ genYulExpr lv <> " := " <> genYulExpr e <> "\n" 
+  Y.VarDeclStmt id e -> do
+    genText $ "let " <> id <> " := " <> genYulExpr e  <> "\n"
+  Y.AssignmentStmt lv e -> do
+    genText $ genYulExpr lv <> " := " <> genYulExpr e <> "\n" 
   Y.IfStmt c b -> do
     c' <- genText $ "if " <> genYulExpr c <> " {\n"
     b' <- withIndent $ genYulStmt b
     e <- genText "}\n"
     return $ c' <> b' <> e
-  Y.SwitchStmt _ _ -> genText "case"
+  Y.ExpressionStmt e -> do
+    e' <- withIndent $ pure $ genYulExpr e 
+    genText $ e' <> "\n" 
+  Y.SwitchStmt cond bs -> do
+    s <- genText $ "switch " <> genYulExpr cond <> "\n"
+    bs' <- withIndent' genYulSwitchCase bs
+    return $ s <> bs'
 
-genYulExpr :: Y.Expression -> SolText 
+genYulSwitchCase :: (Y.Identifier, Y.Statement) -> SolTextGen
+genYulSwitchCase ("", s) = do
+  s' <- genText "default {\n"
+  b <- withIndent $ genYulStmt s
+  e <- genText "}\n"
+  return $ s' <> b <> e
+genYulSwitchCase (c, s) = do
+  s' <- genText $ "case " <> c <> " {\n"
+  b <- withIndent $ genYulStmt s
+  e <- genText "}\n"
+  return $ s' <> b <> e
+
+
+genYulExpr :: Y.Expression -> SolText
 genYulExpr = \case  
   Y.IdentifierE id -> id
   Y.BuiltinE b -> genYulBuiltin b
   Y.PathE lv m -> genYulExpr lv <> "." <> genYulExpr m
+  Y.LiteralE l -> genYulLit l
   Y.FunctionCallE id es -> genYulExpr id <> "(" <> T.concat (Data.List.intersperse "," (genYulExpr <$> es)) <> ")"
 
 genYulBuiltin :: Y.Builtin -> SolText
@@ -181,6 +204,7 @@ genExpr = \case
   S.SubscriptE lv i -> genExpr lv <> "[" <> genExpr i <> "]"
   S.FunctionCallE id args -> genExpr id <> "(" <> T.concat (L.intersperse "," (genExpr <$> args)) <> ")"
   S.InstantiationE id args -> "new " <> genExpr id <> "(" <> T.concat (L.intersperse "," (genExpr <$> args)) <> ")"
+  S.ArrayInstantiationE id size -> "new " <> id <> "[](" <> genExpr size <> ")"
   S.CastE t e -> genType t <> "(" <> genExpr e <> ")"
   S.BinaryE op e1 e2 -> genExpr e1 <> " " <> genBinaryOp op <> " " <> genExpr e2
   S.UnaryE op e -> genUnaryOp op <> " " <> genExpr e
@@ -191,6 +215,17 @@ genLit = \case
   S.NumberLit n -> showT n
   S.BooleanLit b -> T.toLower $ showT b
   S.HexLit v -> v
+  S.StructLit id ms -> id <> "({" <> T.concat (L.intersperse "," (genStructLitMember <$> ms)) <> "})"
+
+genStructLitMember :: (S.Identifier, S.Expression) -> SolText
+genStructLitMember (id, e) = id <> ": " <> genExpr e
+
+genYulLit :: Y.Literal -> SolText
+genYulLit = \case
+  Y.StringLit v -> "\"" <> v <> "\""
+  Y.NumberLit n -> showT n
+  Y.BooleanLit b -> T.toLower $ showT b
+  Y.HexLit v -> v
 
 genBinaryOp :: BinaryOp -> SolText
 genBinaryOp = \case

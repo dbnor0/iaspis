@@ -12,12 +12,14 @@ data Statement
   | VarDeclStmt Identifier Expression
   | AssignmentStmt Expression Expression
   | IfStmt Expression Statement
+  | ExpressionStmt Expression
   | SwitchStmt Expression [(Identifier, Statement)]
   deriving stock (Eq, Show)
 
 data Expression 
   = IdentifierE Identifier
   | BuiltinE Builtin
+  | LiteralE Literal
   | PathE Expression Expression
   | FunctionCallE Expression [Expression]
   deriving stock (Eq, Show)

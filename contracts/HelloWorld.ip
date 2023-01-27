@@ -61,7 +61,7 @@ facet Facet2 to Proxy {
     return x * x;
   }
 
-  private pay mut fn f2 () -> bool {
+  private mut fn f2 () -> bool {
     uint256 A := sq(25);
     return true;
   }

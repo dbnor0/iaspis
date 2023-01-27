@@ -12,23 +12,24 @@ import Iaspis.DeclUtils
 import Data.Maybe
 import Data.List.Extra
 import Codegen.Utils
+import Lens.Micro.Platform (_1, _2, (^.))
 
 transpile :: [I.Module] -> [S.Module]
 transpile ms =
   let cs = contractDecls =<< ms
-      ps = proxyDecls =<< ms
       fs = facetDecls =<< ms
+      ps = proxyDecls (snd <$> fs) =<< ms
       storageM = Just $ storageModule ps
   in catMaybes $ (transpileContract <$> cs) <> (transpileProxy <$> ps) <> (transpileFacet <$> fs) <> [storageM]
 
-storageModule :: [([I.Import], I.Contract)] -> S.Module
+storageModule :: [([I.Import], I.Contract, [Facet])] -> S.Module
 storageModule ps =
   S.Module
-  { S.imports = importIds =<< (fst =<< ps)
+  { S.imports = importIds =<< ((^. _1) =<< ps)
   , moduleId = "StorageStructs"
   , decls = [S.LibraryDef libraryDef]
   }
-  where libraryDef = LibraryDefinition "StorageStructs" (storageModuleElems . snd =<< ps)
+  where libraryDef = LibraryDefinition "StorageStructs" (storageModuleElems . (^. _2) =<< ps)
 
 storageModuleElems :: Contract -> [S.ContractBodyElem]
 storageModuleElems (ProxyContract _ _ _ fs) = toElems . storageTuple =<< fieldMappings
@@ -174,15 +175,186 @@ transpileBinaryOp = \case
   I.BitwiseDisjunctionOp -> S.BitwiseDisjunctionOp
   I.BitwiseExclDisjunctionOp -> S.BitwiseExclDisjunctionOp
 
-transpileProxy :: ([I.Import], I.Contract) -> Maybe S.Module
-transpileProxy (is, I.ProxyContract { proxyName, facetList }) =
-  Just $ S.Module { moduleId=proxyName, S.imports=(importIds =<< is) <> facetList, decls=[] }
+transpileProxy :: ([I.Import], I.Contract, [Facet]) -> Maybe S.Module
+transpileProxy (is, p@I.ProxyContract { proxyName, facetList }, facets) =
+  Just $ S.Module { moduleId=proxyName, S.imports=is', decls=proxyDecl }
+  where proxyDecl = transpileProxyContract p facets
+        is' = defaultProxyImports <> (importIds =<< is) <> facetList
 transpileProxy _ = Nothing
 
+transpileProxyContract :: I.Contract -> [Facet] -> [S.Declaration]
+transpileProxyContract (I.ProxyContract _ pId _ _) facets = [ContractDef contractDef]
+  where contractDef = ContractDefinition False pId [] contractBody
+        contractBody =
+          [ transpileProxyConstructor facets
+          , transpileProxyFallback
+          , transpileProxyReceive
+          ]
+transpileProxyContract _ _ = []
+
+transpileProxyConstructor :: [Facet] -> ContractBodyElem
+transpileProxyConstructor facets = ConstructorDef $ FunctionDefinition
+  { functionId = "constructor"
+  , S.functionVisibility = S.Public
+  , S.functionMutability = S.Mutable
+  , functionPayablity = True
+  , functionVirtualSpec = False
+  , functionOverrideSpec = False
+  , S.functionArgs = proxyConstructorArgs $ fst <$> facets
+  , S.functionReturnType = [FunctionArg unit S.Memory ""]
+  , S.functionBody = proxyConstructorBody facets
+  }
+
+proxyConstructorBody :: [Facet] -> [S.Statement]
+proxyConstructorBody facets =
+  [ S.ExpressionStmt $ S.FunctionCallE (S.IdentifierE "LibDiamond.setContractOwner") [S.IdentifierE "_contractOwner"]
+  , S.VarDeclStmt
+    (S.FunctionArg (array (struct "IDiamondCut.FacetCut") Nothing) S.Memory "cut")
+    (Just $ S.ArrayInstantiationE "IDiamondCut.FacetCut" (S.LiteralE (S.NumberLit (length facets))))
+  ]
+  <>
+  (proxyFacetCutInit =<< zip [0..n] facets)
+  <>
+  [ S.ExpressionStmt $ S.FunctionCallE (S.IdentifierE "LibDiamond.diamondCut")
+    [ S.IdentifierE "cut"
+    , S.FunctionCallE (S.IdentifierE "address") [S.LiteralE (S.NumberLit 0)]
+    , S.LiteralE (S.StringLit "")
+    ]
+  ]
+  where n = length facets
+
+proxyFacetCutInit :: (Int, Facet) -> [S.Statement]
+proxyFacetCutInit (idx, (fId, fFns)) =
+  [ S.VarDeclStmt (S.FunctionArg (array (bytes 4) Nothing) S.Memory (fId <> "functionSelectors"))
+    (Just $ S.ArrayInstantiationE "bytes4" (S.LiteralE (S.NumberLit 1)))
+  ]
+  <>
+  (proxyFacetCutSelectors <$> zip3 [0..n] (replicate n fId) validFns)
+  <>
+  [S.AssignmentStmt (S.SubscriptE (S.IdentifierE "cut") (S.LiteralE (S.NumberLit idx)))
+    (S.LiteralE (S.StructLit "IDiamondCut.FacetCut"
+      [ ("facetAddress", S.IdentifierE $ "_" <> fId <> "Address")
+      , ("action", S.IdentifierE "IDiamondCut.FacetCutAction.Add")
+      , ("functionSelectors", S.IdentifierE $ fId <> "functionSelectors")
+      ]
+    ))
+  ]
+  where validFns = filter f fFns
+        f = (||) <$> (== I.Public) . g <*> (== I.External) . g
+        g = I.functionVisibility . I.functionHeader
+        n = length validFns
+
+proxyFacetCutSelectors :: (Int, S.Identifier, Function) -> S.Statement
+proxyFacetCutSelectors (idx, fId, Function hd _) =
+  S.AssignmentStmt
+    (S.SubscriptE (S.IdentifierE (fId <> "functionSelectors")) (S.LiteralE (S.NumberLit idx)))
+    (S.IdentifierE $ fId <> "." <> functionName hd <> ".selector")
+
+proxyConstructorArgs :: [S.Identifier] -> [FunctionArg]
+proxyConstructorArgs fIds = FunctionArg address S.Memory "_contractOwner" : (facetAddress <$> fIds)
+  where facetAddress fId = FunctionArg address S.Memory ("_" <> fId <> "Address")
+
+transpileProxyFallback :: ContractBodyElem
+transpileProxyFallback = FallbackDef $ FunctionDefinition
+  { functionId = "fallback"
+  , S.functionVisibility = S.External
+  , S.functionMutability = S.Mutable
+  , functionPayablity = True
+  , functionVirtualSpec = False
+  , functionOverrideSpec = False
+  , S.functionArgs = []
+  , S.functionReturnType = [FunctionArg unit S.Memory ""]
+  , S.functionBody = proxyFallbackBody
+  }
+
+proxyFallbackBody :: [S.Statement]
+proxyFallbackBody =
+  [ S.VarDeclStmt (S.FunctionArg (struct "LibDiamond.DiamondStorage") S.Storage "ds") Nothing
+  , S.VarDeclStmt (S.FunctionArg (bytes 32) S.Memory "position") (Just $ S.IdentifierE "LibDiamond.DIAMOND_STORAGE_POSITION")
+  , S.AssemblyStmt (Y.AssignmentStmt (Y.PathE (Y.IdentifierE "ds") (Y.IdentifierE "slot")) (Y.IdentifierE "position"))
+  , S.VarDeclStmt (S.FunctionArg address S.Memory "facet")
+    (Just $ S.MemberAccessE (S.IdentifierE "ds")
+      (S.MemberAccessE
+        (S.SubscriptE
+          (S.IdentifierE "selectorToFacetAndPosition") (S.MemberAccessE (S.IdentifierE "msg") (S.IdentifierE "sig"))
+        )
+        (S.IdentifierE "facetAddress")
+      )
+    )
+  , S.ExpressionStmt $ S.FunctionCallE (S.IdentifierE "require")
+    [ S.BinaryE S.InequalityOp (S.IdentifierE "facet") (S.FunctionCallE (S.IdentifierE "address") [S.LiteralE (S.NumberLit 0)])
+    , S.LiteralE (S.StringLit "Diamond: Function does not exist")
+    ]
+  , S.AssemblyStmt $ Y.BlockStmt
+    [ Y.ExpressionStmt $ Y.FunctionCallE (Y.IdentifierE "calldatacopy")
+      [ Y.LiteralE (Y.NumberLit 0)
+      , Y.LiteralE (Y.NumberLit 0)
+      , Y.FunctionCallE (Y.IdentifierE "calldatasize") []
+      ]
+    , Y.VarDeclStmt "result" (Y.FunctionCallE (Y.IdentifierE "delegatecall")
+      [ Y.FunctionCallE (Y.IdentifierE "gas") []
+      , Y.IdentifierE "facet"
+      , Y.LiteralE (Y.NumberLit 0)
+      , Y.FunctionCallE (Y.IdentifierE "calldatasize") []
+      , Y.LiteralE (Y.NumberLit 0)
+      , Y.LiteralE (Y.NumberLit 0)
+      ])
+    , Y.ExpressionStmt $ Y.FunctionCallE (Y.IdentifierE "returndatacopy")
+      [ Y.LiteralE (Y.NumberLit 0)
+      , Y.LiteralE (Y.NumberLit 0)
+      , Y.FunctionCallE (Y.IdentifierE "returndatasize") []
+      ]
+    , Y.SwitchStmt (Y.IdentifierE "result")
+      [ ("0", Y.ExpressionStmt $ Y.FunctionCallE (Y.IdentifierE "revert")
+        [ Y.LiteralE (Y.NumberLit 0)
+        , Y.FunctionCallE (Y.IdentifierE "returndatasize") []
+        ])
+      , ("", Y.ExpressionStmt $ Y.FunctionCallE (Y.IdentifierE "return")
+        [ Y.LiteralE (Y.NumberLit 0)
+        , Y.FunctionCallE (Y.IdentifierE "returndatasize") []
+        ])
+      ]
+    ]
+  ]
+
+transpileProxyReceive :: ContractBodyElem
+transpileProxyReceive = FallbackDef $ FunctionDefinition
+  { functionId = "receive"
+  , S.functionVisibility = S.External
+  , S.functionMutability = S.Mutable
+  , functionPayablity = True
+  , functionVirtualSpec = False
+  , functionOverrideSpec = False
+  , S.functionArgs = []
+  , S.functionReturnType = [FunctionArg unit S.Memory ""]
+  , S.functionBody = [S.NoOpStmt]
+  }
+
+defaultProxyImports :: [S.Identifier]
+defaultProxyImports = ["LibDiamond", "IDiamondCut"]
+
 transpileFacet :: ([I.Import], I.Contract) -> Maybe S.Module
-transpileFacet (is, I.FacetContract { facetName, proxyList }) =
-  Just $ S.Module { moduleId=facetName, S.imports=(importIds =<< is) <> [proxyList], decls=[] }
+transpileFacet (is, f@I.FacetContract { facetName, proxyList }) =
+  Just $ S.Module { moduleId=facetName, S.imports=(importIds =<< is) <> [proxyList], decls=transpileFacetContract f }
 transpileFacet _ = Nothing
+
+transpileFacetContract :: I.Contract -> [S.Declaration]
+transpileFacetContract (FacetContract fId pId fns) = [ContractDef contractDef]
+  where contractDef = ContractDefinition False fId [] (transpileFacetFn <$> fns)
+transpileFacetContract _ = []
+
+transpileFacetFn :: Function -> ContractBodyElem
+transpileFacetFn (Function hd body) = FunctionDef $ FunctionDefinition
+  { functionId = functionName hd
+  , S.functionVisibility = transpileVisibility . Just $ I.functionVisibility hd
+  , S.functionMutability = transpileMutability $ I.functionMutability hd
+  , functionPayablity = transpilePayability $ I.functionPayability hd
+  , functionVirtualSpec = False
+  , functionOverrideSpec = False
+  , S.functionArgs = []
+  , S.functionReturnType = [FunctionArg unit S.Memory ""]
+  , S.functionBody = [S.NoOpStmt]
+  }
 
 transpileType :: I.Type -> S.Type
 transpileType = \case

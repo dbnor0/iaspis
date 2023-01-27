@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 
 module Analysis.Environment.Utils where
 
@@ -16,8 +17,7 @@ import Data.Map as M
 import Control.Monad.Error.Class
 import Analysis.Environment.Error
 import Data.Maybe
-import qualified Data.List
-import Utils.Text
+import Data.List qualified
 
 
 enterScope :: MonadState BuildEnv m => Scope -> m ()

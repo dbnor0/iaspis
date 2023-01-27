@@ -1,9 +1,10 @@
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 
 module Solidity.Grammar where
 
 import Data.Text as T
-import qualified Yul.Grammar as Yul
+import Yul.Grammar qualified as Yul
 
 
 type Identifier = T.Text
@@ -145,6 +146,7 @@ data Expression
   | SubscriptE Expression Expression
   | FunctionCallE Expression [Expression]
   | InstantiationE Expression [Expression]
+  | ArrayInstantiationE Identifier Expression
   | CastE Type Expression
   | BinaryE BinaryOp Expression Expression
   | UnaryE UnaryOp Expression
@@ -192,6 +194,7 @@ data Statement
   | ReturnStmt (Maybe Expression)
   | RevertStmt Expression
   | AssemblyStmt Yul.Statement
+  | NoOpStmt
   deriving stock (Eq, Show)
   
 data Literal
@@ -199,4 +202,5 @@ data Literal
   | NumberLit Int 
   | BooleanLit Bool
   | HexLit T.Text
+  | StructLit Identifier [(Identifier, Expression)]
   deriving stock (Eq, Show)
