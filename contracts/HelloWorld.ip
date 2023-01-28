@@ -3,7 +3,8 @@ module HelloWorld;
 import C from Utils;
 
 contract Contract {
-  public  uint256 a;
+  public uint256 a <- 123;
+  public uint256 b 123123 12321312;
   private string x;
   private C myC;
  
@@ -65,8 +66,15 @@ facet Facet2 to Proxy {
     uint256 A := sq(25);
     return true;
   }
+
+  public fn m() {
+    n();
+  }
+
+  public fn n() {
+    m();
+  }
 }
 
 facet Facet3 to Proxy {
-
 }

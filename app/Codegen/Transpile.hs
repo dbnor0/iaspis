@@ -87,13 +87,13 @@ transpileContract (is, I.ImmutableContract { contractName, contractFields, contr
 transpileContract _ = Nothing
 
 transpileContractField :: I.Field -> S.StateVarDeclaration
-transpileContractField Field{ fieldType, fieldVisibility, fieldName } =
+transpileContractField Field{ fieldType, fieldVisibility, fieldName, fieldInitializer } =
   StateVarDeclaration
     { stateVarType = transpileType fieldType
     , stateVarVisibility = transpileVisibility fieldVisibility
     , stateVarModifier = Nothing
     , stateVarId = fieldName
-    , stateVarInitializer = Nothing
+    , stateVarInitializer = transpileExpr <$> fieldInitializer
     }
 
 transpileFunctionDef :: I.Function -> S.FunctionDefinition

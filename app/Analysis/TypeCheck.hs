@@ -29,13 +29,24 @@ typeCheckDecl = \case
 typeCheckContract :: MonadState BuildEnv m => MonadError BuildError m => Contract -> m ()
 typeCheckContract = traverseContract cFn pFn fFn
   where cFn = \case
-          ImmutableContract _ _ fns -> traverse_ typeCheckFn fns
+          ImmutableContract _ fields fns -> 
+            traverse_ typeCheckField fields 
+            >> traverse_ typeCheckFn fns
           _ -> return ()
         pFn = const $ return ()
         fFn = \case
           FacetContract _ _ fns -> do
             traverse_ typeCheckFn fns
           _ -> return ()
+
+typeCheckField :: MonadState BuildEnv m => MonadError BuildError m => Field -> m ()
+typeCheckField Field{ fieldType, fieldName, fieldInitializer } =
+  case fieldInitializer of
+    Just init -> do
+      t <- typeCheckExpr init
+      unless (t == fieldType)
+        (throwError $  InvalidAssigType fieldName fieldType t)
+    Nothing -> return ()
 
 typeCheckFn :: MonadState BuildEnv m => MonadError BuildError m => Function -> m ()
 typeCheckFn f@(Function hd stmts) = traverseFn f $ traverse_ (typeCheckStmt hd) stmts
@@ -71,15 +82,15 @@ typeCheckExpr :: MonadState BuildEnv m => MonadError BuildError m => Expression 
 typeCheckExpr = \case
   LiteralE l -> return $ typeCheckLit l
   IdentifierE id -> do
-    f <- getField id 
+    f <- getField id
     return $ fieldType f
   FunctionCallE id args -> do
     fn <- getFn id
     ts <- traverse typeCheckExpr args
     traverse_ typeCheckArg (zip (functionArgs fn) ts)
     return $ functionReturnType fn
-    where typeCheckArg (arg, t) = 
-            unless (fieldType arg == t) 
+    where typeCheckArg (arg, t) =
+            unless (fieldType arg == t)
               (throwError $ InvalidArgType arg (fieldType arg) t)
   UnaryE op e -> typeCheckUnaryExpr e op
   BinaryE op e1 e2 -> typeCheckBinaryExpr e1 e2 op
@@ -99,7 +110,7 @@ typeCheckUnaryExpr e op = do
   case op of
     op
       | op `elem` numericUnaryOps ->
-        unless (isNumeric t) 
+        unless (isNumeric t)
           (throwError $ InvalidExpressionType e (Right "numeric") t)
       | op == BitwiseNegationOp ->
         unless (isBitwise t)

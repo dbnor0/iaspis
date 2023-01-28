@@ -126,6 +126,7 @@ data Field = Field
   , fieldType :: Type
   , fieldLocation :: MemoryLocation
   , fieldName :: Identifier
+  , fieldInitializer :: Maybe Expression
   } deriving stock (Eq, Show, Generic)
 
 instance ToJSON Field where

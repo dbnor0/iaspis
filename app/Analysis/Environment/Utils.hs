@@ -18,6 +18,7 @@ import Control.Monad.Error.Class
 import Analysis.Environment.Error
 import Data.Maybe
 import Data.List qualified
+import Data.List.Extra qualified as Extra
 
 
 enterScope :: MonadState BuildEnv m => Scope -> m ()
@@ -56,7 +57,7 @@ getField id = do
   ct <- gets (^. (scopeInfo . contractType))
   ls <- localScopes
   ps <- facetProxyScope
-  let scopes = if ct == Just Facet then ls <> [ps] else ls
+  let scopes = if ct == Just Facet then Extra.snoc ls ps else ls
   getEntry id varEntries scopes UndefField
 
 getFn :: MonadState BuildEnv m => MonadError BuildError m => Identifier -> m FunctionHeader

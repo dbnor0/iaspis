@@ -65,6 +65,7 @@ fnFieldDecl =
   <*> type'
   <*> option Memory memoryLocation
   <*> identifier
+  <*> pure Nothing
 
 contractFieldDecl :: Parser Field
 contractFieldDecl =
@@ -75,6 +76,7 @@ contractFieldDecl =
   <*> type'
   <*> pure Storage
   <*> identifier
+  <*> optional (reserved' "<-" Storage *> expression)
 
 function :: Parser Function
 function = Function <$> functionHeader <*> body
@@ -295,7 +297,7 @@ bitwiseOps = choice $ uncurry mkBinaryExpr <$>
 -- types
 
 type' :: Parser Type
-type' 
+type'
   =   primitiveType
   <|> UserDefinedT <$> identifier
 
