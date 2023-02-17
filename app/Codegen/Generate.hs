@@ -92,7 +92,7 @@ genFunctionHeader (FunctionDefinition id v m p vt o args rt _) = genText header
         virt = genSpec "virtual" vt
         ov = genSpec "override" o
         keyword fn
-          | fn `elem` ["constructor", "receive", "fallback"] = ""
+          | fn `Prelude.elem` ["constructor", "receive", "fallback"] = ""
           | otherwise = "function "
 
 genFunctionArg :: FunctionArg -> SolText

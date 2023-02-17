@@ -107,7 +107,7 @@ isTopLevelEntry id m = do
   return $ isEntryIn k (cWithScope <$> e ^. contracts) 
         || isEntryIn k (pWithScope <$> e ^. proxies) 
         || isEntryIn k (fWithScope <$> e ^. facets)
-  where isEntryIn k bs = k `elem` bs
+  where isEntryIn k bs = k `Prelude.elem` bs
         k = m <> "::" <> id
         cWithScope ContractEntry{ contractId, contractScope } = contractScope <> "::" <> contractId
         pWithScope ProxyEntry{ proxyId, proxyScope } = proxyScope <> "::" <> proxyId
