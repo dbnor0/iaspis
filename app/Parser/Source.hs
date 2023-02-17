@@ -30,25 +30,26 @@ importStmt = endsIn ";" stmt
   where stmt = Import <$> (reserved "import" *> sepBy1 identifier comma) <*> (reserved "from" *> identifier)
 
 decl :: Parser Declaration
-decl = contract
+decl = backtrack 
+  [ ContractDecl <$> immutableContract
+  , ProxyDecl <$> proxyContract
+  , FacetDecl <$> facetContract
+  ]
 
-contract :: Parser Declaration
-contract = ContractDecl <$> backtrack [immutableContract, proxyContract, facetContract]
-
-immutableContract :: Parser Contract
+immutableContract :: Parser ImmutableContract
 immutableContract = do
   name <- reserved "contract" *> identifier
   memberList <- block $ many (backtrack [Left <$> endsIn ";" contractFieldDecl, Right <$> function])
   return $ ImmutableContract name (lefts memberList) (rights memberList)
 
-proxyContract :: Parser Contract
+proxyContract :: Parser ProxyContract
 proxyContract = ProxyContract <$> proxyKind' <*> name  <*> facetList <*> memberList
   where proxyKind' = proxyKind <* reserved "proxy"
         name       = identifier <* reserved "for"
         facetList  = sepBy identifier comma
         memberList = block $ many (endsIn ";" contractFieldDecl)
 
-facetContract :: Parser Contract
+facetContract :: Parser FacetContract
 facetContract = FacetContract <$> name <*> proxy <*> memberList
   where name       = reserved "facet" *> identifier
         proxy  = reserved "to" *> identifier

@@ -25,7 +25,9 @@ executable iaspis
     Main.hs
   other-modules:
     Analysis.ContractCheck
+    Analysis.Environment.AltBuild
     Analysis.Environment.Build
+    Analysis.Environment.AltEnvironment
     Analysis.Environment.Environment
     Analysis.Environment.Error
     Analysis.Environment.Traversals
