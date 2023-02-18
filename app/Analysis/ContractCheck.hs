@@ -27,14 +27,14 @@ definedProxies :: (MonadState BuildEnv m, MonadError BuildError m) => m ()
 definedProxies = do
   e <- gets (^. env)
   traverse_ (\p -> traverse_ (checkProxy e p) (facetList p)) (e ^. proxies)
-  where checkProxy e p f = unless (f `elem` (facetId <$> e ^. facets))
+  where checkProxy e p f = unless (f `Prelude.elem` (facetId <$> e ^. facets))
           (throwError $ UndefFacet (proxyId p) f)
 
 definedFacets :: MonadState BuildEnv m => MonadError BuildError m => m ()
 definedFacets = do
   e <- gets (^. env)
   traverse_ (checkFacet e) (e ^. facets)
-  where checkFacet e f = unless (proxy f `elem` (proxyId <$> e ^. proxies))
+  where checkFacet e f = unless (proxy f `Prelude.elem` (proxyId <$> e ^. proxies))
           (throwError $ UndefProxy (facetId f) (proxy f))
 
 contractCheck :: MonadState BuildEnv m => MonadError BuildError m => Module -> m ()
@@ -57,7 +57,7 @@ contractCheckContract = traverseContract cFn pFn fFn
                   checkFieldFacet f =
                     case fieldProxyKind f of
                       Just (UniqueProxyMember facet) ->
-                        unless (facet `elem` facets)
+                        unless (facet `Prelude.elem` facets)
                           (throwError $ UndeclaredFacet facet (fieldName f))
                       _ -> return ()
           _ -> return ()
@@ -97,7 +97,7 @@ contractCheckId ids id = do
   (ct, _) <- getFacetField id
   when (ct == Proxy) $ do
     facet <- fromMaybe "" <$> gets (^. (scopeInfo . contract))
-    unless (id `elem` ids) (throwError $ InvalidFieldRef id facet)
+    unless (id `Prelude.elem` ids) (throwError $ InvalidFieldRef id facet)
 
 validFacetFields :: MonadState BuildEnv m => Identifier -> m [Identifier]
 validFacetFields id = do
@@ -106,7 +106,7 @@ validFacetFields id = do
     return $ fieldName . fst <$> Prelude.filter isProxyField (Prelude.zip (entry <$> fieldEntries) proxies)
     where isProxyField (Field{ fieldProxyKind }, p) = case (fieldProxyKind, p) of
             (Just (UniqueProxyMember fId), _) -> fId == id
-            (Just SharedProxyMember, Just p') -> id `elem` facetList p'
+            (Just SharedProxyMember, Just p') -> id `Prelude.elem` facetList p'
             _ -> False
           fieldProxy (Entry s _) = getProxy (scopeContract s)
           scopeContract = (!! 1) . splitOn "::"

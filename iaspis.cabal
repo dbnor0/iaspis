@@ -25,7 +25,9 @@ executable iaspis
     Main.hs
   other-modules:
     Analysis.ContractCheck
+    Analysis.Environment.AltBuild
     Analysis.Environment.Build
+    Analysis.Environment.AltEnvironment
     Analysis.Environment.Environment
     Analysis.Environment.Error
     Analysis.Environment.Traversals
@@ -97,7 +99,7 @@ executable iaspis
     -Wredundant-constraints
     -Wunused-packages
   build-depends:    
-    base ^>=4.14.3.0
+    base ^>=4.16.4.0
     , aeson
     , bytestring
     , containers

@@ -180,32 +180,39 @@ data MemberDecl
 newtype ModuleDecl = ModuleDecl Identifier
   deriving stock Show
 
-newtype Declaration 
-  = ContractDecl Contract 
+data Declaration 
+  = ContractDecl ImmutableContract
+  | ProxyDecl ProxyContract
+  | FacetDecl FacetContract
   deriving stock (Show, Generic)
 
 instance ToJSON Declaration where
 
-data Contract 
-  = ImmutableContract 
+data ImmutableContract = ImmutableContract 
   { contractName :: Identifier
   , contractFields :: [Field]
   , contractFns :: [Function] 
-  }
-  | ProxyContract 
+  } deriving stock (Show, Generic)
+
+instance ToJSON ImmutableContract where
+
+data ProxyContract = ProxyContract 
   { proxyContractKind :: ProxyKind
   , proxyName :: Identifier
   , facetList :: [Identifier]
   , proxyDecls :: [Field] 
-  }
-  | FacetContract 
+  } deriving stock (Show, Generic)
+
+instance ToJSON ProxyContract where
+
+data FacetContract = FacetContract 
   { facetName :: Identifier
   , proxyList :: Identifier
   , facetDecls :: [Function] 
-  }
-  deriving stock (Show, Generic)
+  } deriving stock (Show, Generic)
+  
 
-instance ToJSON Contract where
+instance ToJSON FacetContract where
 
 data Import = Import
   { importIds :: [Identifier]
