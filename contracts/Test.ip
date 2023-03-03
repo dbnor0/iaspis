@@ -1,0 +1,7 @@
+module Test;
+
+import C from HelloWorld;
+
+contract Test {
+
+}

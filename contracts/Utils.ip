@@ -1,5 +1,7 @@
 module Utils;
 
+import Test from Test;
+
 contract C {
   private uint256 a;
 
