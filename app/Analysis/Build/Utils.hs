@@ -35,4 +35,4 @@ revertScope = intercalate "::" . Prelude.init . splitOn "::"
 
 updateScope :: Scope -> Identifier -> Scope
 updateScope "" id = id
-updateScope s id = s <> id
+updateScope s id = s <> "::" <> id

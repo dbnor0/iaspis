@@ -49,7 +49,8 @@ addDecls = \case
     m <- currentModule
     uniqueId contractName (ns <> (m ^. moduleImportedDecls)) (DupId ContractId)
     modify $ contracts %~ M.insert contractName entry
-    withScope biContract contractName (return ())
+    withScope biContract contractName $ do
+      traverse_ addFn contractFns
     where entry = ContractEntry contractName fieldNames fnNames
           fnNames = functionName . functionHeader <$> contractFns
           fieldNames = fieldName <$> contractFields
@@ -66,9 +67,20 @@ addDecls = \case
     m <- currentModule
     uniqueId facetName (ns <> (m ^. moduleImportedDecls)) (DupId FacetId)
     modify $ facets %~ M.insert facetName entry
-    withScope biContract facetName (return ())
+    withScope biContract facetName $ do
+      traverse_ addFn facetDecls
     where entry = FacetEntry facetName proxyList fnNames
           fnNames = functionName . functionHeader <$> facetDecls
+
+addFn :: MonadState BuildEnv m => MonadError BuildError m => Function -> m ()
+addFn (Function hd _) = do
+  fns <- gets (M.elems . (^. functions))
+  s <- gets (^. (buildInfo . biScope))
+  throwError (DupId ModuleId s)
+  -- uniqueId (functionName hd) (fnNames fns) (DupId FunctionId)
+  modify $ functions %~ M.insert (s <> "::" <> functionName hd) entry
+    where entry = FunctionEntry (functionName hd) (functionArgs hd) (functionReturnType hd) (functionMutability hd) (functionVisibility hd) (functionPayability hd)
+          fnNames fns = view fnId <$> fns
 
 contractNamespace :: MonadState BuildEnv m => m [Identifier]
 contractNamespace = do
@@ -81,3 +93,4 @@ currentModule :: MonadState BuildEnv m => m ModuleEntry
 currentModule = do
   mId <- fromJust <$> gets (^. (buildInfo . biModule))
   (M.! mId) <$> gets (^. modules)
+                                                                                                                                                                                                              

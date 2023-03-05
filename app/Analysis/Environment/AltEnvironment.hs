@@ -6,7 +6,7 @@
 module Analysis.Environment.AltEnvironment where
 
 import Data.Map as M
-import Iaspis.Grammar (Identifier, Import, FunctionArg, Mutability, MemberVisibility)
+import Iaspis.Grammar (Identifier, Import, FunctionArg, Mutability, MemberVisibility, PayabilityKind)
 import Lens.Micro.Platform (makeLenses)
 
 
@@ -52,8 +52,10 @@ data FunctionEntry = FunctionEntry
   , _fnReturn :: FunctionArg
   , _fnMutability :: Mutability
   , _fnVisibility :: MemberVisibility
-  , _fnPayability :: Bool
-  }
+  , _fnPayability :: PayabilityKind
+  } deriving stock (Eq, Show)
+
+makeLenses ''FunctionEntry
 
 data ContractType
   = Contract
@@ -78,6 +80,7 @@ data BuildEnv = BuildEnv
   , _contracts :: Bindings ContractEntry
   , _proxies :: Bindings ProxyEntry
   , _facets :: Bindings FacetEntry
+  , _functions :: Bindings FunctionEntry
   } deriving stock (Eq, Show)
 
 makeLenses ''BuildEnv
@@ -99,4 +102,5 @@ mkEnv = BuildEnv
   , _contracts = M.empty
   , _proxies = M.empty
   , _facets = M.empty
+  , _functions = M.empty
   }
