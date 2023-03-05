@@ -119,6 +119,23 @@ data Mutability
 
 instance ToJSON Mutability where
 
+data FunctionArg = FunctionArg
+  { argType :: Type
+  , argName :: Identifier
+  , argLocation :: MemoryLocation
+  } deriving stock (Eq, Show, Generic)
+
+instance ToJSON FunctionArg where
+
+data DeclArg = DeclArg
+  { delcMutability :: Mutability
+  , declType :: Type
+  , declName :: Identifier
+  , declLocation :: MemoryLocation
+  } deriving stock (Eq, Show, Generic)
+
+instance ToJSON DeclArg where
+
 data Field = Field
   { fieldProxyKind :: Maybe ProxyMemberKind
   , fieldVisibility :: Maybe MemberVisibility
@@ -132,7 +149,7 @@ data Field = Field
 instance ToJSON Field where
 
 data Statement
-  = VarDeclStmt Field MemoryLocation Expression
+  = VarDeclStmt DeclArg MemoryLocation Expression
   | AssignmentStmt Expression MemoryLocation Expression 
   | ReturnStmt (Maybe Expression)
   | IfStmt Expression Statement (Maybe Statement)
@@ -150,8 +167,8 @@ data FunctionHeader = FunctionHeader
   , functionPayability :: PayabilityKind
   , functionMutability :: Mutability
   , functionName :: Identifier
-  , functionArgs :: [Field]
-  , functionReturnType :: Type
+  , functionArgs :: [FunctionArg]
+  , functionReturnType :: FunctionArg
   , overrideSpecifier :: Bool
   } deriving stock (Show, Generic)
 

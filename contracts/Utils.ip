@@ -9,3 +9,7 @@ contract C {
     a <- aa;
   }
 }
+
+contract ContractX {
+
+}

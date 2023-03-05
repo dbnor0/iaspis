@@ -1,8 +1,7 @@
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleContexts #-}
 
-module Analysis.Environment.AltBuild where
+module Analysis.Build.Module where
 
 import Control.Monad.State.Class
 import Analysis.Environment.AltEnvironment
@@ -10,35 +9,12 @@ import Control.Monad.Error.Class
 import Iaspis.Grammar
 import Control.Monad
 import Lens.Micro.Platform
-import Data.Map as M
 import Data.Containers.ListUtils
 import Control.Monad.State
 import Data.Bifunctor
 import Data.Foldable
-
-
-data BuildError
-  = DupModule Identifier
-  | CyclicImports
-  | UndefinedImport
-  deriving stock (Eq, Show)
-
-build :: MonadState BuildEnv m => MonadError BuildError m => [Module] -> m ()
-build ms = do
-  traverse_ addModules ms
-  checkImports
-  checkImportedDecls
-  checkCyclicImports
-
-addModules :: MonadState BuildEnv m => MonadError BuildError m => Module -> m ()
-addModules Module{ moduleDecl, imports, declarations } = do
-  ms <- gets (M.elems . (^. modules))
-  uniqueId moduleDecl (view moduleId <$> ms) DupModule
-  modify $ modules %~ M.insert moduleDecl entry
-  where entry = ModuleEntry moduleDecl imports (declId <$> declarations) []
-        declId (ContractDecl c) = contractName c
-        declId (ProxyDecl p) = proxyName p
-        declId (FacetDecl f) = facetName f
+import Analysis.Build.Error
+import Data.Map as M
 
 checkCyclicImports :: MonadState BuildEnv m => MonadError BuildError m =>  m ()
 checkCyclicImports = do

@@ -6,7 +6,7 @@
 module Analysis.Environment.AltEnvironment where
 
 import Data.Map as M
-import Iaspis.Grammar (Identifier, Import)
+import Iaspis.Grammar (Identifier, Import, FunctionArg, Mutability, MemberVisibility)
 import Lens.Micro.Platform (makeLenses)
 
 
@@ -46,6 +46,14 @@ data FacetEntry = FacetEntry
 
 makeLenses ''FacetEntry
 
+data FunctionEntry = FunctionEntry
+  { _fnId :: Identifier
+  , _fnArgs :: [FunctionArg]
+  , _fnReturn :: FunctionArg
+  , _fnMutability :: Mutability
+  , _fnVisibility :: MemberVisibility
+  , _fnPayability :: Bool
+  }
 
 data ContractType
   = Contract
@@ -55,8 +63,10 @@ data ContractType
 
 data BuildInfo = BuildInfo
   { _biScope :: Scope
-  , _biModule :: Identifier
-  , _biContract :: Maybe (Identifier, ContractType)
+  , _biModule :: Maybe Identifier
+  , _biContract :: Maybe Identifier
+  , _biProxy :: Maybe Identifier
+  , _biFacet :: Maybe Identifier
   , _biFn :: Maybe Identifier
   } deriving stock (Eq, Show)
 
@@ -75,8 +85,10 @@ makeLenses ''BuildEnv
 mkBuildInfo :: BuildInfo
 mkBuildInfo = BuildInfo
   { _biScope = ""
-  , _biModule = ""
+  , _biModule = Nothing
   , _biContract = Nothing
+  , _biProxy = Nothing
+  , _biFacet = Nothing
   , _biFn = Nothing
   }
 

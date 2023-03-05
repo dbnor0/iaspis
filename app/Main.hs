@@ -27,11 +27,11 @@ import Data.Either
 import Data.Foldable
 -- import Codegen.Transpile (transpile)
 -- import Codegen.Generate
-import Data.Aeson
-import Data.ByteString.Lazy.Char8 as BS (unpack)
-import Analysis.Environment.AltBuild (addModules, build)
-import Analysis.Environment.AltEnvironment (mkEnv, modules)
-import Lens.Micro.Platform
+-- import Data.Aeson
+-- import Data.ByteString.Lazy.Char8 as BS (unpack)
+import Analysis.Build.Build (build)
+import Analysis.Environment.AltEnvironment (mkEnv, {-modules-})
+-- import Lens.Micro.Platform
 
 
 hasExt :: FilePath -> FilePath -> Bool
@@ -73,7 +73,7 @@ main :: IO ()
 main = do
   files <- getContractFiles ".ip" "./contracts"
   parsed <- traverse loadFile files
-  if Prelude.null $ rights parsed then
+  if Data.Foldable.length parsed /= Data.Foldable.length (rights parsed) then
     print $ "Parser error(s): " <> show (lefts parsed)
   else
     let modules = rights parsed

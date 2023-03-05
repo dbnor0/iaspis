@@ -1,6 +1,6 @@
 module Test;
 
-import C from HelloWorld;
+import Contract, Proxy from HelloWorld;
 
 contract Test {
 

@@ -30,7 +30,7 @@ importStmt = endsIn ";" stmt
   where stmt = Import <$> (reserved "import" *> sepBy1 identifier comma) <*> (reserved "from" *> identifier)
 
 decl :: Parser Declaration
-decl = backtrack 
+decl = backtrack
   [ ContractDecl <$> immutableContract
   , ProxyDecl <$> proxyContract
   , FacetDecl <$> facetContract
@@ -57,16 +57,20 @@ facetContract = FacetContract <$> name <*> proxy <*> memberList
 
 -- field declarations
 
-fnFieldDecl :: Parser Field
-fnFieldDecl =
-  Field
-  <$> optional fieldProxyKind
-  <*> optional visibility
-  <*> mutability
-  <*> type'
-  <*> option Memory memoryLocation
+fnArgDecl :: Parser FunctionArg
+fnArgDecl =
+  FunctionArg
+  <$> type'
   <*> identifier
-  <*> pure Nothing
+  <*> option Memory memoryLocation
+
+declArg :: Parser DeclArg
+declArg =
+  DeclArg
+  <$> option View mutability
+  <*> type'
+  <*> identifier
+  <*> option Memory memoryLocation
 
 contractFieldDecl :: Parser Field
 contractFieldDecl =
@@ -93,28 +97,32 @@ functionHeader = backtrack
 
 userDefinedHeader :: Parser FunctionHeader
 userDefinedHeader
-  = FunctionHeader <$> visibility <*> payability <*> mutability <*> name <*> argList <*> returnType <*> overrideSpecifier
+  = FunctionHeader <$> visibility <*> payability <*> mutability <*> name <*> argList <*> returnArg <*> overrideSpecifier
   where name       = reserved "fn" *> identifier
-        argList    = parens (sepBy fnFieldDecl comma)
-        returnType = option UnitT $ reserved "->" *> type'
+        argList    = parens (sepBy fnArgDecl comma)
+        returnArg  = FunctionArg <$> option UnitT (reserved "->" *> type') <*> pure "" <*> option Memory memoryLocation
+        -- returnArg = option UnitT $ reserved "->" *> type'
 
 constructorHeader :: Parser FunctionHeader
 constructorHeader
-  = FunctionHeader Public <$> payability <*> pure Mutable <*> name <*> argList <*> pure UnitT <*> pure False
+  = FunctionHeader Public <$> payability <*> pure Mutable <*> name <*> argList <*> returnArg <*> pure False
   where name    = lexeme' "constructor"
-        argList = parens (sepBy fnFieldDecl comma)
+        argList = parens (sepBy fnArgDecl comma)
+        returnArg  = pure (FunctionArg UnitT "" Memory)
 
 receiveHeader :: Parser FunctionHeader
 receiveHeader
-  = FunctionHeader External Payable <$> mutability <*> name <*> argList <*> pure UnitT <*> pure False
+  = FunctionHeader External Payable <$> mutability <*> name <*> argList <*> returnArg <*> pure False
   where name    = lexeme' "receive"
         argList = parens spaceOrComment $> []
+        returnArg  = pure (FunctionArg UnitT "" Memory)
 
 fallbackHeader :: Parser FunctionHeader
 fallbackHeader
-  = FunctionHeader External NonPayable <$> mutability <*> name <*> argList <*> pure UnitT <*> pure False
+  = FunctionHeader External NonPayable <$> mutability <*> name <*> argList <*> returnArg <*> pure False
   where name    = lexeme' "fallback"
         argList = parens spaceOrComment $> []
+        returnArg  = pure (FunctionArg UnitT "" Memory)
 
 -- syntax elements
 
@@ -170,7 +178,7 @@ expressionStmt = endsIn ";" stmt
 
 varDeclStmt :: Parser Statement
 varDeclStmt = endsIn ";" stmt
-  where stmt = VarDeclStmt <$> fnFieldDecl <*> assignmentSymbol <*> expression
+  where stmt = VarDeclStmt <$> declArg <*> assignmentSymbol <*> expression
 
 returnStmt :: Parser Statement
 returnStmt = endsIn ";" stmt
