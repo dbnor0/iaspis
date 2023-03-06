@@ -36,7 +36,8 @@ addModules Module{ moduleDecl, imports, declarations } = do
   ms <- gets (M.elems . (^. modules))
   uniqueId moduleDecl (view moduleId <$> ms) (DupId ModuleId)
   modify $ modules %~ M.insert moduleDecl entry
-  withScope biModule moduleDecl $ traverse_ addDecls declarations
+  withScope biModule moduleDecl $ do
+    traverse_ addDecls declarations
   where entry = ModuleEntry moduleDecl imports (declId <$> declarations) (importIds =<< imports)
         declId (ContractDecl c) = contractName c
         declId (ProxyDecl p) = proxyName p
@@ -76,11 +77,11 @@ addFn :: MonadState BuildEnv m => MonadError BuildError m => Function -> m ()
 addFn (Function hd _) = do
   fns <- gets (M.elems . (^. functions))
   s <- gets (^. (buildInfo . biScope))
-  throwError (DupId ModuleId s)
-  -- uniqueId (functionName hd) (fnNames fns) (DupId FunctionId)
-  modify $ functions %~ M.insert (s <> "::" <> functionName hd) entry
+  uniqueId (scopedName s) (fnNames fns) (DupId FunctionId)
+  modify $ functions %~ M.insert (scopedName s) entry
     where entry = FunctionEntry (functionName hd) (functionArgs hd) (functionReturnType hd) (functionMutability hd) (functionVisibility hd) (functionPayability hd)
           fnNames fns = view fnId <$> fns
+          scopedName s = s <> "::" <> functionName hd
 
 contractNamespace :: MonadState BuildEnv m => m [Identifier]
 contractNamespace = do

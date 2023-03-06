@@ -33,6 +33,7 @@ exitScope setter = modify (setType . setScope)
 revertScope :: Scope -> Scope
 revertScope = intercalate "::" . Prelude.init . splitOn "::"
 
-updateScope :: Scope -> Identifier -> Scope
-updateScope "" id = id
-updateScope s id = s <> "::" <> id
+updateScope :: Identifier -> Scope -> Scope
+updateScope id s
+  | T.null s = id
+  | otherwise = s <> "::" <> id
