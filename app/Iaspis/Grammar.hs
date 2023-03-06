@@ -4,7 +4,7 @@
 
 module Iaspis.Grammar where
 
-import Data.Text
+import Data.Text ( Text )
 import Prelude hiding (Enum)
 import GHC.Generics
 import Data.Aeson hiding (Value)
@@ -21,8 +21,8 @@ data Type
   | StringT
   | UnitT
   | UserDefinedT Identifier
-  | StructT Identifier
-  | EnumT Identifier
+  | StructT Struct
+  | EnumT Enum
   | ContractT Identifier
   deriving stock (Eq, Show, Generic)
 
@@ -201,6 +201,8 @@ data Declaration
   = ContractDecl ImmutableContract
   | ProxyDecl ProxyContract
   | FacetDecl FacetContract
+  | StructDecl Struct
+  | EnumDecl Enum
   deriving stock (Show, Generic)
 
 instance ToJSON Declaration where
@@ -228,8 +230,28 @@ data FacetContract = FacetContract
   , facetDecls :: [Function] 
   } deriving stock (Show, Generic)
   
-
 instance ToJSON FacetContract where
+
+data Struct = Struct
+  { structName :: Identifier
+  , structFields :: [StructField]
+  } deriving stock (Eq, Show, Generic)
+
+instance ToJSON Struct where
+
+data StructField = StructField
+  { structFieldType :: Type
+  , structFieldName :: Identifier
+  } deriving stock (Eq, Show, Generic)
+
+instance ToJSON StructField where
+
+data Enum = Enum
+  { enumName :: Identifier
+  , enumFields :: [Identifier]
+  } deriving stock (Eq, Show, Generic)
+
+instance ToJSON Enum where
 
 data Import = Import
   { importIds :: [Identifier]

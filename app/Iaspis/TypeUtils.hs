@@ -1,8 +1,11 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Iaspis.TypeUtils where
   
 import Iaspis.Grammar
+import Data.Text as T
+import Utils.Text
 
 
 isNumeric :: Type -> Bool
@@ -39,3 +42,19 @@ relationalOps = [LessThanOp, GreaterThanOp, LessThanEqualOp, GreaterThanEqualOp]
 
 bitwiseOps :: [BinaryOp]
 bitwiseOps = [LeftShiftOp, RightShiftOp, BitwiseConjunctionOp, BitwiseDisjunctionOp, BitwiseExclDisjunctionOp]
+
+name :: Type -> T.Text
+name AddressT = "address"
+name BoolT = "bool"
+name (BytesT n) = "bytes" <> showT n
+name BytesDynamicT = "bytes"
+name (UIntT n) = "uint" <> showT n
+name StringT = "string"
+name UnitT = "unit"
+name (UserDefinedT id) = id
+name (StructT s) = structName s
+name (EnumT e) = enumName e
+name (ContractT id) = id
+
+
+

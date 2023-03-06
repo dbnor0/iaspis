@@ -1,5 +1,14 @@
 module HelloWorld;
 
+struct S {
+  uint256 x;
+  string y;
+}
+
+struct Contract {
+  uint256 z;
+}
+
 contract Contract {
   public uint256 a <- 123;
   public uint256 b;

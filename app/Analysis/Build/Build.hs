@@ -18,6 +18,7 @@ import Lens.Micro.Platform
 import Analysis.Build.Utils
 import Data.Maybe (fromJust)
 import Analysis.Environment.Error ()
+import Iaspis.TypeUtils
 
 
 build :: MonadState BuildEnv m => MonadError BuildError m => [Module] -> m ()
@@ -42,13 +43,17 @@ addModules Module{ moduleDecl, imports, declarations } = do
         declId (ContractDecl c) = contractName c
         declId (ProxyDecl p) = proxyName p
         declId (FacetDecl f) = facetName f
+        declId (StructDecl s) = structName s
+        declId (EnumDecl e) = enumName e
 
 addDecls :: MonadState BuildEnv m => MonadError BuildError m => Declaration -> m ()
 addDecls = \case
   ContractDecl (ImmutableContract{ contractName, contractFns, contractFields }) -> do
     ns <- contractNamespace
+    ts <- gets (M.elems . (^. types))
     m <- currentModule
     uniqueId contractName (ns <> (m ^. moduleImportedDecls)) (DupId ContractId)
+    uniqueId contractName (name <$> ts) (DupId TypeId)
     modify $ contracts %~ M.insert contractName entry
     withScope biContract contractName $ do
       traverse_ addFn contractFns
@@ -72,6 +77,15 @@ addDecls = \case
       traverse_ addFn facetDecls
     where entry = FacetEntry facetName proxyList fnNames
           fnNames = functionName . functionHeader <$> facetDecls
+  StructDecl s@Struct{ structName } -> do
+    ts <- gets (M.elems . (^. types))
+    uniqueId structName (name <$> ts) (DupId TypeId)
+    modify $ types %~ M.insert structName (StructT s)
+  EnumDecl e@Enum{ enumName } -> do
+    ts <- gets (M.elems . (^. types))
+    uniqueId enumName (name <$> ts) (DupId TypeId)
+    modify $ types %~ M.insert enumName (EnumT e)
+
 
 addFn :: MonadState BuildEnv m => MonadError BuildError m => Function -> m ()
 addFn (Function hd _) = do

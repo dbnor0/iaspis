@@ -6,7 +6,7 @@
 module Analysis.Environment.AltEnvironment where
 
 import Data.Map as M
-import Iaspis.Grammar (Identifier, Import, FunctionArg, Mutability, MemberVisibility, PayabilityKind)
+import Iaspis.Grammar (Identifier, Import, FunctionArg, Mutability, MemberVisibility, PayabilityKind, Type)
 import Lens.Micro.Platform (makeLenses)
 
 
@@ -77,6 +77,7 @@ makeLenses ''BuildInfo
 data BuildEnv = BuildEnv
   { _buildInfo :: BuildInfo
   , _modules :: Bindings ModuleEntry
+  , _types :: Bindings Type
   , _contracts :: Bindings ContractEntry
   , _proxies :: Bindings ProxyEntry
   , _facets :: Bindings FacetEntry
@@ -99,6 +100,7 @@ mkEnv :: BuildEnv
 mkEnv = BuildEnv
   { _buildInfo = mkBuildInfo
   , _modules = M.empty
+  , _types = M.empty
   , _contracts = M.empty
   , _proxies = M.empty
   , _facets = M.empty

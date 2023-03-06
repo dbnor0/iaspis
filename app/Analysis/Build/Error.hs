@@ -4,6 +4,7 @@ import Iaspis.Grammar
 
 data IdType 
   = ModuleId
+  | TypeId
   | ContractId
   | ProxyId
   | FacetId

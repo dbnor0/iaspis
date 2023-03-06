@@ -14,6 +14,7 @@ import Text.Megaparsec.Char (char)
 import Text.Megaparsec.Char.Lexer (decimal, charLiteral)
 import Data.Functor (($>))
 import Data.Either
+import Prelude hiding (Enum)
 
 
 module' :: Parser Module
@@ -34,6 +35,8 @@ decl = backtrack
   [ ContractDecl <$> immutableContract
   , ProxyDecl <$> proxyContract
   , FacetDecl <$> facetContract
+  , StructDecl <$> struct
+  , EnumDecl <$> enum
   ]
 
 immutableContract :: Parser ImmutableContract
@@ -54,6 +57,16 @@ facetContract = FacetContract <$> name <*> proxy <*> memberList
   where name       = reserved "facet" *> identifier
         proxy  = reserved "to" *> identifier
         memberList = block $ many function
+
+struct :: Parser Struct
+struct = Struct <$> name <*> fields
+  where name      = reserved "struct" *> identifier
+        fields    = block . many $ endsIn ";" structFieldDecl
+
+enum :: Parser Enum
+enum = Enum <$> name <*> fields
+  where name   = reserved "enum" *> identifier
+        fields = block $ sepBy1 identifier comma
 
 -- field declarations
 
@@ -82,6 +95,9 @@ contractFieldDecl =
   <*> pure Storage
   <*> identifier
   <*> optional (reserved' "<-" Storage *> expression)
+
+structFieldDecl :: Parser StructField
+structFieldDecl = StructField <$> type' <*> identifier
 
 function :: Parser Function
 function = Function <$> functionHeader <*> body
