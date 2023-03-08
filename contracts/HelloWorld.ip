@@ -5,7 +5,7 @@ struct S {
   string y;
 }
 
-struct Contract {
+struct T {
   uint256 z;
 }
 

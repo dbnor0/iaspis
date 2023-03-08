@@ -57,6 +57,13 @@ data FunctionEntry = FunctionEntry
 
 makeLenses ''FunctionEntry
 
+data FieldEntry = FieldEntry
+  { _fdId :: Identifier
+  , _fdType :: Type
+  } deriving stock (Eq, Show)
+
+makeLenses ''FieldEntry
+
 data ContractType
   = Contract
   | Proxy
@@ -65,6 +72,7 @@ data ContractType
 
 data BuildInfo = BuildInfo
   { _biScope :: Scope
+  , _biDepth :: Int
   , _biModule :: Maybe Identifier
   , _biContract :: Maybe Identifier
   , _biProxy :: Maybe Identifier
@@ -82,6 +90,7 @@ data BuildEnv = BuildEnv
   , _proxies :: Bindings ProxyEntry
   , _facets :: Bindings FacetEntry
   , _functions :: Bindings FunctionEntry
+  , _fields :: Bindings FieldEntry
   } deriving stock (Eq, Show)
 
 makeLenses ''BuildEnv
@@ -89,6 +98,7 @@ makeLenses ''BuildEnv
 mkBuildInfo :: BuildInfo
 mkBuildInfo = BuildInfo
   { _biScope = ""
+  , _biDepth = 0
   , _biModule = Nothing
   , _biContract = Nothing
   , _biProxy = Nothing
@@ -105,4 +115,5 @@ mkEnv = BuildEnv
   , _proxies = M.empty
   , _facets = M.empty
   , _functions = M.empty
+  , _fields = M.empty
   }

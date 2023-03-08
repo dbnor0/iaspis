@@ -7,7 +7,7 @@
 module Analysis.Build.Build where
 
 import Control.Monad.State.Class
-import Analysis.Environment.AltEnvironment hiding (contractFields, contractFns)
+import Analysis.Environment.AltEnvironment hiding (fieldType, contractFields, contractFns)
 import Control.Monad.Error.Class
 import Iaspis.Grammar
 import Analysis.Build.Error
@@ -57,6 +57,7 @@ addDecls = \case
     modify $ contracts %~ M.insert contractName entry
     withScope biContract contractName $ do
       traverse_ addFn contractFns
+      traverse_ addField contractFields
     where entry = ContractEntry contractName fieldNames fnNames
           fnNames = functionName . functionHeader <$> contractFns
           fieldNames = fieldName <$> contractFields
@@ -65,7 +66,8 @@ addDecls = \case
     m <- currentModule
     uniqueId proxyName (ns <> (m ^. moduleImportedDecls)) (DupId ProxyId)
     modify $ proxies %~ M.insert proxyName entry
-    withScope biContract proxyName (return ())
+    withScope biContract proxyName $ do
+      traverse_ addField proxyDecls
     where entry = ProxyEntry proxyName facetList fieldNames
           fieldNames = fieldName <$> proxyDecls
   FacetDecl (FacetContract{ facetName, proxyList, facetDecls }) -> do
@@ -86,16 +88,52 @@ addDecls = \case
     uniqueId enumName (name <$> ts) (DupId TypeId)
     modify $ types %~ M.insert enumName (EnumT e)
 
-
 addFn :: MonadState BuildEnv m => MonadError BuildError m => Function -> m ()
 addFn (Function hd _) = do
   fns <- gets (M.elems . (^. functions))
   s <- gets (^. (buildInfo . biScope))
   uniqueId (scopedName s) (fnNames fns) (DupId FunctionId)
   modify $ functions %~ M.insert (scopedName s) entry
-    where entry = FunctionEntry (functionName hd) (functionArgs hd) (functionReturnType hd) (functionMutability hd) (functionVisibility hd) (functionPayability hd)
-          fnNames fns = view fnId <$> fns
-          scopedName s = s <> "::" <> functionName hd
+  withScope biFn (functionName hd) $ do
+    traverse_ addFnArg (functionArgs hd)
+  where entry = FunctionEntry (functionName hd) (functionArgs hd) (functionReturnType hd) (functionMutability hd) (functionVisibility hd) (functionPayability hd)
+        fnNames fns = view fnId <$> fns
+        scopedName s = s <> "::" <> functionName hd
+
+addField :: MonadState BuildEnv m => MonadError BuildError m => Field -> m ()
+addField Field{ fieldName, fieldType } = do
+  fs <- gets (M.elems . (^. fields))
+  s <- gets (^. (buildInfo . biScope))
+  uniqueId (scopedName s) (view fdId <$> fs) (DupId FieldId)
+  modify $ fields %~ M.insert (scopedName s) entry
+  where entry = FieldEntry fieldName fieldType
+        scopedName s = s <> "::" <> fieldName
+
+addFnArg :: MonadState BuildEnv m => MonadError BuildError m => FunctionArg -> m ()
+addFnArg FunctionArg{ argName, argType } = do
+  fs <- gets (M.elems . (^. fields))
+  s <- gets (^. (buildInfo . biScope))
+  uniqueId (scopedName s) (view fdId <$> fs) (DupId FieldId)
+  modify $ fields %~ M.insert (scopedName s) entry
+  where entry = FieldEntry argName argType
+        scopedName s = s <> "::" <> argName
+
+addDeclArg :: MonadState BuildEnv m => MonadError BuildError m => DeclArg -> m ()
+addDeclArg DeclArg{ declName, declType } = do
+  fs <- gets (M.elems . (^. fields))
+  s <- gets (^. (buildInfo . biScope))
+  uniqueId (scopedName s) (view fdId <$> fs) (DupId FieldId)
+  modify $ fields %~ M.insert (scopedName s) entry
+  where entry = FieldEntry declName declType
+        scopedName s = s <> "::" <> declName
+
+addStmtDecl :: MonadState BuildEnv m => MonadError BuildError m => Statement -> m ()
+addStmtDecl = \case
+  VarDeclStmt arg _ _ -> addDeclArg arg
+  IfStmt _ b1 b2 -> addStmtDecl b1 >> maybe (return ()) addStmtDecl b2
+  BlockStmt ss -> do
+    
+  _ -> return ()
 
 contractNamespace :: MonadState BuildEnv m => m [Identifier]
 contractNamespace = do

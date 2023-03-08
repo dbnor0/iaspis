@@ -9,6 +9,7 @@ data IdType
   | ProxyId
   | FacetId
   | FunctionId
+  | FieldId
   deriving stock (Eq, Show)
 
 data BuildError
