@@ -33,6 +33,7 @@ contract Contract {
 
   public fn fact (uint256 n) -> uint256 {
     if (n == 1) {
+      uint256 wallagong := 23;
       return 1;
     }
     return n * fact(n - 1);

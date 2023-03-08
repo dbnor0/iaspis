@@ -89,13 +89,14 @@ addDecls = \case
     modify $ types %~ M.insert enumName (EnumT e)
 
 addFn :: MonadState BuildEnv m => MonadError BuildError m => Function -> m ()
-addFn (Function hd _) = do
+addFn (Function hd bd) = do
   fns <- gets (M.elems . (^. functions))
   s <- gets (^. (buildInfo . biScope))
   uniqueId (scopedName s) (fnNames fns) (DupId FunctionId)
   modify $ functions %~ M.insert (scopedName s) entry
   withScope biFn (functionName hd) $ do
     traverse_ addFnArg (functionArgs hd)
+    traverse_ addStmtDecl bd
   where entry = FunctionEntry (functionName hd) (functionArgs hd) (functionReturnType hd) (functionMutability hd) (functionVisibility hd) (functionPayability hd)
         fnNames fns = view fnId <$> fns
         scopedName s = s <> "::" <> functionName hd
@@ -130,9 +131,15 @@ addDeclArg DeclArg{ declName, declType } = do
 addStmtDecl :: MonadState BuildEnv m => MonadError BuildError m => Statement -> m ()
 addStmtDecl = \case
   VarDeclStmt arg _ _ -> addDeclArg arg
-  IfStmt _ b1 b2 -> addStmtDecl b1 >> maybe (return ()) addStmtDecl b2
+  IfStmt _ b1 b2 -> do
+    enterBlock
+    addStmtDecl b1
+    exitBlock
+    maybe (return ()) (\s -> enterBlock >> addStmtDecl s >> exitBlock) b2
   BlockStmt ss -> do
-    
+    enterBlock
+    traverse_ addStmtDecl ss
+    exitBlock
   _ -> return ()
 
 contractNamespace :: MonadState BuildEnv m => m [Identifier]

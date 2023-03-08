@@ -10,6 +10,7 @@ import Data.Text as T
 import Lens.Micro.Platform
 import Iaspis.Grammar
 import Analysis.Environment.AltEnvironment
+import Utils.Text
 
 
 type ScopeSetter = Lens' BuildInfo (Maybe Identifier)
@@ -32,6 +33,17 @@ exitScope setter = modify (setType . setScope)
 
 revertScope :: Scope -> Scope
 revertScope = intercalate "::" . Prelude.init . splitOn "::"
+
+enterBlock :: MonadState BuildEnv m => m ()
+enterBlock = do
+  modify $ (buildInfo . biDepth) +~ 1
+  bd <- gets (^. (buildInfo . biDepth))
+  modify $ (buildInfo . biScope) %~ updateScope (showT bd)
+
+exitBlock :: MonadState BuildEnv m => m ()
+exitBlock = do
+  modify $ (buildInfo . biDepth) -~ 1
+  modify $ (buildInfo . biScope) %~ revertScope
 
 updateScope :: Identifier -> Scope -> Scope
 updateScope id s
