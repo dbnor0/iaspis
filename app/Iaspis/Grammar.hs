@@ -74,6 +74,7 @@ instance ToJSON UnaryOp where
 data Expression
   = LiteralE Value
   | IdentifierE Identifier
+  | MemberAccessE Expression Identifier
   | FunctionCallE Identifier [Expression]
   | InstantiationE Identifier [Expression]
   | UnaryE UnaryOp Expression

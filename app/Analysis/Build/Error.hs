@@ -17,4 +17,6 @@ data BuildError
   | CyclicImports
   | UndefinedImport
   | UndefinedType Identifier
+  | InvalidFacets
+  | InvalidProxy
   deriving stock (Eq, Show)

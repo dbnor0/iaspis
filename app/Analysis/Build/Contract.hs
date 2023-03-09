@@ -1,22 +1,29 @@
--- {-# LANGUAGE FlexibleContexts #-}
--- {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 
--- module Analysis.Build.Contract where
+module Analysis.Build.Contract where
 
--- import Control.Monad.State.Class
--- import Analysis.Environment.AltEnvironment
--- import Control.Monad.Error.Class
--- import Analysis.Build.Error
--- import Iaspis.Grammar
+import Control.Monad.State.Class
+import Analysis.Environment.AltEnvironment
+import Control.Monad.Error.Class
+import Analysis.Build.Error
+import Data.Map as M
+import Lens.Micro.Platform
+import Control.Monad
+import Data.Foldable
 
+contractChecks :: MonadState BuildEnv m => MonadError BuildError m => m ()
+contractChecks = do
+  ps <- gets (M.elems . (^. proxies))
+  traverse_ proxyChecks ps
 
--- buildModules :: MonadState BuildEnv m => MonadError BuildError m => [Module] -> m ()
--- buildModules ms = do
---   traverse_ addContracts ms
+proxyChecks :: MonadState BuildEnv m => MonadError BuildError m => ProxyEntry -> m ()
+proxyChecks (ProxyEntry _ facetList _) = do
+  fs <- gets (M.elems . (^. facets))
+  unless (all (`elem` (view facetId <$> fs)) facetList) (throwError InvalidFacets)
 
--- addContracts :: MonadState BuildEnv m => MonadError BuildError m => Module -> m ()
--- addContracts Module{ moduleDecl, imports, declarations } = do
---   ms <- gets (M.elems . (^. modules))
---   uniqueId moduleDecl (view moduleId <$> ms) DupModule
---   modify $ modules %~ M.insert moduleDecl entry
---   where entry = ModuleEntry moduleDecl imports (declId <$> declarations) []
+facetChecks :: MonadState BuildEnv m => MonadError BuildError m => FacetEntry -> m ()
+facetChecks (FacetEntry _ facetProxy _) = do
+  ps <- gets (M.elems . (^. proxies))
+  unless (facetProxy `elem` (view proxyId <$> ps)) (throwError InvalidProxy)

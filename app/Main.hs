@@ -14,7 +14,6 @@ import Iaspis.Grammar as I
 import Utils.Error
 -- import Analysis.ContractCheck
 -- import Analysis.MemoryCheck (memCheck)
-import Analysis.Environment.Error
 import Control.Monad.Except
 -- import Analysis.MutabilityCheck
 -- import Analysis.TypeCheck (typeCheck)
@@ -30,9 +29,11 @@ import Data.Foldable
 -- import Data.Aeson
 -- import Data.ByteString.Lazy.Char8 as BS (unpack)
 import Analysis.Build.Build (build)
-import Analysis.Environment.AltEnvironment (mkEnv, {-modules-})
+import Analysis.Environment.AltEnvironment (mkEnv, BuildEnv, {-modules-})
 import Data.ByteString.Lazy.Char8 as BS (unpack)
 import Data.Aeson
+import Analysis.Build.Error
+import Analysis.Build.Contract (contractChecks)
 -- import Lens.Micro.Platform
 
 
@@ -65,6 +66,11 @@ loadFile fp = do
 -- writeModules :: FilePath -> [I.Module] -> IO ()
 -- writeModules out ms = traverse_ (genFile out) (genModule <$> transpile ms)
 
+analyze :: MonadState BuildEnv m => MonadError BuildError m => [Module] -> m ()
+analyze ms = do
+  build ms
+  contractChecks
+
 writeEIP2535 :: IO ()
 writeEIP2535 = do
   fps <- getContractFiles ".sol" "./sol"
@@ -79,7 +85,7 @@ main = do
     print $ "Parser error(s): " <> show (lefts parsed)
   else
     let modules = rights parsed
-        (err, e) = runState (runExceptT $ build modules) mkEnv
+        (err, e) = runState (runExceptT $ analyze modules) mkEnv
     in
       case err of
         Left be -> do

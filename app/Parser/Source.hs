@@ -15,6 +15,7 @@ import Text.Megaparsec.Char.Lexer (decimal, charLiteral)
 import Data.Functor (($>))
 import Data.Either
 import Prelude hiding (Enum)
+import Data.Aeson.KeyMap (member)
 
 
 module' :: Parser Module
@@ -237,14 +238,24 @@ expression =
   `chainl1` bitwiseOps
 
 lvalueExpr :: Parser Expression
-lvalueExpr = IdentifierE <$> identifier
+lvalueExpr = backtrack
+  [ memberExpr
+  , IdentifierE <$> identifier
+  ]
 
 baseExpr :: Parser Expression
 baseExpr = backtrack
-  [ factor
+  [ memberExpr
+  , factor
   , unaryExpr <*> expression
   ]
 
+memberExpr :: Parser Expression
+memberExpr = do
+  struct <- factor
+  members <- many1 member
+  return $ Prelude.foldl MemberAccessE struct members
+  where member = reserved "." *> identifier
 
 unaryExpr :: Parser UnaryExpression
 unaryExpr = choice $ uncurry mkUnaryExpr <$>
