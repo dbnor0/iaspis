@@ -31,6 +31,8 @@ import Data.Foldable
 -- import Data.ByteString.Lazy.Char8 as BS (unpack)
 import Analysis.Build.Build (build)
 import Analysis.Environment.AltEnvironment (mkEnv, {-modules-})
+import Data.ByteString.Lazy.Char8 as BS (unpack)
+import Data.Aeson
 -- import Lens.Micro.Platform
 
 
@@ -84,7 +86,7 @@ main = do
           print e
           print be
         Right _ -> do
-          print e
+          Prelude.writeFile "output.json" (BS.unpack $ encode e)
           print "cool"
 
 
