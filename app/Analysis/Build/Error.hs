@@ -16,4 +16,5 @@ data BuildError
   = DupId IdType Identifier
   | CyclicImports
   | UndefinedImport
+  | UndefinedType Identifier
   deriving stock (Eq, Show)

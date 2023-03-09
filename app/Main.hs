@@ -83,7 +83,7 @@ main = do
     in
       case err of
         Left be -> do
-          print e
+          Prelude.writeFile "output.json" (BS.unpack $ encode e)
           print be
         Right _ -> do
           Prelude.writeFile "output.json" (BS.unpack $ encode e)

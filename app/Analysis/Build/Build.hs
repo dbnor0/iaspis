@@ -24,6 +24,7 @@ import Iaspis.TypeUtils
 build :: MonadState BuildEnv m => MonadError BuildError m => [Module] -> m ()
 build ms = do
   buildModules ms
+  updateFieldTypes
 
 buildModules :: MonadState BuildEnv m => MonadError BuildError m => [Module] -> m ()
 buildModules ms = do
@@ -55,6 +56,7 @@ addDecls = \case
     uniqueId contractName (ns <> (m ^. moduleImportedDecls)) (DupId ContractId)
     uniqueId contractName (name <$> ts) (DupId TypeId)
     modify $ contracts %~ M.insert contractName entry
+    modify $ types %~ M.insert contractName (ContractT contractName)
     withScope biContract contractName $ do
       traverse_ addFn contractFns
       traverse_ addField contractFields
@@ -140,6 +142,20 @@ addStmtDecl = \case
     exitBlock
   _ -> return ()
 
+updateFieldTypes :: MonadState BuildEnv m => MonadError BuildError m => m ()
+updateFieldTypes = do
+  fs <- gets (M.assocs . (^. fields))
+  traverse_ updateFieldType fs
+
+updateFieldType :: MonadState BuildEnv m => MonadError BuildError m => (Identifier, FieldEntry) -> m ()
+updateFieldType (fId, FieldEntry _ (UserDefinedT tId)) = do
+  fType <- gets (M.lookup tId . (^. types))
+  case fType of
+    Nothing -> throwError $ UndefinedType tId
+    Just t -> do
+      modify $ fields %~ M.adjust (\f -> f & fdType .~ t) fId
+updateFieldType _ = return ()
+
 contractNamespace :: MonadState BuildEnv m => m [Identifier]
 contractNamespace = do
   cs <- gets (M.elems . (^. contracts))
@@ -151,4 +167,3 @@ currentModule :: MonadState BuildEnv m => m ModuleEntry
 currentModule = do
   mId <- fromJust <$> gets (^. (buildInfo . biModule))
   (M.! mId) <$> gets (^. modules)
-                                                                                                                                                                                                              

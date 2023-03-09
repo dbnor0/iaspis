@@ -14,6 +14,7 @@ contract Contract {
   public uint256 b;
   private string x;
   private C myC;
+  private S myS;
  
   constructor() {
     myC <- new C(10);
