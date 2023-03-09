@@ -61,6 +61,12 @@ facet Facet1 to Proxy {
     mut uint256 z := 123;
     mut string c := "123";
     mut string q := "abc";
+    if (true) {
+      mut string stuff := "stuff";
+      if (true) {
+        mut string kek := "kek";
+      }
+    }
     return c;
   }
 }

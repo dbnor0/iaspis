@@ -132,9 +132,7 @@ addStmtDecl :: MonadState BuildEnv m => MonadError BuildError m => Statement -> 
 addStmtDecl = \case
   VarDeclStmt arg _ _ -> addDeclArg arg
   IfStmt _ b1 b2 -> do
-    enterBlock
     addStmtDecl b1
-    exitBlock
     maybe (return ()) (\s -> enterBlock >> addStmtDecl s >> exitBlock) b2
   BlockStmt ss -> do
     enterBlock
