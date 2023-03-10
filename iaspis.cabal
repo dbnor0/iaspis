@@ -38,7 +38,6 @@ executable iaspis
     Analysis.Environment.Error
     Analysis.Environment.Traversals
     Analysis.Environment.Utils
-    Analysis.ImportCheck
     Analysis.TypeCheck
     Codegen.Generate
     Codegen.Transpile

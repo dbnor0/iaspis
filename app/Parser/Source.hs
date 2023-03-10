@@ -15,7 +15,6 @@ import Text.Megaparsec.Char.Lexer (decimal, charLiteral)
 import Data.Functor (($>))
 import Data.Either
 import Prelude hiding (Enum)
-import Data.Aeson.KeyMap (member)
 
 
 module' :: Parser Module
@@ -365,7 +364,8 @@ identifier = lexeme' $ cons <$> satisfy isAlpha <*> takeWhileP Nothing isAlphaNu
 
 literal :: Parser Value
 literal = backtrack
-  [ addressLit
+  [ structLit
+  , addressLit
   , boolLit
   , bytesLit
   , stringLit
@@ -386,6 +386,12 @@ stringLit = StringV <$> stringRaw
 
 uintLit :: Parser Value
 uintLit = UIntV <$> uintRaw
+
+structLit :: Parser Value
+structLit = StructV <$> structValue
+  where structValue = StructValue <$> identifier <*> braces structMembers
+        structMembers = sepBy structValMember comma
+        structValMember = StructValueMember <$> identifier <*> (reserved "=" *> expression)
 
 -- raw values
 

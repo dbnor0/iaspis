@@ -34,6 +34,7 @@ data Value
   | BytesV Text
   | UIntV Int
   | StringV Text
+  | StructV StructValue
   deriving stock (Eq, Show, Generic)
 
 instance ToJSON Value where
@@ -246,6 +247,20 @@ data StructField = StructField
   } deriving stock (Eq, Show, Generic)
 
 instance ToJSON StructField where
+
+data StructValue = StructValue
+  { structValueName :: Identifier
+  , structValueMembers :: [StructValueMember]
+  } deriving stock (Eq, Show, Generic)
+
+instance ToJSON StructValue where
+
+data StructValueMember = StructValueMember
+  { structMemberValueName :: Identifier
+  , structMemberValueExpr :: Expression
+  } deriving stock (Eq, Show, Generic)
+
+instance ToJSON StructValueMember where
 
 data Enum = Enum
   { enumName :: Identifier
