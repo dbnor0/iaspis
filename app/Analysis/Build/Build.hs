@@ -7,7 +7,7 @@
 module Analysis.Build.Build where
 
 import Control.Monad.State.Class
-import Analysis.Environment.AltEnvironment hiding (fieldType, contractFields, contractFns)
+import Analysis.Environment.AltEnvironment hiding (contractFields, contractFns)
 import Control.Monad.Error.Class
 import Iaspis.Grammar
 import Analysis.Build.Error
@@ -104,12 +104,12 @@ addFn (Function hd bd) = do
         scopedName s = s <> "::" <> functionName hd
 
 addField :: MonadState BuildEnv m => MonadError BuildError m => Field -> m ()
-addField Field{ fieldName, fieldType } = do
+addField Field{ fieldName, fieldType, fieldMutability, fieldLocation } = do
   fs <- gets (M.elems . (^. fields))
   s <- gets (^. (buildInfo . biScope))
   uniqueId (scopedName s) (view fdId <$> fs) (DupId FieldId)
   modify $ fields %~ M.insert (scopedName s) entry
-  where entry = FieldEntry fieldName fieldType
+  where entry = FieldEntry fieldName fieldType fieldMutability fieldLocation
         scopedName s = s <> "::" <> fieldName
 
 addFnArg :: MonadState BuildEnv m => MonadError BuildError m => FunctionArg -> m ()
@@ -118,16 +118,16 @@ addFnArg FunctionArg{ argName, argType } = do
   s <- gets (^. (buildInfo . biScope))
   uniqueId (scopedName s) (view fdId <$> fs) (DupId FieldId)
   modify $ fields %~ M.insert (scopedName s) entry
-  where entry = FieldEntry argName argType
+  where entry = FieldEntry argName argType Mutable Memory
         scopedName s = s <> "::" <> argName
 
 addDeclArg :: MonadState BuildEnv m => MonadError BuildError m => DeclArg -> m ()
-addDeclArg DeclArg{ declName, declType } = do
+addDeclArg DeclArg{ declName, declType, declMutability, declLocation } = do
   fs <- gets (M.elems . (^. fields))
   s <- gets (^. (buildInfo . biScope))
   uniqueId (scopedName s) (view fdId <$> fs) (DupId FieldId)
   modify $ fields %~ M.insert (scopedName s) entry
-  where entry = FieldEntry declName declType
+  where entry = FieldEntry declName declType declMutability declLocation
         scopedName s = s <> "::" <> declName
 
 addStmtDecl :: MonadState BuildEnv m => MonadError BuildError m => Statement -> m ()
@@ -148,7 +148,7 @@ updateFieldTypes = do
   traverse_ updateFieldType fs
 
 updateFieldType :: MonadState BuildEnv m => MonadError BuildError m => (Identifier, FieldEntry) -> m ()
-updateFieldType (fId, FieldEntry _ (UserDefinedT tId)) = do
+updateFieldType (fId, FieldEntry _ (UserDefinedT tId) _ _) = do
   fType <- gets (M.lookup tId . (^. types))
   case fType of
     Nothing -> throwError $ UndefinedType tId

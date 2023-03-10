@@ -129,7 +129,7 @@ data FunctionArg = FunctionArg
 instance ToJSON FunctionArg where
 
 data DeclArg = DeclArg
-  { delcMutability :: Mutability
+  { declMutability :: Mutability
   , declType :: Type
   , declName :: Identifier
   , declLocation :: MemoryLocation

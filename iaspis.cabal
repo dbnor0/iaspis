@@ -28,7 +28,10 @@ executable iaspis
     Analysis.Build.Build
     Analysis.Build.Error
     Analysis.Build.Module
+    Analysis.Build.Mutability
+    Analysis.Build.Memory
     Analysis.Build.Utils
+    Analysis.Build.Contract
     Analysis.Environment.Build
     Analysis.Environment.AltEnvironment
     Analysis.Environment.Environment
@@ -36,8 +39,6 @@ executable iaspis
     Analysis.Environment.Traversals
     Analysis.Environment.Utils
     Analysis.ImportCheck
-    Analysis.MemoryCheck
-    Analysis.MutabilityCheck
     Analysis.TypeCheck
     Codegen.Generate
     Codegen.Transpile

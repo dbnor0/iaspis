@@ -11,6 +11,10 @@ import Lens.Micro.Platform
 import Iaspis.Grammar
 import Analysis.Environment.AltEnvironment
 import Utils.Text
+import Control.Monad.Error.Class
+import Analysis.Build.Error
+import Data.Map as M
+import Data.Maybe
 
 
 type ScopeSetter = Lens' BuildInfo (Maybe Identifier)
@@ -22,12 +26,14 @@ withScope t s f = do
   exitScope t
 
 enterScope :: MonadState BuildEnv m => ScopeSetter -> Scope -> m ()
-enterScope setter s = modify (setType . setScope)
+enterScope setter s = do
+  modify (setType . setScope)
   where setScope = (buildInfo . biScope) %~ updateScope s
         setType = (buildInfo . setter) ?~ s
 
 exitScope :: MonadState BuildEnv m => ScopeSetter -> m ()
-exitScope setter = modify (setType . setScope)
+exitScope setter = do
+  modify (setType . setScope)
   where setScope = (buildInfo . biScope) %~ revertScope
         setType = (buildInfo . setter) .~ Nothing
 
@@ -49,3 +55,21 @@ updateScope :: Identifier -> Scope -> Scope
 updateScope id s
   | T.null s = id
   | otherwise = s <> "::" <> id
+
+getField :: MonadState BuildEnv m => MonadError BuildError m => Identifier -> m FieldEntry
+getField id = do
+  ls <- localScopes
+  -- when (id == "wallagong") (throwError $ DupId ModuleId (showT ls))
+  fs <- gets (^. fields)
+  let entries = (\s -> M.lookup (s <> "::" <> id) fs) <$> ls
+  if Prelude.all isNothing entries then
+    throwError $ UndefinedId id
+  else
+    (return . Prelude.head . catMaybes) entries
+
+localScopes :: MonadState BuildEnv m => m [Scope]
+localScopes = do
+  s <- gets (^. (buildInfo . biScope))
+  return $ Prelude.scanl localScope s (Prelude.reverse [1..(scopeSize s)])
+  where localScope t n = intercalate "::" $ Prelude.take n $ splitOn "::" t
+        scopeSize s = Prelude.length $ splitOn "::" s

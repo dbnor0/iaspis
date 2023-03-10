@@ -11,7 +11,6 @@ import System.Directory
 import Control.Monad.State
 import Iaspis.Grammar as I
 -- import Analysis.Environment.Build
-import Utils.Error
 -- import Analysis.ContractCheck
 -- import Analysis.MemoryCheck (memCheck)
 import Control.Monad.Except
@@ -33,7 +32,10 @@ import Analysis.Environment.AltEnvironment (mkEnv, BuildEnv, {-modules-})
 import Data.ByteString.Lazy.Char8 as BS (unpack)
 import Data.Aeson
 import Analysis.Build.Error
-import Analysis.Build.Contract (contractChecks)
+import Analysis.Build.Memory
+import Analysis.Build.Mutability
+import Analysis.Build.Contract
+
 -- import Lens.Micro.Platform
 
 
@@ -69,6 +71,8 @@ loadFile fp = do
 analyze :: MonadState BuildEnv m => MonadError BuildError m => [Module] -> m ()
 analyze ms = do
   build ms
+  mutCheck ms
+  memCheck ms
   contractChecks
 
 writeEIP2535 :: IO ()
@@ -93,7 +97,7 @@ main = do
           print be
         Right _ -> do
           Prelude.writeFile "output.json" (BS.unpack $ encode e)
-          print "cool"
+          T.putStrLn "cool"
 
 
     -- let modules = rights parsed

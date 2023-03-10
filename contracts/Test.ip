@@ -1,7 +1,5 @@
 module Test;
 
-import Contract, Proxy from HelloWorld;
-
 contract Test {
 
 }

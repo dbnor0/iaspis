@@ -7,7 +7,7 @@
 module Analysis.Environment.AltEnvironment where
 
 import Data.Map as M
-import Iaspis.Grammar (Identifier, Import, FunctionArg, Mutability, MemberVisibility, PayabilityKind, Type)
+import Iaspis.Grammar (Identifier, Import, FunctionArg, Mutability, MemberVisibility, PayabilityKind, Type, MemoryLocation)
 import Lens.Micro.Platform (makeLenses)
 import GHC.Generics
 import Data.Aeson
@@ -73,6 +73,8 @@ makeLenses ''FunctionEntry
 data FieldEntry = FieldEntry
   { _fdId :: Identifier
   , _fdType :: Type
+  , _fdMutability :: Mutability
+  , _fdLocation :: MemoryLocation
   } deriving stock (Eq, Generic, Show)
 
 instance ToJSON FieldEntry where

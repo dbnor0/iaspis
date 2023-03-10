@@ -17,6 +17,12 @@ data BuildError
   | CyclicImports
   | UndefinedImport
   | UndefinedType Identifier
+  | UndefinedId Identifier  
   | InvalidFacets
   | InvalidProxy
+  | IllegalStorageAssig Identifier Identifier
+  | IllegalMutAssig Identifier
+  | InvalidMemoryLocationType Identifier Type
+  | InvalidAssignOp Identifier MemoryLocation
+  | InvalidLValue Expression
   deriving stock (Eq, Show)

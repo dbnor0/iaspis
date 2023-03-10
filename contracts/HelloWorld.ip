@@ -10,7 +10,7 @@ struct T {
 }
 
 contract Contract {
-  public uint256 a <- 123;
+  public mut uint256 a <- 123;
   public uint256 b;
   private string x;
   private C myC;
@@ -22,17 +22,8 @@ contract Contract {
     x <- "0";
   }
 
-  mut receive() {
-    a <- 1;
-    x <- "1";
-  }
-
-  mut fallback() {
-    a <- 2;
-    x <- "2";
-  }
-
-  public fn fact (uint256 n) -> uint256 {
+  public mut fn fact (uint256 n) -> uint256 {
+    S v storage <- 1;
     if (n == 1) {
       uint256 wallagong := 23;
       return 1;
