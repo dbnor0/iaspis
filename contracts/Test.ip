@@ -1,5 +1,7 @@
 module Test;
 
+import S from HelloWorld;
+
 contract Test {
 
 }

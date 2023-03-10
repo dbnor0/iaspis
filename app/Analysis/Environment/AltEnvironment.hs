@@ -7,20 +7,32 @@
 module Analysis.Environment.AltEnvironment where
 
 import Data.Map as M
-import Iaspis.Grammar (Identifier, Import, FunctionArg, Mutability, MemberVisibility, PayabilityKind, Type, MemoryLocation)
+import Iaspis.Grammar
 import Lens.Micro.Platform (makeLenses)
 import GHC.Generics
 import Data.Aeson
+import Prelude hiding (Enum)
 
 
 type Scope = Identifier
 type Bindings a = M.Map Identifier a
 
+data ImportType
+  = UnparsedImport
+  | ContractImport
+  | ProxyImport
+  | FacetImport
+  | StructImport
+  | EnumImport
+  deriving stock (Eq, Generic, Show)
+
+instance ToJSON ImportType where
+
 data ModuleEntry = ModuleEntry
   { _moduleId :: Identifier
   , _moduleImports :: [Import]
   , _moduleDecls :: [Identifier]
-  , _moduleImportedDecls :: [Identifier]
+  , _moduleImportedDecls :: [(Identifier, ImportType)]
   } deriving stock (Eq, Generic, Show)
 
 instance ToJSON ModuleEntry where
@@ -56,6 +68,20 @@ data FacetEntry = FacetEntry
 instance ToJSON FacetEntry where
 
 makeLenses ''FacetEntry
+
+data StructEntry = StructEntry
+  { _structId :: Identifier
+  , _structDef :: Struct
+  } deriving stock (Eq, Show, Generic)
+
+instance ToJSON StructEntry where
+
+data EnumEntry = EnumEntry
+  { _enumId :: Identifier
+  , _enumDef :: Enum
+  } deriving stock (Eq, Show, Generic)
+
+instance ToJSON EnumEntry where
 
 data FunctionEntry = FunctionEntry
   { _fnId :: Identifier
@@ -105,6 +131,8 @@ data BuildEnv = BuildEnv
   { _buildInfo :: BuildInfo
   , _modules :: Bindings ModuleEntry
   , _types :: Bindings Type
+  , _structs :: Bindings StructEntry
+  , _enums :: Bindings EnumEntry
   , _contracts :: Bindings ContractEntry
   , _proxies :: Bindings ProxyEntry
   , _facets :: Bindings FacetEntry
@@ -132,6 +160,8 @@ mkEnv = BuildEnv
   { _buildInfo = mkBuildInfo
   , _modules = M.empty
   , _types = M.empty
+  , _structs = M.empty
+  , _enums  = M.empty
   , _contracts = M.empty
   , _proxies = M.empty
   , _facets = M.empty
