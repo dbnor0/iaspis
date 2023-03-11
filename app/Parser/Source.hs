@@ -15,6 +15,7 @@ import Text.Megaparsec.Char.Lexer (decimal, charLiteral)
 import Data.Functor (($>))
 import Data.Either
 import Prelude hiding (Enum)
+import GHC.Generics (URec(UInt))
 
 
 module' :: Parser Module
@@ -341,9 +342,8 @@ primitiveType = backtrack
   [ reserved' "address" AddressT
   , reserved' "bool" BoolT
   , reserved' "string" StringT
-  , chunk "uint" *> sizedType UIntT uintPredicates
+  , reserved' "uint" UIntT
   , chunk "bytes" *> sizedType BytesT bytesPredicates
-  , reserved' "bytes" BytesDynamicT
   ]
 
 sizedType :: (Int -> Type) -> [Int -> Bool] -> Parser Type

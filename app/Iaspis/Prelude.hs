@@ -26,11 +26,10 @@ preludeFns = M.empty
 
 preludeTypes :: Bindings Type
 preludeTypes = M.fromList 
-  [ ("uint256", Entry "" (UIntT 256))
+  [ ("uint", Entry "" UIntT)
   , ("string", Entry "" StringT)
   , ("bool", Entry "" BoolT)
   , ("unit", Entry "" UnitT)
   , ("address", Entry "" AddressT)
   , ("bytes32", Entry "" (BytesT 32))
-  , ("bytes", Entry "" BytesDynamicT)
   ]

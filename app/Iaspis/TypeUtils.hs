@@ -10,7 +10,7 @@ import Utils.Text
 
 isNumeric :: Type -> Bool
 isNumeric = \case
-  UIntT _ -> True
+  UIntT -> True
   _ -> False
 
 isBitwise :: Type -> Bool
@@ -47,8 +47,7 @@ name :: Type -> T.Text
 name AddressT = "address"
 name BoolT = "bool"
 name (BytesT n) = "bytes" <> showT n
-name BytesDynamicT = "bytes"
-name (UIntT n) = "uint" <> showT n
+name UIntT = "uint"
 name StringT = "string"
 name UnitT = "unit"
 name (UserDefinedT id) = id

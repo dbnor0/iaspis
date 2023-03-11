@@ -13,11 +13,10 @@ import Data.Aeson hiding (Value)
 type Identifier = Text
 
 data Type
-  = AddressT 
+  = AddressT
   | BoolT
   | BytesT Int
-  | BytesDynamicT
-  | UIntT Int
+  | UIntT
   | StringT
   | UnitT
   | UserDefinedT Identifier

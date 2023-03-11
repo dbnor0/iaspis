@@ -74,7 +74,6 @@ memCheckStmt = \case
 
 canBeStorage :: Type -> Bool
 canBeStorage = \case
-  BytesDynamicT -> True
   StringT -> True
   StructT _ -> True
   _ -> False
