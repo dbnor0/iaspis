@@ -25,7 +25,6 @@ import Iaspis.TypeUtils
 build :: MonadState BuildEnv m => MonadError BuildError m => [Module] -> m ()
 build ms = do
   buildModules ms
-  updateImportedDecls
   updateFieldTypes
 
 buildModules :: MonadState BuildEnv m => MonadError BuildError m => [Module] -> m ()
@@ -42,7 +41,7 @@ addModules Module{ moduleDecl, imports, declarations } = do
   modify $ modules %~ M.insert moduleDecl entry
   withScope biModule moduleDecl $ do
     traverse_ addDecls declarations
-  where entry = ModuleEntry moduleDecl imports (declId <$> declarations) (fmap (, UnparsedImport) . importIds =<< imports)
+  where entry = ModuleEntry moduleDecl imports (declId <$> declarations) (importIds =<< imports)
         declId (ContractDecl c) = contractName c
         declId (ProxyDecl p) = proxyName p
         declId (FacetDecl f) = facetName f
@@ -55,7 +54,7 @@ addDecls = \case
     ns <- contractNamespace
     ts <- gets (M.elems . (^. types))
     m <- currentModule
-    uniqueId contractName (ns <> (fst <$> (m ^. moduleImportedDecls))) (DupId ContractId)
+    uniqueId contractName (ns <> (m ^. moduleImportedDecls)) (DupId ContractId)
     uniqueId contractName (name <$> ts) (DupId TypeId)
     modify $ contracts %~ M.insert contractName entry
     modify $ types %~ M.insert contractName (ContractT contractName)
@@ -68,7 +67,7 @@ addDecls = \case
   ProxyDecl (ProxyContract{ proxyName, facetList, proxyDecls }) -> do
     ns <- contractNamespace
     m <- currentModule
-    uniqueId proxyName (ns <> (fst <$> m ^. moduleImportedDecls)) (DupId ProxyId)
+    uniqueId proxyName (ns <> (m ^. moduleImportedDecls)) (DupId ProxyId)
     modify $ proxies %~ M.insert proxyName entry
     withScope biContract proxyName $ do
       traverse_ addField proxyDecls
@@ -77,7 +76,7 @@ addDecls = \case
   FacetDecl (FacetContract{ facetName, proxyList, facetDecls }) -> do
     ns <- contractNamespace
     m <- currentModule
-    uniqueId facetName (ns <> (fst <$> m ^. moduleImportedDecls)) (DupId FacetId)
+    uniqueId facetName (ns <> (m ^. moduleImportedDecls)) (DupId FacetId)
     modify $ facets %~ M.insert facetName entry
     withScope biContract facetName $ do
       traverse_ addFn facetDecls
@@ -162,32 +161,9 @@ updateFieldType (fId, FieldEntry _ (UserDefinedT tId) _ _) = do
       modify $ fields %~ M.adjust (\f -> f & fdType .~ t) fId
 updateFieldType _ = return ()
 
-updateImportedDecls :: MonadState BuildEnv m => MonadError BuildError m => m ()
-updateImportedDecls = do
-  ms <- gets (M.elems . (^. modules))
-  traverse_ updateModuleImports ms
-
-updateModuleImports :: MonadState BuildEnv m => MonadError BuildError m => ModuleEntry -> m ()
-updateModuleImports (ModuleEntry id _ _ importedDecls) = do
-  ts <- traverse importType (fst <$> importedDecls)
-  modify $ modules %~ M.adjust (\m -> m & moduleImportedDecls .~ ts) id
-
-importType :: MonadState BuildEnv m => MonadError BuildError m => Identifier -> m (Identifier, ImportType)
-importType id = do
-  (c, p, f, s, e) <- gets $
-    (,,,,) 
-    <$> M.lookup id . (^. contracts) 
-    <*> M.lookup id . (^. proxies)
-    <*> M.lookup id . (^. facets)
-    <*> M.lookup id . (^. structs)
-    <*> M.lookup id . (^. enums)
-  case (c, p, f, s, e) of
-    (Just _, _, _, _, _) -> return (id, ContractImport)
-    (_, Just _, _, _, _) -> return (id, ProxyImport)
-    (_, _, Just _, _, _) -> return (id, FacetImport)
-    (_, _, _, Just _, _) -> return (id, StructImport)
-    (_, _, _, _, Just _) -> return (id, EnumImport)
-    _ -> throwError (UndefinedType id)
+-- when typechecking, get type of field
+-- if type exists, check if type is available in current 
+-- type is available if its defined here or imported
 
 contractNamespace :: MonadState BuildEnv m => m [Identifier]
 contractNamespace = do

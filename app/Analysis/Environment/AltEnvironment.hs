@@ -17,22 +17,11 @@ import Prelude hiding (Enum)
 type Scope = Identifier
 type Bindings a = M.Map Identifier a
 
-data ImportType
-  = UnparsedImport
-  | ContractImport
-  | ProxyImport
-  | FacetImport
-  | StructImport
-  | EnumImport
-  deriving stock (Eq, Generic, Show)
-
-instance ToJSON ImportType where
-
 data ModuleEntry = ModuleEntry
   { _moduleId :: Identifier
   , _moduleImports :: [Import]
   , _moduleDecls :: [Identifier]
-  , _moduleImportedDecls :: [(Identifier, ImportType)]
+  , _moduleImportedDecls :: [Identifier]
   } deriving stock (Eq, Generic, Show)
 
 instance ToJSON ModuleEntry where

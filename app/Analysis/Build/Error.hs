@@ -25,4 +25,5 @@ data BuildError
   | InvalidMemoryLocationType Identifier Type
   | InvalidAssignOp Identifier MemoryLocation
   | InvalidLValue Expression
+  | InvalidProxyField Identifier
   deriving stock (Eq, Show)

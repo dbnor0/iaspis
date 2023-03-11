@@ -73,7 +73,7 @@ analyze ms = do
   build ms
   mutCheck ms
   memCheck ms
-  contractChecks
+  contractChecks ms
 
 writeEIP2535 :: IO ()
 writeEIP2535 = do
