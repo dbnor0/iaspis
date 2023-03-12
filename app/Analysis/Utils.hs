@@ -3,16 +3,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 
-module Analysis.Build.Utils where
+module Analysis.Utils where
 
 import Control.Monad.State.Class
 import Data.Text as T
 import Lens.Micro.Platform
 import Iaspis.Grammar
-import Analysis.Environment.AltEnvironment
+import Analysis.Environment
 import Utils.Text
 import Control.Monad.Error.Class
-import Analysis.Build.Error
+import Analysis.Error
 import Data.Map as M
 import Data.Maybe
 
@@ -59,13 +59,29 @@ updateScope id s
 getField :: MonadState BuildEnv m => MonadError BuildError m => Identifier -> m FieldEntry
 getField id = do
   ls <- localScopes
-  -- when (id == "wallagong") (throwError $ DupId ModuleId (showT ls))
   fs <- gets (^. fields)
   let entries = (\s -> M.lookup (s <> "::" <> id) fs) <$> ls
   if Prelude.all isNothing entries then
     throwError $ UndefinedId id
   else
     (return . Prelude.head . catMaybes) entries
+
+getFn :: MonadState BuildEnv m => MonadError BuildError m => Identifier -> m FunctionEntry
+getFn id = do
+  ls <- localScopes
+  fs <- gets (^. functions)
+  let entries = (\s -> M.lookup (s <> "::" <> id) fs) <$> ls
+  if Prelude.all isNothing entries then
+    throwError $ UndefinedId id
+  else
+    (return . Prelude.head . catMaybes) entries
+
+getType :: MonadState BuildEnv m => MonadError BuildError m => Identifier -> m Type
+getType id = do
+  ts <- gets (^. types)
+  case M.lookup id ts of
+    Nothing -> throwError $ UndefinedType id
+    Just t -> return t
 
 localScopes :: MonadState BuildEnv m => m [Scope]
 localScopes = do

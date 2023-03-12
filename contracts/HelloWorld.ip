@@ -2,7 +2,7 @@ module HelloWorld;
 
 struct S {
   uint x;
-  string y;
+  uint y;
 }
 
 struct T {
@@ -23,7 +23,7 @@ contract Contract {
   }
 
   public mut fn fact (uint n) -> uint {
-    S v storage <- S { x = 1, y = 2 };
+    S v storage <- S { x = 1, z = 2 };
     if (n == 1) {
       uint wallagong := 23;
       return 1;

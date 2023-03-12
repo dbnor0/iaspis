@@ -1,5 +1,7 @@
 {-# LANGUAGE DerivingStrategies #-}
-module Analysis.Build.Error where
+
+module Analysis.Error where
+
 import Iaspis.Grammar
 
 data IdType 
@@ -26,4 +28,15 @@ data BuildError
   | InvalidAssignOp Identifier MemoryLocation
   | InvalidLValue Expression
   | InvalidProxyField Identifier
+  | InvalidUserDefinedType Identifier
+  | InvalidArgType FunctionArg Type Type
+  | InvalidAssigType Identifier Type Type
+  | InvalidReturnType Identifier Type Type
+  | InvalidExpressionType Expression (Either Type Identifier) Type
+  | InvalidStructLiteral Identifier [StructField] [StructValueMember]
+  | NotInContractScope
+  | InvalidOp
+  | InvalidStructType
+  | NotYetImplemented
+  | Debug Identifier
   deriving stock (Eq, Show)

@@ -4,7 +4,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 
 
-module Analysis.Environment.AltEnvironment where
+module Analysis.Environment where
 
 import Data.Map as M
 import Iaspis.Grammar
@@ -12,6 +12,7 @@ import Lens.Micro.Platform (makeLenses)
 import GHC.Generics
 import Data.Aeson
 import Prelude hiding (Enum)
+import Utils.Text
 
 
 type Scope = Identifier
@@ -148,7 +149,7 @@ mkEnv :: BuildEnv
 mkEnv = BuildEnv
   { _buildInfo = mkBuildInfo
   , _modules = M.empty
-  , _types = M.empty
+  , _types = preludeTypes
   , _structs = M.empty
   , _enums  = M.empty
   , _contracts = M.empty
@@ -157,3 +158,20 @@ mkEnv = BuildEnv
   , _functions = M.empty
   , _fields = M.empty
   }
+
+preludeFields :: Bindings Field
+preludeFields = M.empty
+
+preludeFns :: Bindings FunctionHeader
+preludeFns = M.empty
+
+preludeTypes :: Bindings Type
+preludeTypes = M.fromList $
+  [ ("uint", UIntT)
+  , ("string", StringT)
+  , ("bool", BoolT)
+  , ("address", AddressT)
+  ] <> preludeByteTypes
+
+preludeByteTypes :: [(Identifier, Type)]
+preludeByteTypes = (\n -> ("bytes" <> showT n, BytesT n)) <$> [1..32]

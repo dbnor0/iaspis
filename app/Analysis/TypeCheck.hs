@@ -1,153 +1,166 @@
--- {-# LANGUAGE LambdaCase #-}
--- {-# LANGUAGE NamedFieldPuns #-}
--- {-# LANGUAGE FlexibleContexts #-}
--- {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Analysis.TypeCheck where
-
--- import Control.Monad.State.Class
--- import Control.Monad.Error.Class
--- import Analysis.Environment.Error
--- import Iaspis.Grammar
--- import Data.Foldable
--- import Control.Monad
--- import Utils.Text
--- import Lens.Micro.Platform
--- import Iaspis.TypeUtils
--- import Analysis.Environment.Environment
--- import Analysis.Environment.Utils
--- import Analysis.Environment.Traversals
+import Control.Monad.State.Class
+import Analysis.Environment
+import Control.Monad.Error.Class
+import Analysis.Error
+import Iaspis.Grammar
+import Data.Foldable
+import Analysis.Utils
+import Control.Monad
+import Data.Text as T
+import Lens.Micro.Platform
+import Iaspis.TypeUtils
 
 
--- typeCheck :: MonadState BuildEnv m => MonadError BuildError m => Module -> m ()
--- typeCheck m@Module{ declarations } = traverseModule m $ traverse_ typeCheckDecl declarations
+typeCheck :: MonadState BuildEnv m => MonadError BuildError m => [Module] -> m ()
+typeCheck = traverse_ typeCheckModule
 
--- typeCheckDecl :: MonadState BuildEnv m => MonadError BuildError m => Declaration -> m ()
--- typeCheckDecl = \case
---   ContractDecl c -> typeCheckContract c
+typeCheckModule :: MonadState BuildEnv m => MonadError BuildError m => Module -> m ()
+typeCheckModule Module{ moduleDecl, declarations } = withScope biModule moduleDecl $ traverse_ typeCheckDecl declarations
 
--- typeCheckContract :: MonadState BuildEnv m => MonadError BuildError m => Contract -> m ()
--- typeCheckContract = traverseContract cFn pFn fFn
---   where cFn = \case
---           ImmutableContract _ fields fns -> 
---             traverse_ typeCheckField fields 
---             >> traverse_ typeCheckFn fns
---           _ -> return ()
---         pFn = const $ return ()
---         fFn = \case
---           FacetContract _ _ fns -> do
---             traverse_ typeCheckFn fns
---           _ -> return ()
+typeCheckDecl :: MonadState BuildEnv m => MonadError BuildError m => Declaration -> m ()
+typeCheckDecl = \case
+  ContractDecl c -> withScope biContract (contractName c) $ typeCheckContract c
+  FacetDecl f -> withScope biFacet (facetName f) $ typeCheckFacet f
+  _ -> return ()
 
--- typeCheckField :: MonadState BuildEnv m => MonadError BuildError m => Field -> m ()
--- typeCheckField Field{ fieldType, fieldName, fieldInitializer } =
---   case fieldInitializer of
---     Just init -> do
---       t <- typeCheckExpr init
---       unless (t == fieldType)
---         (throwError $  InvalidAssigType fieldName fieldType t)
---     Nothing -> return ()
+typeCheckContract :: MonadState BuildEnv m => MonadError BuildError m => ImmutableContract -> m ()
+typeCheckContract (ImmutableContract _ fields fns) = do 
+  traverse_ typeCheckField fields 
+  traverse_ typeCheckFn fns
 
--- typeCheckFn :: MonadState BuildEnv m => MonadError BuildError m => Function -> m ()
--- typeCheckFn f@(Function hd stmts) = traverseFn f $ traverse_ (typeCheckStmt hd) stmts
+typeCheckFacet :: MonadState BuildEnv m => MonadError BuildError m => FacetContract -> m ()
+typeCheckFacet (FacetContract _ _ fns) = traverse_ typeCheckFn fns 
 
--- typeCheckStmt :: MonadState BuildEnv m => MonadError BuildError m => FunctionHeader -> Statement -> m ()
--- typeCheckStmt fn = \case
---   VarDeclStmt f _ ex -> do
---     et <- typeCheckExpr ex
---     unless (fieldType f == et)
---       (throwError $ InvalidAssigType (fieldName f) (fieldType f) et)
---   AssignmentStmt (IdentifierE fId) _ ex -> do
---     f <- getField fId
---     et <- typeCheckExpr ex
---     unless (fieldType f == et)
---       (throwError $ InvalidAssigType (fieldName f) (fieldType f) et)
---   ReturnStmt ex -> do
---     et <- maybe (pure UnitT) typeCheckExpr ex
---     unless (functionReturnType fn == et)
---       (throwError $ InvalidReturnType (functionName fn) (functionReturnType fn) et)
---   IfStmt cond b1 b2 -> do
---     ct <- typeCheckExpr cond
---     unless (ct == BoolT)
---       (throwError $ InvalidExpressionType cond (Left BoolT) ct)
---     typeCheckStmt fn b1
---     maybe (return ()) (typeCheckStmt fn) b2
---   BlockStmt stmts -> do
---     bs <- gets (showT . (^. blockDepth))
---     withScope bs $ traverse_ (typeCheckStmt fn) stmts
---   ExpressionStmt e -> void $ typeCheckExpr e
---   _ -> return ()
+typeCheckField :: MonadState BuildEnv m => MonadError BuildError m => Field -> m ()
+typeCheckField Field{ fieldType, fieldName, fieldInitializer } =
+  case fieldInitializer of
+    Just init -> do
+      t <- typeCheckExpr init
+      unless (t == fieldType)
+        (throwError $ InvalidAssigType fieldName fieldType t)
+    Nothing -> return ()
 
--- typeCheckExpr :: MonadState BuildEnv m => MonadError BuildError m => Expression -> m Type
--- typeCheckExpr = \case
---   LiteralE l -> return $ typeCheckLit l
---   IdentifierE id -> do
---     f <- getField id
---     return $ fieldType f
---   FunctionCallE id args -> do
---     fn <- getFn id
---     ts <- traverse typeCheckExpr args
---     traverse_ typeCheckArg (zip (functionArgs fn) ts)
---     return $ functionReturnType fn
---     where typeCheckArg (arg, t) =
---             unless (fieldType arg == t)
---               (throwError $ InvalidArgType arg (fieldType arg) t)
---   UnaryE op e -> typeCheckUnaryExpr e op
---   BinaryE op e1 e2 -> typeCheckBinaryExpr e1 e2 op
---   InstantiationE tId _ -> getType tId
+typeCheckFn :: MonadState BuildEnv m => MonadError BuildError m => Function -> m ()
+typeCheckFn (Function hd stmts) = withScope biFn (functionName hd) $ traverse_ (typeCheckStmt hd) stmts
 
--- typeCheckLit :: Value -> Type
--- typeCheckLit = \case
---   AddressV _ -> AddressT
---   BoolV _ -> BoolT
---   BytesV _ -> BytesDynamicT
---   UIntV _ -> UIntT 256
---   StringV _ -> StringT
+typeCheckStmt :: MonadState BuildEnv m => MonadError BuildError m => FunctionHeader -> Statement -> m ()
+typeCheckStmt fn = \case
+  VarDeclStmt f _ ex -> do
+    field <- getField (declName f)
+    et <- typeCheckExpr ex
+    unless (field ^. fdType == et)
+      (throwError $ InvalidAssigType (field ^. fdId) (field ^. fdType) et)
+  AssignmentStmt (IdentifierE fId) _ ex -> do
+    f <- getField fId
+    et <- typeCheckExpr ex
+    unless (f ^. fdType == et)
+      (throwError $ InvalidAssigType (f ^. fdId) (f ^. fdType) et)
+  ReturnStmt ex -> do
+    et <- maybe (pure UnitT) typeCheckExpr ex
+    unless ((argType . functionReturnType) fn == et)
+      (throwError $ InvalidReturnType (functionName fn) ((argType . functionReturnType) fn) et)
+  IfStmt cond b1 b2 -> do
+    ct <- typeCheckExpr cond
+    unless (ct == BoolT)
+      (throwError $ InvalidExpressionType cond (Left BoolT) ct)
+    typeCheckStmt fn b1
+    maybe (return ()) (typeCheckStmt fn) b2
+  BlockStmt stmts -> do
+    enterBlock
+    traverse_ (typeCheckStmt fn) stmts
+    exitBlock
+  ExpressionStmt e -> void $ typeCheckExpr e
+  _ -> return ()
 
--- typeCheckUnaryExpr :: MonadState BuildEnv m => MonadError BuildError m => Expression -> UnaryOp -> m Type
--- typeCheckUnaryExpr e op = do
---   t <- typeCheckExpr e
---   case op of
---     op
---       | op `elem` numericUnaryOps ->
---         unless (isNumeric t)
---           (throwError $ InvalidExpressionType e (Right "numeric") t)
---       | op == BitwiseNegationOp ->
---         unless (isBitwise t)
---           (throwError $ InvalidExpressionType e (Right "bitwise") t)
---       | op == LogicalNegationOp ->
---         unless (t == BoolT)
---           (throwError $ InvalidExpressionType e (Left BoolT) t)
---       | otherwise -> throwError InvalidOp
---   return t
+typeCheckExpr :: MonadState BuildEnv m => MonadError BuildError m => Expression -> m Type
+typeCheckExpr = \case
+  LiteralE l -> typeCheckLit l
+  IdentifierE id -> do
+    f <- getField id
+    return $ f ^. fdType
+  MemberAccessE e id -> return UnitT
+  FunctionCallE id args -> do
+    fn <- getFn id
+    ts <- traverse typeCheckExpr args
+    traverse_ typeCheckArg (Prelude.zip (fn ^. fnArgs) ts)
+    return . argType $ fn ^. fnReturn
+    where typeCheckArg (arg, t) =
+            unless (argType arg == t)
+              (throwError $ InvalidArgType arg (argType arg) t)
+  UnaryE op e -> typeCheckUnaryExpr e op
+  BinaryE op e1 e2 -> typeCheckBinaryExpr e1 e2 op
+  InstantiationE tId _ -> getType tId
 
--- typeCheckBinaryExpr :: MonadState BuildEnv m => MonadError BuildError m => Expression -> Expression -> BinaryOp -> m Type
--- typeCheckBinaryExpr e1 e2 op = do
---   t1 <- typeCheckExpr e1
---   t2 <- typeCheckExpr e2
---   case op of
---     op
---       | op `elem` arithOps || op `elem` relationalOps -> do
---         unless (isNumeric t1)
---           (throwError $ InvalidExpressionType e1 (Right "numeric") t1)
---         unless (isNumeric t2)
---           (throwError $ InvalidExpressionType e2 (Right "numeric") t2)
---         return t1
---       | op `elem` eqOps -> do
---         unless (t1 == t2)
---           (throwError $ InvalidExpressionType e2 (Left t1) t2)
---         return BoolT
---       | op `elem` logicalOps -> do
---         unless (t1 == BoolT)
---           (throwError $ InvalidExpressionType e1 (Left BoolT) t1)
---         unless (t2 == BoolT)
---           (throwError $ InvalidExpressionType e2 (Left BoolT) t2)
---         return t1
---       | op `elem` bitwiseOps -> do
---         unless (isBitwise t1)
---           (throwError $ InvalidExpressionType e1 (Right "bitwise") t1)
---         unless (isBitwise t2)
---           (throwError $ InvalidExpressionType e2 (Right "bitwise") t2)
---         return t1
---       | otherwise -> throwError InvalidOp
+typeCheckLit :: MonadState BuildEnv m => MonadError BuildError m => Value -> m Type
+typeCheckLit = \case
+  AddressV _ -> return AddressT
+  BoolV _ -> return BoolT
+  BytesV b -> return $ BytesT size
+    where size = T.length b `div` 2
+  UIntV _ -> return UIntT
+  StringV _ -> return StringT
+  StructV StructValue{ structValueName, structValueMembers } -> do
+    t <- getType structValueName
+    case t of
+      s@(StructT (Struct id fs)) -> do
+        let memIds = structMemberValueName <$> structValueMembers
+            structIds = structFieldName <$> fs
+            structTs = structFieldType <$> fs
+        memTs <- traverse typeCheckExpr (structMemberValueExpr <$> structValueMembers)
+        unless (memIds == structIds && memTs == structTs) 
+          (throwError $ InvalidStructLiteral id fs structValueMembers)
+        return s
+      _ -> throwError InvalidStructType
 
+typeCheckUnaryExpr :: MonadState BuildEnv m => MonadError BuildError m => Expression -> UnaryOp -> m Type
+typeCheckUnaryExpr e op = do
+  t <- typeCheckExpr e
+  case op of
+    op
+      | Data.Foldable.elem op numericUnaryOps ->
+        unless (isNumeric t)
+          (throwError $ InvalidExpressionType e (Right "numeric") t)
+      | op == BitwiseNegationOp ->
+        unless (isBitwise t)
+          (throwError $ InvalidExpressionType e (Right "bitwise") t)
+      | op == LogicalNegationOp ->
+        unless (t == BoolT)
+          (throwError $ InvalidExpressionType e (Left BoolT) t)
+      | otherwise -> throwError InvalidOp
+  return t
+
+typeCheckBinaryExpr :: MonadState BuildEnv m => MonadError BuildError m => Expression -> Expression -> BinaryOp -> m Type
+typeCheckBinaryExpr e1 e2 op = do
+  t1 <- typeCheckExpr e1
+  t2 <- typeCheckExpr e2
+  case op of
+    op
+      | Data.Foldable.elem op arithOps || Data.Foldable.elem op relationalOps -> do
+        unless (isNumeric t1)
+          (throwError $ InvalidExpressionType e1 (Right "numeric") t1)
+        unless (isNumeric t2)
+          (throwError $ InvalidExpressionType e2 (Right "numeric") t2)
+        return t1
+      | Data.Foldable.elem op eqOps -> do
+        unless (t1 == t2)
+          (throwError $ InvalidExpressionType e2 (Left t1) t2)
+        return BoolT
+      | Data.Foldable.elem op logicalOps -> do
+        unless (t1 == BoolT)
+          (throwError $ InvalidExpressionType e1 (Left BoolT) t1)
+        unless (t2 == BoolT)
+          (throwError $ InvalidExpressionType e2 (Left BoolT) t2)
+        return t1
+      | Data.Foldable.elem op bitwiseOps -> do
+        unless (isBitwise t1)
+          (throwError $ InvalidExpressionType e1 (Right "bitwise") t1)
+        unless (isBitwise t2)
+          (throwError $ InvalidExpressionType e2 (Right "bitwise") t2)
+        return t1
+      | otherwise -> throwError InvalidOp

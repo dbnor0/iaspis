@@ -3,12 +3,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE LambdaCase #-}
 
-module Analysis.Build.Contract where
+module Analysis.Contract where
 
 import Control.Monad.State.Class
-import Analysis.Environment.AltEnvironment
+import Analysis.Environment
 import Control.Monad.Error.Class
-import Analysis.Build.Error
+import Analysis.Error
 import Data.Map as M
 import Lens.Micro.Platform
 import Control.Monad

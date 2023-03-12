@@ -5,20 +5,19 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections #-}
 
-module Analysis.Build.Build where
+module Analysis.Build where
 
 import Control.Monad.State.Class
-import Analysis.Environment.AltEnvironment hiding (contractFields, contractFns)
+import Analysis.Environment hiding (contractFields, contractFns)
 import Control.Monad.Error.Class
 import Iaspis.Grammar
-import Analysis.Build.Error
-import Analysis.Build.Module
+import Analysis.Error
+import Analysis.Module
 import Data.Map as M
 import Data.Foldable
 import Lens.Micro.Platform
-import Analysis.Build.Utils
+import Analysis.Utils
 import Data.Maybe (fromJust)
-import Analysis.Environment.Error ()
 import Iaspis.TypeUtils
 
 

@@ -1,10 +1,10 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE FlexibleContexts #-}
 
-module Analysis.Build.Module where
+module Analysis.Module where
 
 import Control.Monad.State.Class
-import Analysis.Environment.AltEnvironment
+import Analysis.Environment
 import Control.Monad.Error.Class
 import Iaspis.Grammar
 import Control.Monad
@@ -13,7 +13,7 @@ import Data.Containers.ListUtils
 import Control.Monad.State
 import Data.Bifunctor
 import Data.Foldable
-import Analysis.Build.Error
+import Analysis.Error
 import Data.Map as M
 
 checkCyclicImports :: MonadState BuildEnv m => MonadError BuildError m =>  m ()

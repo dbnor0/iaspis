@@ -3,14 +3,14 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Analysis.Build.Mutability where
+module Analysis.Mutability where
 
 import Iaspis.Grammar
 import Control.Monad.State.Class
 import Control.Monad.Error.Class
-import Analysis.Build.Error
-import Analysis.Environment.AltEnvironment
-import Analysis.Build.Utils
+import Analysis.Error
+import Analysis.Environment
+import Analysis.Utils
 import Data.Foldable
 import Control.Monad
 import Lens.Micro.Platform

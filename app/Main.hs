@@ -10,33 +10,22 @@ import Control.Monad
 import System.Directory
 import Control.Monad.State
 import Iaspis.Grammar as I
--- import Analysis.Environment.Build
--- import Analysis.ContractCheck
--- import Analysis.MemoryCheck (memCheck)
 import Control.Monad.Except
--- import Analysis.MutabilityCheck
--- import Analysis.TypeCheck (typeCheck)
--- import Analysis.ImportCheck
 import System.FilePath
 import Data.Text as T
 import Data.Either.Combinators
 import Utils.Text
 import Data.Either
 import Data.Foldable
--- import Codegen.Transpile (transpile)
--- import Codegen.Generate
--- import Data.Aeson
--- import Data.ByteString.Lazy.Char8 as BS (unpack)
-import Analysis.Build.Build (build)
-import Analysis.Environment.AltEnvironment (mkEnv, BuildEnv, {-modules-})
+import Analysis.Build (build)
 import Data.ByteString.Lazy.Char8 as BS (unpack)
 import Data.Aeson
-import Analysis.Build.Error
-import Analysis.Build.Memory
-import Analysis.Build.Mutability
-import Analysis.Build.Contract
-
--- import Lens.Micro.Platform
+import Analysis.Error
+import Analysis.Memory
+import Analysis.Mutability
+import Analysis.Contract
+import Analysis.TypeCheck (typeCheck)
+import Analysis.Environment
 
 
 hasExt :: FilePath -> FilePath -> Bool
@@ -57,23 +46,13 @@ loadFile fp = do
   file <- T.readFile fp
   return $ mapLeft showT $ runParser Parser.Source.module' "" file
 
--- validate :: MonadState BuildEnv m => MonadError BuildError m => I.Module -> m ()
--- validate m = do
---   checkImports m
---   checkContracts m
---   memCheck m
---   mutCheck m
---   typeCheck m
-
--- writeModules :: FilePath -> [I.Module] -> IO ()
--- writeModules out ms = traverse_ (genFile out) (genModule <$> transpile ms)
-
 analyze :: MonadState BuildEnv m => MonadError BuildError m => [Module] -> m ()
 analyze ms = do
   build ms
   mutCheck ms
   memCheck ms
   contractChecks ms
+  typeCheck ms
 
 writeEIP2535 :: IO ()
 writeEIP2535 = do
@@ -98,23 +77,3 @@ main = do
         Right _ -> do
           Prelude.writeFile "output.json" (BS.unpack $ encode e)
           T.putStrLn "cool"
-
-
-    -- let modules = rights parsed
-    --     (err, e) = runState (runExceptT $ traverse_ buildEnv modules) mkEnv
-    -- in
-    --   case err of
-    --     Left be -> print $ showErr be
-    --     Right _ -> do
-    --       let (err, env) = runState (runExceptT $ traverse_ validate modules) e
-    --       case err of
-    --         Left be -> do
-    --           Prelude.writeFile "output.json" (BS.unpack $ encode env)
-    --           Prelude.writeFile "ast.json" (BS.unpack $ encode modules)
-    --           print $ showErr be
-    --         Right _ -> do
-    --           writeEIP2535
-    --           writeModules "./output" modules
-
-
-

@@ -2,15 +2,15 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE FlexibleContexts #-}
 
-module Analysis.Build.Memory  where
+module Analysis.Memory  where
 
 import Control.Monad.State.Class
-import Analysis.Environment.AltEnvironment
+import Analysis.Environment
 import Control.Monad.Error.Class
-import Analysis.Build.Error
+import Analysis.Error
 import Iaspis.Grammar
 import Data.Foldable
-import Analysis.Build.Utils
+import Analysis.Utils
 import Control.Monad
 import Lens.Micro.Platform
 
