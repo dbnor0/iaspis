@@ -149,6 +149,8 @@ addStmtDecl = \case
 updateFieldTypes :: MonadState BuildEnv m => MonadError BuildError m => m ()
 updateFieldTypes = do
   fs <- gets (M.assocs . (^. fields))
+  ts <- gets (M.assocs . (^. types))
+  traverse_ updateStructType ts
   traverse_ updateFieldType fs
 
 updateFieldType :: MonadState BuildEnv m => MonadError BuildError m => (Identifier, FieldEntry) -> m ()
@@ -160,9 +162,22 @@ updateFieldType (fId, FieldEntry _ (UserDefinedT tId) _ _) = do
       modify $ fields %~ M.adjust (\f -> f & fdType .~ t) fId
 updateFieldType _ = return ()
 
--- when typechecking, get type of field
--- if type exists, check if type is available in current 
--- type is available if its defined here or imported
+updateStructType :: MonadState BuildEnv m => MonadError BuildError m => (Identifier, Type) -> m ()
+updateStructType (tId, t) = do
+  case t of
+    StructT s@(Struct _ sFs) -> do
+      traverse_ (updateStructFieldType tId s) sFs
+    _ -> return ()
+
+updateStructFieldType:: MonadState BuildEnv m => MonadError BuildError m => Identifier -> Struct -> StructField -> m ()
+updateStructFieldType tId (Struct sId fs) (StructField (UserDefinedT id) fId) = do      
+  fType <- gets (M.lookup id . (^. types))
+  case fType of
+    Nothing -> throwError $ UndefinedType id
+    Just t -> do
+      modify $ types %~ M.adjust (const $ StructT $ Struct sId newFields) tId
+      where newFields = StructField t fId : Prelude.filter ((/= fId) . structFieldName) fs
+updateStructFieldType _ _ _ = return ()
 
 contractNamespace :: MonadState BuildEnv m => m [Identifier]
 contractNamespace = do

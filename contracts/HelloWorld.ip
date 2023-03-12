@@ -5,8 +5,19 @@ struct S {
   uint y;
 }
 
+struct Z {
+  uint x;
+  uint y;
+  T h;
+}
+
 struct T {
+  Q b;
   uint z;
+}
+
+struct Q {
+  bool q;
 }
 
 contract Contract {
@@ -23,7 +34,8 @@ contract Contract {
   }
 
   public mut fn fact (uint n) -> uint {
-    S v storage <- S { x = 1, z = 2 };
+    Z v storage <- Z { h = T { b = Q { q = true }, z = 123 }, x = 1, y = 2 };
+    string aaa := v.h.b.q;
     if (n == 1) {
       uint wallagong := 23;
       return 1;

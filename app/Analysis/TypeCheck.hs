@@ -84,7 +84,28 @@ typeCheckExpr = \case
   IdentifierE id -> do
     f <- getField id
     return $ f ^. fdType
-  MemberAccessE e id -> return UnitT
+  MemberAccessE (IdentifierE base) mem -> do
+    f <- getField base
+    case f ^. fdType of
+      StructT _ -> do
+        m <- getStructField (f ^. fdType) mem
+        return $ structFieldType m
+      _ -> throwError NotYetImplemented
+  MemberAccessE e@(MemberAccessE _ _) mem -> do
+    t <- typeCheckExpr e
+    case t of
+      StructT _ -> do
+        m <- getStructField t mem
+        return $ structFieldType m
+      _ -> throwError NotYetImplemented
+  MemberAccessE e@(FunctionCallE _ _) mem -> do
+    t <- typeCheckExpr e
+    case t of
+      StructT _ -> do
+        m <- getStructField t mem
+        return $ structFieldType m
+      _ -> throwError NotYetImplemented
+  MemberAccessE _ _ -> throwError InvalidMemberAccessOp
   FunctionCallE id args -> do
     fn <- getFn id
     ts <- traverse typeCheckExpr args

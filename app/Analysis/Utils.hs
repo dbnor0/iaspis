@@ -15,6 +15,7 @@ import Control.Monad.Error.Class
 import Analysis.Error
 import Data.Map as M
 import Data.Maybe
+import qualified Data.Foldable
 
 
 type ScopeSetter = Lens' BuildInfo (Maybe Identifier)
@@ -89,3 +90,13 @@ localScopes = do
   return $ Prelude.scanl localScope s (Prelude.reverse [1..(scopeSize s)])
   where localScope t n = intercalate "::" $ Prelude.take n $ splitOn "::" t
         scopeSize s = Prelude.length $ splitOn "::" s
+
+getStructField :: MonadState BuildEnv m => MonadError BuildError m => Type -> Identifier -> m StructField
+getStructField t memId = do
+  case t of
+    StructT (Struct _ sMems) -> do
+      let mem = Data.Foldable.find ((== memId) . structFieldName) sMems
+      case mem of
+        Nothing -> throwError NotYetImplemented
+        Just m -> return m
+    _ -> throwError NotYetImplemented

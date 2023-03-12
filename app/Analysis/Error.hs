@@ -37,6 +37,7 @@ data BuildError
   | NotInContractScope
   | InvalidOp
   | InvalidStructType
+  | InvalidMemberAccessOp
   | NotYetImplemented
   | Debug Identifier
   deriving stock (Eq, Show)
