@@ -2,6 +2,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 
 module Analysis.Environment where
@@ -13,6 +15,9 @@ import GHC.Generics
 import Data.Aeson
 import Prelude hiding (Enum)
 import Utils.Text
+import Control.Monad.State.Class
+import Analysis.Error
+import Control.Monad.Error.Class
 
 
 type Scope = Identifier
@@ -66,12 +71,16 @@ data StructEntry = StructEntry
 
 instance ToJSON StructEntry where
 
+makeLenses ''StructEntry
+
 data EnumEntry = EnumEntry
   { _enumId :: Identifier
   , _enumDef :: Enum
   } deriving stock (Eq, Show, Generic)
 
 instance ToJSON EnumEntry where
+
+makeLenses ''EnumEntry
 
 data FunctionEntry = FunctionEntry
   { _fnId :: Identifier
@@ -133,6 +142,8 @@ data BuildEnv = BuildEnv
 instance ToJSON BuildEnv where
 
 makeLenses ''BuildEnv
+
+type BuildContext m = (MonadState BuildEnv m, MonadError BuildError m)
 
 mkBuildInfo :: BuildInfo
 mkBuildInfo = BuildInfo

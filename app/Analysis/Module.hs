@@ -16,14 +16,14 @@ import Data.Foldable
 import Analysis.Error
 import Data.Map as M
 
-checkCyclicImports :: MonadState BuildEnv m => MonadError BuildError m =>  m ()
+checkCyclicImports :: BuildContext m =>  m ()
 checkCyclicImports = do
   ms <- gets (M.elems . (^. modules))
   let graph = M.fromList $ toAdjList <$> ms
   when (detectCycles graph) (throwError CyclicImports)
   where toAdjList (ModuleEntry mId mIds _ _) = (mId, importModule <$> mIds)
 
-checkImportedDecls :: MonadState BuildEnv m => MonadError BuildError m =>  m ()
+checkImportedDecls :: BuildContext m =>  m ()
 checkImportedDecls = do
   ms <- gets (^. modules)
   traverse_ (checkImport ms) (view moduleImports =<< M.elems ms)
@@ -31,14 +31,14 @@ checkImportedDecls = do
           unless (all (`elem` ((ms M.! mod) ^. moduleDecls)) ids) 
             (throwError UndefinedImport)
 
-checkImports :: MonadState BuildEnv m => MonadError BuildError m =>  m ()
+checkImports :: BuildContext m =>  m ()
 checkImports = do
   ms <- gets (M.elems . (^. modules))
   let moduleIds = view moduleId <$> ms
   let importedModules = importModule <$> (view moduleImports =<< ms)
   unless (all (`elem` moduleIds) importedModules) (throwError UndefinedImport)
 
-uniqueId :: MonadError BuildError m
+uniqueId :: BuildContext m
          => Identifier
          -> [Identifier]
          -> (Identifier -> BuildError)

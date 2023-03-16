@@ -20,6 +20,12 @@ struct Q {
   bool q;
 }
 
+enum States {
+  STARTED,
+  FINISHED,
+  FAILED
+}
+
 contract Contract {
   public mut uint a <- 123;
   public uint b;
@@ -35,7 +41,7 @@ contract Contract {
 
   public mut fn fact (uint n) -> uint {
     Z v storage <- Z { h = T { b = Q { q = true }, z = 123 }, x = 1, y = 2 };
-    string aaa := v.h.b.q;
+    mut bool aaa := v.h.b.q;
     if (n == 1) {
       uint wallagong := 23;
       return 1;

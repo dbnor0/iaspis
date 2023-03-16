@@ -12,6 +12,7 @@ data IdType
   | FacetId
   | FunctionId
   | FieldId
+  | EnumFieldId
   deriving stock (Eq, Show)
 
 data BuildError

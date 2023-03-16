@@ -2,6 +2,11 @@ module Test;
 
 import S from HelloWorld;
 
+enum States2 {
+  RED,
+  BLACK
+}
+
 contract Test {
 
 }

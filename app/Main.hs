@@ -46,7 +46,7 @@ loadFile fp = do
   file <- T.readFile fp
   return $ mapLeft showT $ runParser Parser.Source.module' "" file
 
-analyze :: MonadState BuildEnv m => MonadError BuildError m => [Module] -> m ()
+analyze :: BuildContext m => [Module] -> m ()
 analyze ms = do
   build ms
   mutCheck ms

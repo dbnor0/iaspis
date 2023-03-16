@@ -20,19 +20,19 @@ import qualified Data.Foldable
 
 type ScopeSetter = Lens' BuildInfo (Maybe Identifier)
 
-withScope :: MonadState BuildEnv m => ScopeSetter -> Scope -> m a -> m ()
+withScope :: BuildContext m => ScopeSetter -> Scope -> m a -> m ()
 withScope t s f = do
   enterScope t s
   _ <- f
   exitScope t
 
-enterScope :: MonadState BuildEnv m => ScopeSetter -> Scope -> m ()
+enterScope :: BuildContext m => ScopeSetter -> Scope -> m ()
 enterScope setter s = do
   modify (setType . setScope)
   where setScope = (buildInfo . biScope) %~ updateScope s
         setType = (buildInfo . setter) ?~ s
 
-exitScope :: MonadState BuildEnv m => ScopeSetter -> m ()
+exitScope :: BuildContext m => ScopeSetter -> m ()
 exitScope setter = do
   modify (setType . setScope)
   where setScope = (buildInfo . biScope) %~ revertScope
@@ -41,13 +41,13 @@ exitScope setter = do
 revertScope :: Scope -> Scope
 revertScope = intercalate "::" . Prelude.init . splitOn "::"
 
-enterBlock :: MonadState BuildEnv m => m ()
+enterBlock :: BuildContext m => m ()
 enterBlock = do
   modify $ (buildInfo . biDepth) +~ 1
   bd <- gets (^. (buildInfo . biDepth))
   modify $ (buildInfo . biScope) %~ updateScope (showT bd)
 
-exitBlock :: MonadState BuildEnv m => m ()
+exitBlock :: BuildContext m => m ()
 exitBlock = do
   modify $ (buildInfo . biDepth) -~ 1
   modify $ (buildInfo . biScope) %~ revertScope
@@ -57,7 +57,7 @@ updateScope id s
   | T.null s = id
   | otherwise = s <> "::" <> id
 
-getField :: MonadState BuildEnv m => MonadError BuildError m => Identifier -> m FieldEntry
+getField :: BuildContext m => Identifier -> m FieldEntry
 getField id = do
   ls <- localScopes
   fs <- gets (^. fields)
@@ -67,7 +67,7 @@ getField id = do
   else
     (return . Prelude.head . catMaybes) entries
 
-getFn :: MonadState BuildEnv m => MonadError BuildError m => Identifier -> m FunctionEntry
+getFn :: BuildContext m => Identifier -> m FunctionEntry
 getFn id = do
   ls <- localScopes
   fs <- gets (^. functions)
@@ -77,21 +77,21 @@ getFn id = do
   else
     (return . Prelude.head . catMaybes) entries
 
-getType :: MonadState BuildEnv m => MonadError BuildError m => Identifier -> m Type
+getType :: BuildContext m => Identifier -> m Type
 getType id = do
   ts <- gets (^. types)
   case M.lookup id ts of
     Nothing -> throwError $ UndefinedType id
     Just t -> return t
 
-localScopes :: MonadState BuildEnv m => m [Scope]
+localScopes :: BuildContext m => m [Scope]
 localScopes = do
   s <- gets (^. (buildInfo . biScope))
   return $ Prelude.scanl localScope s (Prelude.reverse [1..(scopeSize s)])
   where localScope t n = intercalate "::" $ Prelude.take n $ splitOn "::" t
         scopeSize s = Prelude.length $ splitOn "::" s
 
-getStructField :: MonadState BuildEnv m => MonadError BuildError m => Type -> Identifier -> m StructField
+getStructField :: BuildContext m => Type -> Identifier -> m StructField
 getStructField t memId = do
   case t of
     StructT (Struct _ sMems) -> do

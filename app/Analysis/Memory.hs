@@ -4,7 +4,6 @@
 
 module Analysis.Memory  where
 
-import Control.Monad.State.Class
 import Analysis.Environment
 import Control.Monad.Error.Class
 import Analysis.Error
@@ -15,22 +14,22 @@ import Control.Monad
 import Lens.Micro.Platform
 
 
-memCheck :: MonadState BuildEnv m => MonadError BuildError m => [Module] -> m ()
+memCheck :: BuildContext m => [Module] -> m ()
 memCheck = traverse_ (\Module{ moduleDecl, declarations } -> withScope biModule moduleDecl $ traverse_ memCheckDecl declarations)
 
-memCheckDecl :: MonadState BuildEnv m => MonadError BuildError m => Declaration -> m ()
+memCheckDecl :: BuildContext m => Declaration -> m ()
 memCheckDecl = \case
   ContractDecl (ImmutableContract id _ fns) -> withScope biContract id $ traverse_ memCheckFn fns
   FacetDecl (FacetContract id _ fns) -> withScope biFacet id $ traverse_ memCheckFn fns
   _ -> return ()
 
-memCheckFn :: MonadState BuildEnv m => MonadError BuildError m => Function -> m ()
+memCheckFn :: BuildContext m => Function -> m ()
 memCheckFn (Function hd stmts) = withScope biFn (functionName hd) $ do
   traverse_ memCheckStmt stmts
   when (functionMutability hd == View)
     (traverse_ (memCheckViewFnStmt (functionName hd)) stmts)
 
-memCheckViewFnStmt :: MonadState BuildEnv m => MonadError BuildError m => Identifier -> Statement -> m ()
+memCheckViewFnStmt :: BuildContext m => Identifier -> Statement -> m ()
 memCheckViewFnStmt fnId = \case
   VarDeclStmt field loc _ -> when (loc == Storage)
     (throwError $ IllegalStorageAssig (declName field) fnId)
@@ -42,7 +41,7 @@ memCheckViewFnStmt fnId = \case
   BlockStmt stmts -> traverse_ (memCheckViewFnStmt fnId) stmts
   _ -> return ()
 
-memCheckStmt :: MonadState BuildEnv m => MonadError BuildError m => Statement -> m ()
+memCheckStmt :: BuildContext m => Statement -> m ()
 memCheckStmt = \case
   VarDeclStmt DeclArg{ declName } assigLoc _ -> do
     f <- getField declName

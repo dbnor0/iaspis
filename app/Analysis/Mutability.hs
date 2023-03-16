@@ -17,21 +17,21 @@ import Lens.Micro.Platform
 import Data.Maybe
 
 
-mutCheck :: MonadState BuildEnv m => MonadError BuildError m => [Module] -> m ()
+mutCheck :: BuildContext m => [Module] -> m ()
 mutCheck = traverse_ (\Module{ moduleDecl, declarations } -> withScope biModule moduleDecl $ traverse_ mutCheckDecl declarations)
 
-mutCheckDecl :: MonadState BuildEnv m => MonadError BuildError m => Declaration -> m ()
+mutCheckDecl :: BuildContext m => Declaration -> m ()
 mutCheckDecl = \case
   ContractDecl (ImmutableContract id _ fns) -> withScope biContract id $ traverse_ mutCheckFn fns
   FacetDecl (FacetContract id _ fns) -> withScope biFacet id $ traverse_ mutCheckFn fns
   _ -> return () 
   
-mutCheckFn :: MonadState BuildEnv m => MonadError BuildError m => Function -> m ()
+mutCheckFn :: BuildContext m => Function -> m ()
 mutCheckFn (Function hd stmts) = withScope biFn (functionName hd) $
   traverse_ mutCheckStmt stmts
 
 -- check that constants are not being assigned to unless in constructor
-mutCheckStmt :: MonadState BuildEnv m => MonadError BuildError m => Statement -> m ()
+mutCheckStmt :: BuildContext m => Statement -> m ()
 mutCheckStmt = \case
   AssignmentStmt (IdentifierE id) _ _ -> do
     fn <- gets (fromJust . (^. (buildInfo . biFn)))

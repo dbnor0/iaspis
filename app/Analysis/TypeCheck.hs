@@ -4,7 +4,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Analysis.TypeCheck where
-import Control.Monad.State.Class
 import Analysis.Environment
 import Control.Monad.Error.Class
 import Analysis.Error
@@ -17,27 +16,27 @@ import Lens.Micro.Platform
 import Iaspis.TypeUtils
 
 
-typeCheck :: MonadState BuildEnv m => MonadError BuildError m => [Module] -> m ()
+typeCheck :: BuildContext m => [Module] -> m ()
 typeCheck = traverse_ typeCheckModule
 
-typeCheckModule :: MonadState BuildEnv m => MonadError BuildError m => Module -> m ()
+typeCheckModule :: BuildContext m => Module -> m ()
 typeCheckModule Module{ moduleDecl, declarations } = withScope biModule moduleDecl $ traverse_ typeCheckDecl declarations
 
-typeCheckDecl :: MonadState BuildEnv m => MonadError BuildError m => Declaration -> m ()
+typeCheckDecl :: BuildContext m => Declaration -> m ()
 typeCheckDecl = \case
   ContractDecl c -> withScope biContract (contractName c) $ typeCheckContract c
   FacetDecl f -> withScope biFacet (facetName f) $ typeCheckFacet f
   _ -> return ()
 
-typeCheckContract :: MonadState BuildEnv m => MonadError BuildError m => ImmutableContract -> m ()
+typeCheckContract :: BuildContext m => ImmutableContract -> m ()
 typeCheckContract (ImmutableContract _ fields fns) = do 
   traverse_ typeCheckField fields 
   traverse_ typeCheckFn fns
 
-typeCheckFacet :: MonadState BuildEnv m => MonadError BuildError m => FacetContract -> m ()
+typeCheckFacet :: BuildContext m => FacetContract -> m ()
 typeCheckFacet (FacetContract _ _ fns) = traverse_ typeCheckFn fns 
 
-typeCheckField :: MonadState BuildEnv m => MonadError BuildError m => Field -> m ()
+typeCheckField :: BuildContext m => Field -> m ()
 typeCheckField Field{ fieldType, fieldName, fieldInitializer } =
   case fieldInitializer of
     Just init -> do
@@ -46,10 +45,10 @@ typeCheckField Field{ fieldType, fieldName, fieldInitializer } =
         (throwError $ InvalidAssigType fieldName fieldType t)
     Nothing -> return ()
 
-typeCheckFn :: MonadState BuildEnv m => MonadError BuildError m => Function -> m ()
+typeCheckFn :: BuildContext m => Function -> m ()
 typeCheckFn (Function hd stmts) = withScope biFn (functionName hd) $ traverse_ (typeCheckStmt hd) stmts
 
-typeCheckStmt :: MonadState BuildEnv m => MonadError BuildError m => FunctionHeader -> Statement -> m ()
+typeCheckStmt :: BuildContext m => FunctionHeader -> Statement -> m ()
 typeCheckStmt fn = \case
   VarDeclStmt f _ ex -> do
     field <- getField (declName f)
@@ -78,7 +77,7 @@ typeCheckStmt fn = \case
   ExpressionStmt e -> void $ typeCheckExpr e
   _ -> return ()
 
-typeCheckExpr :: MonadState BuildEnv m => MonadError BuildError m => Expression -> m Type
+typeCheckExpr :: BuildContext m => Expression -> m Type
 typeCheckExpr = \case
   LiteralE l -> typeCheckLit l
   IdentifierE id -> do
@@ -118,7 +117,7 @@ typeCheckExpr = \case
   BinaryE op e1 e2 -> typeCheckBinaryExpr e1 e2 op
   InstantiationE tId _ -> getType tId
 
-typeCheckLit :: MonadState BuildEnv m => MonadError BuildError m => Value -> m Type
+typeCheckLit :: BuildContext m => Value -> m Type
 typeCheckLit = \case
   AddressV _ -> return AddressT
   BoolV _ -> return BoolT
@@ -139,7 +138,7 @@ typeCheckLit = \case
         return s
       _ -> throwError InvalidStructType
 
-typeCheckUnaryExpr :: MonadState BuildEnv m => MonadError BuildError m => Expression -> UnaryOp -> m Type
+typeCheckUnaryExpr :: BuildContext m => Expression -> UnaryOp -> m Type
 typeCheckUnaryExpr e op = do
   t <- typeCheckExpr e
   case op of
@@ -156,7 +155,7 @@ typeCheckUnaryExpr e op = do
       | otherwise -> throwError InvalidOp
   return t
 
-typeCheckBinaryExpr :: MonadState BuildEnv m => MonadError BuildError m => Expression -> Expression -> BinaryOp -> m Type
+typeCheckBinaryExpr :: BuildContext m => Expression -> Expression -> BinaryOp -> m Type
 typeCheckBinaryExpr e1 e2 op = do
   t1 <- typeCheckExpr e1
   t2 <- typeCheckExpr e2
