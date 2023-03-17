@@ -30,6 +30,7 @@ executable iaspis
     Analysis.Mutability
     Analysis.Memory
     Analysis.Utils
+    Analysis.Scope
     Analysis.Contract
     Analysis.Environment
     Analysis.TypeCheck
@@ -101,7 +102,6 @@ executable iaspis
     , containers
     , directory
     , either
-    , extra
     , filepath
     , megaparsec
     , microlens-platform

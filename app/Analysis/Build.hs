@@ -4,6 +4,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 
 module Analysis.Build where
 
@@ -16,10 +17,10 @@ import Analysis.Module
 import Data.Map as M
 import Data.Foldable
 import Lens.Micro.Platform
-import Analysis.Utils
 import Data.Maybe (fromJust)
 import Iaspis.TypeUtils
 import Control.Monad
+import Analysis.Scope
 
 
 build :: BuildContext m => [Module] -> m ()
@@ -36,11 +37,11 @@ typePass ms = do
   checkCyclicImports
 
 addModules :: BuildContext m => Module -> m ()
-addModules Module{ moduleDecl, imports, declarations } = do
+addModules m@Module{ moduleDecl, imports, declarations } = do
   ms <- gets (M.elems . (^. modules))
   uniqueId moduleDecl (view moduleId <$> ms) (DupId ModuleId)
   modify $ modules %~ M.insert moduleDecl entry
-  withScope biModule moduleDecl $ do
+  withScope m $ do
     traverse_ addDecls declarations
   where entry = ModuleEntry moduleDecl imports (declId <$> declarations) (importIds =<< imports)
         declId (ContractDecl c) = contractName c
@@ -94,29 +95,24 @@ addDecls = \case
 fieldPass :: BuildContext m => [Module] -> m ()
 fieldPass ms = do
   traverse_ addModuleFields ms
-  where addModuleFields Module{ moduleDecl, declarations } = withScope biModule moduleDecl $ traverse_ addDeclFields declarations
+  where addModuleFields m = withScope m $ traverse_ addDeclFields (declarations m)
 
 addDeclFields :: BuildContext m => Declaration -> m ()
 addDeclFields = \case
-  ContractDecl (ImmutableContract{ contractName, contractFns, contractFields }) -> do
-    withScope biContract contractName $ do
-      traverse_ addFn contractFns
-      traverse_ addField contractFields
-  ProxyDecl (ProxyContract{ proxyName, proxyDecls }) -> do
-    withScope biContract proxyName $
-      traverse_ addField proxyDecls
-  FacetDecl (FacetContract{ facetName, facetDecls }) -> do
-    withScope biContract facetName $
-      traverse_ addFn facetDecls
+  ContractDecl c -> withScope c $ do
+    traverse_ addFn (contractFns c)
+    traverse_ addField (contractFields c)
+  ProxyDecl p -> withScope p $ traverse_ addField (proxyDecls p)
+  FacetDecl f -> withScope f $ traverse_ addFn (facetDecls f)
   _ -> return ()
 
 addFn :: BuildContext m => Function -> m ()
-addFn (Function hd bd) = do
+addFn f@(Function hd bd) = do
   fns <- gets (M.elems . (^. functions))
   s <- gets (^. (buildInfo . biScope))
   uniqueId (scopedName s) (fnNames fns) (DupId FunctionId)
   modify $ functions %~ M.insert (scopedName s) entry
-  withScope biFn (functionName hd) $ do
+  withScope f $ do
     traverse_ addFnArg (functionArgs hd)
     traverse_ addStmtDecl bd
   where entry = FunctionEntry (functionName hd) (functionArgs hd) (functionReturnType hd) (functionMutability hd) (functionVisibility hd) (functionPayability hd)
@@ -131,7 +127,7 @@ addField Field{ fieldName, fieldType, fieldMutability, fieldLocation } = do
   uniqueId fieldName evs (DupId FieldId)
   uniqueId (scopedName s) (view fdId <$> fs) (DupId FieldId)
   modify $ fields %~ M.insert (scopedName s) entry
-  where entry = FieldEntry fieldName fieldType fieldMutability fieldLocation
+  where entry = FieldEntry fieldName fieldType fieldMutability fieldLocation False
         scopedName s = s <> "::" <> fieldName
 
 addFnArg :: BuildContext m => FunctionArg -> m ()
@@ -142,7 +138,7 @@ addFnArg FunctionArg{ argName, argType } = do
   uniqueId argName evs (DupId FieldId)
   uniqueId (scopedName s) (view fdId <$> fs) (DupId FieldId)
   modify $ fields %~ M.insert (scopedName s) entry
-  where entry = FieldEntry argName argType Mutable Memory
+  where entry = FieldEntry argName argType Mutable Memory False
         scopedName s = s <> "::" <> argName
 
 addDeclArg :: BuildContext m => DeclArg -> m ()
@@ -153,14 +149,16 @@ addDeclArg DeclArg{ declName, declType, declMutability, declLocation } = do
   uniqueId declName evs (DupId FieldId)
   uniqueId (scopedName s) (view fdId <$> fs) (DupId FieldId)
   modify $ fields %~ M.insert (scopedName s) entry
-  where entry = FieldEntry declName declType declMutability declLocation
+  where entry = FieldEntry declName declType declMutability declLocation False
         scopedName s = s <> "::" <> declName
 
 addStmtDecl :: BuildContext m => Statement -> m ()
 addStmtDecl = \case
   VarDeclStmt arg _ _ -> addDeclArg arg
   IfStmt _ b1 b2 -> do
+    enterBlock
     addStmtDecl b1
+    exitBlock
     maybe (return ()) (\s -> enterBlock >> addStmtDecl s >> exitBlock) b2
   BlockStmt ss -> do
     enterBlock
@@ -176,7 +174,7 @@ updateFieldTypes = do
   traverse_ updateFieldType fs
 
 updateFieldType :: BuildContext m => (Identifier, FieldEntry) -> m ()
-updateFieldType (fId, FieldEntry _ (UserDefinedT tId) _ _) = do
+updateFieldType (fId, FieldEntry _ (UserDefinedT tId) _ _ _) = do
   fType <- gets (M.lookup tId . (^. types))
   case fType of
     Nothing -> throwError $ UndefinedType tId

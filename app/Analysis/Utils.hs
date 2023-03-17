@@ -2,6 +2,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 
 module Analysis.Utils where
 
@@ -10,72 +11,33 @@ import Data.Text as T
 import Lens.Micro.Platform
 import Iaspis.Grammar
 import Analysis.Environment
-import Utils.Text
 import Control.Monad.Error.Class
 import Analysis.Error
 import Data.Map as M
 import Data.Maybe
-import qualified Data.Foldable
-
-
-type ScopeSetter = Lens' BuildInfo (Maybe Identifier)
-
-withScope :: BuildContext m => ScopeSetter -> Scope -> m a -> m ()
-withScope t s f = do
-  enterScope t s
-  _ <- f
-  exitScope t
-
-enterScope :: BuildContext m => ScopeSetter -> Scope -> m ()
-enterScope setter s = do
-  modify (setType . setScope)
-  where setScope = (buildInfo . biScope) %~ updateScope s
-        setType = (buildInfo . setter) ?~ s
-
-exitScope :: BuildContext m => ScopeSetter -> m ()
-exitScope setter = do
-  modify (setType . setScope)
-  where setScope = (buildInfo . biScope) %~ revertScope
-        setType = (buildInfo . setter) .~ Nothing
-
-revertScope :: Scope -> Scope
-revertScope = intercalate "::" . Prelude.init . splitOn "::"
-
-enterBlock :: BuildContext m => m ()
-enterBlock = do
-  modify $ (buildInfo . biDepth) +~ 1
-  bd <- gets (^. (buildInfo . biDepth))
-  modify $ (buildInfo . biScope) %~ updateScope (showT bd)
-
-exitBlock :: BuildContext m => m ()
-exitBlock = do
-  modify $ (buildInfo . biDepth) -~ 1
-  modify $ (buildInfo . biScope) %~ revertScope
-
-updateScope :: Identifier -> Scope -> Scope
-updateScope id s
-  | T.null s = id
-  | otherwise = s <> "::" <> id
+import Data.Foldable qualified
+import Control.Monad (unless)
 
 getField :: BuildContext m => Identifier -> m FieldEntry
 getField id = do
   ls <- localScopes
   fs <- gets (^. fields)
-  let entries = (\s -> M.lookup (s <> "::" <> id) fs) <$> ls
-  if Prelude.all isNothing entries then
-    throwError $ UndefinedId id
-  else
-    (return . Prelude.head . catMaybes) entries
+  let entries = Data.Maybe.mapMaybe (\s -> M.lookup (s <> "::" <> id) fs) ls
+  case entries of
+    [] -> throwError $ UndefinedId id
+    fd : _ -> do
+      s <- gets (^. (buildInfo . biScope))
+      unless (fd ^. fdInScope) (throwError $ FieldNotInScope id s)
+      return fd
 
 getFn :: BuildContext m => Identifier -> m FunctionEntry
 getFn id = do
   ls <- localScopes
   fs <- gets (^. functions)
-  let entries = (\s -> M.lookup (s <> "::" <> id) fs) <$> ls
-  if Prelude.all isNothing entries then
-    throwError $ UndefinedId id
-  else
-    (return . Prelude.head . catMaybes) entries
+  let entries = Data.Maybe.mapMaybe (\s -> M.lookup (s <> "::" <> id) fs) ls
+  case entries of
+    [] -> throwError $ UndefinedId id
+    fd : _ -> return fd
 
 getType :: BuildContext m => Identifier -> m Type
 getType id = do

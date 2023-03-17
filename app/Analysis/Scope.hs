@@ -1,0 +1,104 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
+
+module Analysis.Scope where
+
+import Analysis.Environment
+import Iaspis.Grammar qualified as I
+import Control.Monad.State.Class
+import Lens.Micro.Platform
+import Data.Map qualified as M
+import Data.Foldable
+import Iaspis.Grammar (Identifier)
+import Data.Text qualified as T
+import Utils.Text
+
+
+type ScopeSetter = Lens' BuildInfo (Maybe Identifier)
+
+class HasScope a where
+  scopeId :: a -> Identifier
+
+  scopeSetter :: a -> ScopeSetter
+
+  scopeDecls :: a -> [Identifier]
+  scopeDecls _ = []
+
+  withScope :: BuildContext m => a -> m () -> m ()
+  withScope e f = do
+    enterScope e
+    _ <- f
+    exitScope e
+
+  enterScope :: BuildContext m  => a -> m ()
+  enterScope e = do
+    modify (setType . setScope)
+    traverse_ bringInScope (scopeDecls e)
+    where setScope = (buildInfo . biScope) %~ updateScope (scopeId e)
+          setType = (buildInfo . scopeSetter e) ?~ scopeId e
+
+  exitScope :: BuildContext m  => a -> m ()
+  exitScope e = do
+    clearScope
+    modify (setType . setScope)
+    where setScope = (buildInfo . biScope) %~ revertScope
+          setType = (buildInfo . scopeSetter e) .~ Nothing
+
+
+instance HasScope I.Module where
+  scopeSetter _ = biModule
+  scopeId I.Module{ I.moduleDecl } = moduleDecl
+
+instance HasScope I.ImmutableContract where
+  scopeSetter _ = biContract
+  scopeId I.ImmutableContract{ I.contractName } = contractName
+  scopeDecls I.ImmutableContract{ I.contractFields } = I.fieldName <$> contractFields
+
+instance HasScope I.ProxyContract where
+  scopeSetter _ = biProxy
+  scopeId I.ProxyContract{ I.proxyName } = proxyName
+
+instance HasScope I.FacetContract where
+  scopeSetter _ = biFacet
+  scopeId I.FacetContract{ I.facetName } = facetName
+
+instance HasScope I.Function where
+  scopeSetter _ = biFn
+  scopeId I.Function{ I.functionHeader } = I.functionName functionHeader
+  scopeDecls I.Function{ I.functionHeader } = I.argName <$>
+    I.functionReturnType functionHeader : I.functionArgs functionHeader
+
+updateScope :: Identifier -> Scope -> Scope
+updateScope id s
+  | T.null s = id
+  | otherwise = s <> "::" <> id
+
+revertScope :: Scope -> Scope
+revertScope = T.intercalate "::" . Prelude.init . T.splitOn "::"
+
+enterBlock :: BuildContext m => m ()
+enterBlock = do
+  modify $ (buildInfo . biDepth) +~ 1
+  bd <- gets (^. (buildInfo . biDepth))
+  modify $ (buildInfo . biScope) %~ updateScope (showT bd)
+
+exitBlock :: BuildContext m => m ()
+exitBlock = do
+  modify $ (buildInfo . biDepth) -~ 1
+  modify $ (buildInfo . biScope) %~ revertScope
+
+bringInScope :: BuildContext m => I.Identifier -> m ()
+bringInScope id = do
+  s <- gets (^. (buildInfo . biScope))
+  modify $ fields %~ M.adjust (\f -> f & fdInScope .~ True) (scopedId s)
+  where scopedId s = s <> "::" <> id
+
+clearScope :: BuildContext m => m ()
+clearScope = do
+  s <- gets (^. (buildInfo . biScope))
+  fsInScope <- gets (Prelude.filter (T.isPrefixOf s) . (dropField <$>) . M.keys . (^. fields))
+  traverse_ (\fd -> modify $ fields %~ M.adjust (\f -> f & fdInScope .~ False) fd) fsInScope
+  where dropField = T.intercalate "::" . Prelude.init . T.splitOn "::"

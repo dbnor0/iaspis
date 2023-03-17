@@ -37,6 +37,7 @@ data BuildError
   | InvalidStructLiteral Identifier [StructField] [StructValueMember]
   | NotInContractScope
   | InvalidOp
+  | FieldNotInScope Identifier Identifier
   | InvalidStructType
   | InvalidMemberAccessOp
   | NotYetImplemented

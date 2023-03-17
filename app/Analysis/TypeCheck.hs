@@ -2,6 +2,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 
 module Analysis.TypeCheck where
 import Analysis.Environment
@@ -14,18 +15,19 @@ import Control.Monad
 import Data.Text as T
 import Lens.Micro.Platform
 import Iaspis.TypeUtils
+import Analysis.Scope
 
 
 typeCheck :: BuildContext m => [Module] -> m ()
 typeCheck = traverse_ typeCheckModule
 
 typeCheckModule :: BuildContext m => Module -> m ()
-typeCheckModule Module{ moduleDecl, declarations } = withScope biModule moduleDecl $ traverse_ typeCheckDecl declarations
+typeCheckModule m = withScope m $ traverse_ typeCheckDecl (declarations m)
 
 typeCheckDecl :: BuildContext m => Declaration -> m ()
 typeCheckDecl = \case
-  ContractDecl c -> withScope biContract (contractName c) $ typeCheckContract c
-  FacetDecl f -> withScope biFacet (facetName f) $ typeCheckFacet f
+  ContractDecl c -> withScope c $ typeCheckContract c
+  FacetDecl f -> withScope f $ typeCheckFacet f
   _ -> return ()
 
 typeCheckContract :: BuildContext m => ImmutableContract -> m ()
@@ -46,11 +48,12 @@ typeCheckField Field{ fieldType, fieldName, fieldInitializer } =
     Nothing -> return ()
 
 typeCheckFn :: BuildContext m => Function -> m ()
-typeCheckFn (Function hd stmts) = withScope biFn (functionName hd) $ traverse_ (typeCheckStmt hd) stmts
+typeCheckFn f@(Function hd stmts) = withScope f $ traverse_ (typeCheckStmt hd) stmts
 
 typeCheckStmt :: BuildContext m => FunctionHeader -> Statement -> m ()
 typeCheckStmt fn = \case
   VarDeclStmt f _ ex -> do
+    bringInScope (declName f)
     field <- getField (declName f)
     et <- typeCheckExpr ex
     unless (field ^. fdType == et)
@@ -65,10 +68,13 @@ typeCheckStmt fn = \case
     unless ((argType . functionReturnType) fn == et)
       (throwError $ InvalidReturnType (functionName fn) ((argType . functionReturnType) fn) et)
   IfStmt cond b1 b2 -> do
+    enterBlock
     ct <- typeCheckExpr cond
     unless (ct == BoolT)
       (throwError $ InvalidExpressionType cond (Left BoolT) ct)
     typeCheckStmt fn b1
+    exitBlock
+    -- TODO
     maybe (return ()) (typeCheckStmt fn) b2
   BlockStmt stmts -> do
     enterBlock

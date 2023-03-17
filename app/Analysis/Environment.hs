@@ -100,6 +100,7 @@ data FieldEntry = FieldEntry
   , _fdType :: Type
   , _fdMutability :: Mutability
   , _fdLocation :: MemoryLocation
+  , _fdInScope :: Bool
   } deriving stock (Eq, Generic, Show)
 
 instance ToJSON FieldEntry where

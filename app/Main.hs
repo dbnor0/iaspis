@@ -20,7 +20,6 @@ import Data.Foldable
 import Analysis.Build (build)
 import Data.ByteString.Lazy.Char8 as BS (unpack)
 import Data.Aeson
-import Analysis.Error
 import Analysis.Memory
 import Analysis.Mutability
 import Analysis.Contract
