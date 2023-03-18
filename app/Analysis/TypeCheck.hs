@@ -87,8 +87,12 @@ typeCheckExpr :: BuildContext m => Expression -> m Type
 typeCheckExpr = \case
   LiteralE l -> typeCheckLit l
   IdentifierE id -> do
-    f <- getField id
-    return $ f ^. fdType
+    e <- getFieldEnum id
+    case e of
+      Nothing -> do
+        f <- getField id
+        return $ f ^. fdType
+      Just ed -> return $ EnumT ed
   MemberAccessE (IdentifierE base) mem -> do
     f <- getField base
     case f ^. fdType of

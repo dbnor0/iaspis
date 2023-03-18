@@ -7,7 +7,7 @@
 module Analysis.Utils where
 
 import Control.Monad.State.Class
-import Data.Text as T
+import Data.Text as T hiding (elem)
 import Lens.Micro.Platform
 import Iaspis.Grammar
 import Analysis.Environment
@@ -17,6 +17,7 @@ import Data.Map as M
 import Data.Maybe
 import Data.Foldable qualified
 import Control.Monad.Writer
+import Prelude hiding (Enum)
 
 getFacet :: BuildContext m => Identifier -> m FacetEntry
 getFacet id = do
@@ -91,3 +92,8 @@ getStructField t memId = do
         Nothing -> throwError NotYetImplemented
         Just m -> return m
     _ -> throwError NotYetImplemented
+
+getFieldEnum :: BuildContext m => Identifier -> m (Maybe Enum)
+getFieldEnum id = do
+  es <- gets (^. enums)
+  return $ view enumDef <$> Data.Foldable.find (\e -> id `elem` enumFields (e ^. enumDef)) es

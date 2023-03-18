@@ -49,7 +49,8 @@ facet Facet1 to Proxy {
     y <- "3";
     mut uint z := 123;
     mut string y := "false";
-    mut string c := "123";
+    mut string c := y;
+    States st := STARTED;
     y := "true";
     mut string q := "abc";
     if (true) {
