@@ -1,0 +1,27 @@
+module Structs;
+
+struct S {
+  uint x;
+  uint y;
+}
+
+struct Z {
+  uint x;
+  uint b;
+  T h;
+}
+
+struct T {
+  Q b;
+  uint z;
+}
+
+struct Q {
+  bool q;
+}
+
+enum States {
+  STARTED,
+  FINISHED,
+  FAILED
+}

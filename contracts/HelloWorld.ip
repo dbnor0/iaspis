@@ -1,30 +1,6 @@
 module HelloWorld;
 
-struct S {
-  uint x;
-  uint y;
-}
-
-struct Z {
-  uint x;
-  uint y;
-  T h;
-}
-
-struct T {
-  Q b;
-  uint z;
-}
-
-struct Q {
-  bool q;
-}
-
-enum States {
-  STARTED,
-  FINISHED,
-  FAILED
-}
+import S, Z, T, Q, States from Structs;
 
 contract Contract {
   public mut uint a <- 123;
@@ -40,7 +16,7 @@ contract Contract {
   }
 
   public mut fn fact (uint n) -> uint {
-    Z v storage <- Z { h = T { b = Q { q = true }, z = 123 }, x = 1, y = 2 };
+    Z v storage <- Z { h = T { b = Q { q = true }, z = 123 }, x = 1, b = 2 };
     mut bool aaa := v.h.b.q;
     if (n == 1) {
       uint wallagong := 23;
