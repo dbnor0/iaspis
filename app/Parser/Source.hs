@@ -391,7 +391,7 @@ structLit = StructV <$> structValue
 -- raw values
 
 stringRaw :: Parser Text
-stringRaw = pack <$> (char '\"' *> manyTill charLiteral (char '\"'))
+stringRaw = lexeme' $ pack <$> (char '\"' *> manyTill charLiteral (char '\"'))
 
 uintRaw :: Parser Int
 uintRaw = lexeme' decimal

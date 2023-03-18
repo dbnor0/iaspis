@@ -1,13 +1,13 @@
 module Structs;
 
-/*struct S {
+struct S {
   uint x;
   uint y;
 }
 
 struct Z {
   uint x;
-  uint b;
+  string y;
   T h;
 }
 
@@ -24,4 +24,4 @@ enum States {
   STARTED,
   FINISHED,
   FAILED
-}*/
+}
