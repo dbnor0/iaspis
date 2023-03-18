@@ -1,6 +1,6 @@
 module Test;
 
-enum States2 {
+/*enum States2 {
   RED,
   BLACK
 }
@@ -8,3 +8,4 @@ enum States2 {
 contract Test {
 
 }
+*/

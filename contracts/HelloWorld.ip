@@ -1,79 +1,21 @@
 module HelloWorld;
 
-import S, Z, T, Q, States from Structs;
+struct StringTest {
+  string s1;
+  string s2;
+  bool b;
+  uint i;
+  bytes1 b1;
+  bytes20 a;
+  string s3;
+}
 
-contract Contract {
-  public mut uint a <- 123;
-  public uint b;
-  private string x;
-  private C myC;
-  private S myS;
- 
+contract C {
+  private string heh;
+  private StringTest st;
+
   constructor() {
-    myC <- new C(10);
-    a <- 0;
-    x <- "0";
-  }
-
-  public mut fn fact (uint n) -> uint {
-    Z v storage <- Z { h = T { b = Q { q = true }, z = 123 }, x = 1, b = 2 };
-    mut bool aaa := v.h.b.q;
-    if (n == 1) {
-      uint wallagong := 23;
-      return 1;
-    }
-    return n * fact(n - 1);
-  }
-
-  public mut fn f1 () override {
-    a <- 123;
-    if (true) {
-      return;
-    } else {
-      return;
-    }
-    a <- 256;
+    heh <- "";
+    st <- StringTest { s1 = "123", s2 = "456", b = false, i = 123, b1 = 0x12, a = 0x1212121212121212121212121212121212121212, s3 = "keeek" };
   }
 }
-
-open proxy Proxy for Facet1, Facet2 {
-  @      *   public      string test;
-  @ Facet1   private mut string x;
-  @ Facet2   private mut string y; 
-}
-
-facet Facet1 to Proxy {
-  public mut fn f1 (uint uh) -> string {
-    mut uint z := 123;
-    mut string c := "123";
-    mut string q := "abc";
-    if (true) {
-      mut string stuff := "stuff";
-      if (true) {
-        mut string kek := "kek";
-      }
-    }
-    return c;
-  }
-}
-
-facet Facet2 to Proxy {
-  private fn sq(uint x) -> uint {
-    return x * x;
-  }
-
-  private mut fn f2 () -> bool {
-    uint A := sq(25);
-    return true;
-  }
-
-  public fn m() {
-    n();
-  }
-
-  public fn n() {
-    m();
-  }
-}
-
-facet Facet3 to Proxy {}

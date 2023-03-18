@@ -15,7 +15,6 @@ import Text.Megaparsec.Char.Lexer (decimal, charLiteral)
 import Data.Functor (($>))
 import Data.Either
 import Prelude hiding (Enum)
-import GHC.Generics (URec(UInt))
 
 
 module' :: Parser Module
@@ -365,15 +364,11 @@ identifier = lexeme' $ cons <$> satisfy isAlpha <*> takeWhileP Nothing isAlphaNu
 literal :: Parser Value
 literal = backtrack
   [ structLit
-  , addressLit
   , boolLit
   , bytesLit
   , stringLit
   , uintLit
   ]
-
-addressLit :: Parser Value
-addressLit = AddressV <$> bytesRaw
 
 boolLit :: Parser Value
 boolLit = BoolV <$> boolRaw
