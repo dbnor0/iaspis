@@ -4,6 +4,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 
 
 module Analysis.Environment where
@@ -18,6 +19,8 @@ import Utils.Text
 import Control.Monad.State.Class
 import Analysis.Error
 import Control.Monad.Error.Class
+import Control.Monad.Writer
+import Data.Text qualified as T
 
 
 type Scope = Identifier
@@ -48,6 +51,7 @@ data ProxyEntry = ProxyEntry
   { _proxyId :: Identifier
   , _proxyFacetList :: [Identifier]
   , _proxyFields :: [Identifier]
+  , _proxyScope :: Scope
   } deriving stock (Eq, Generic, Show)
 
 instance ToJSON ProxyEntry where
@@ -144,7 +148,9 @@ instance ToJSON BuildEnv where
 
 makeLenses ''BuildEnv
 
-type BuildContext m = (MonadState BuildEnv m, MonadError BuildError m)
+type BuildLog = T.Text
+
+type BuildContext m = (MonadState BuildEnv m, MonadError BuildError m, MonadWriter [BuildLog] m)
 
 mkBuildInfo :: BuildInfo
 mkBuildInfo = BuildInfo

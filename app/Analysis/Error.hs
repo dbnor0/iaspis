@@ -20,7 +20,8 @@ data BuildError
   | CyclicImports
   | UndefinedImport
   | UndefinedType Identifier
-  | UndefinedId Identifier  
+  | UndefinedId Identifier
+  | UndefinedFacet Identifier
   | InvalidFacets
   | InvalidProxy
   | IllegalStorageAssig Identifier Identifier

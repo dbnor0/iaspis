@@ -3,8 +3,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TupleSections #-}
-{-# LANGUAGE ImportQualifiedPost #-}
 
 module Analysis.Build where
 
@@ -56,9 +54,10 @@ addDecls = \case
     ns <- contractNamespace
     ts <- gets (M.elems . (^. types))
     m <- currentModule
+    s <- gets (^. (buildInfo . biScope))
     uniqueId contractName (ns <> (m ^. moduleImportedDecls)) (DupId ContractId)
     uniqueId contractName (name <$> ts) (DupId TypeId)
-    modify $ contracts %~ M.insert contractName entry
+    modify $ contracts %~ M.insert (s <> "::" <> contractName) entry
     modify $ types %~ M.insert contractName (ContractT contractName)
     where entry = ContractEntry contractName fieldNames fnNames
           fnNames = functionName . functionHeader <$> contractFns
@@ -66,15 +65,17 @@ addDecls = \case
   ProxyDecl (ProxyContract{ proxyName, facetList, proxyDecls }) -> do
     ns <- contractNamespace
     m <- currentModule
+    s <- gets (^. (buildInfo . biScope))
     uniqueId proxyName (ns <> (m ^. moduleImportedDecls)) (DupId ProxyId)
-    modify $ proxies %~ M.insert proxyName entry
+    modify $ proxies %~ M.insert (s <> "::" <> proxyName) (entry s)
     where entry = ProxyEntry proxyName facetList fieldNames
           fieldNames = fieldName <$> proxyDecls
   FacetDecl (FacetContract{ facetName, proxyList, facetDecls }) -> do
     ns <- contractNamespace
     m <- currentModule
+    s <- gets (^. (buildInfo . biScope))
     uniqueId facetName (ns <> (m ^. moduleImportedDecls)) (DupId FacetId)
-    modify $ facets %~ M.insert facetName entry
+    modify $ facets %~ M.insert (s <> "::" <> facetName) entry
     where entry = FacetEntry facetName proxyList fnNames
           fnNames = functionName . functionHeader <$> facetDecls
   StructDecl s@Struct{ structName } -> do
@@ -121,33 +122,33 @@ addFn f@(Function hd bd) = do
 
 addField :: BuildContext m => Field -> m ()
 addField Field{ fieldName, fieldType, fieldMutability, fieldLocation } = do
-  fs <- gets (M.elems . (^. fields))
+  fs <- gets (M.assocs . (^. fields))
   s <- gets (^. (buildInfo . biScope))
   evs <- enumValues
   uniqueId fieldName evs (DupId FieldId)
-  uniqueId (scopedName s) (view fdId <$> fs) (DupId FieldId)
+  uniqueId (scopedName s) (fst <$> fs) (DupId FieldId)
   modify $ fields %~ M.insert (scopedName s) entry
   where entry = FieldEntry fieldName fieldType fieldMutability fieldLocation False
         scopedName s = s <> "::" <> fieldName
 
 addFnArg :: BuildContext m => FunctionArg -> m ()
 addFnArg FunctionArg{ argName, argType } = do
-  fs <- gets (M.elems . (^. fields))
+  fs <- gets (M.assocs . (^. fields))
   s <- gets (^. (buildInfo . biScope))
   evs <- enumValues
   uniqueId argName evs (DupId FieldId)
-  uniqueId (scopedName s) (view fdId <$> fs) (DupId FieldId)
+  uniqueId (scopedName s) (fst <$> fs) (DupId FieldId)
   modify $ fields %~ M.insert (scopedName s) entry
   where entry = FieldEntry argName argType Mutable Memory False
         scopedName s = s <> "::" <> argName
 
 addDeclArg :: BuildContext m => DeclArg -> m ()
 addDeclArg DeclArg{ declName, declType, declMutability, declLocation } = do
-  fs <- gets (M.elems . (^. fields))
+  fs <- gets (M.assocs . (^. fields))
   s <- gets (^. (buildInfo . biScope))
   evs <- enumValues
   uniqueId declName evs (DupId FieldId)
-  uniqueId (scopedName s) (view fdId <$> fs) (DupId FieldId)
+  uniqueId (scopedName s) (fst <$> fs) (DupId FieldId)
   modify $ fields %~ M.insert (scopedName s) entry
   where entry = FieldEntry declName declType declMutability declLocation False
         scopedName s = s <> "::" <> declName

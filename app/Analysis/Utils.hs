@@ -16,13 +16,32 @@ import Analysis.Error
 import Data.Map as M
 import Data.Maybe
 import Data.Foldable qualified
-import Control.Monad (unless)
+import Control.Monad.Writer
+
+getFacet :: BuildContext m => Identifier -> m FacetEntry
+getFacet id = do
+  ls <- localScopes
+  fs <- gets (^. facets)
+  let entries = Data.Maybe.mapMaybe (\s -> M.lookup (s <> "::" <> id) fs) ls
+  case entries of
+    [] -> throwError $ UndefinedFacet id
+    f : _ -> return f
+
+getProxy :: BuildContext m => Identifier -> m ProxyEntry
+getProxy id = do
+  ls <- localScopes
+  ps <- gets (^. proxies)
+  let entries = Data.Maybe.mapMaybe (\s -> M.lookup (s <> "::" <> id) ps) ls
+  case entries of
+    [] -> throwError $ UndefinedId id
+    p : _ -> return p
 
 getField :: BuildContext m => Identifier -> m FieldEntry
 getField id = do
   ls <- localScopes
+  ps <- proxyFieldsScope
   fs <- gets (^. fields)
-  let entries = Data.Maybe.mapMaybe (\s -> M.lookup (s <> "::" <> id) fs) ls
+  let entries = Prelude.filter (^. fdInScope) $ Data.Maybe.mapMaybe (\s -> M.lookup (s <> "::" <> id) fs) (ls <> ps)
   case entries of
     [] -> throwError $ UndefinedId id
     fd : _ -> do
@@ -52,6 +71,16 @@ localScopes = do
   return $ Prelude.scanl localScope s (Prelude.reverse [1..(scopeSize s)])
   where localScope t n = intercalate "::" $ Prelude.take n $ splitOn "::" t
         scopeSize s = Prelude.length $ splitOn "::" s
+
+proxyFieldsScope :: BuildContext m => m [Scope]
+proxyFieldsScope = do
+  fs <- gets (^. (buildInfo . biFacet))
+  case fs of
+    Nothing -> return []
+    Just fId -> do
+      f <- getFacet fId
+      p <- getProxy (f ^. facetProxy)
+      return [(p ^. proxyScope) <> "::" <> (p ^. proxyId)]
 
 getStructField :: BuildContext m => Type -> Identifier -> m StructField
 getStructField t memId = do

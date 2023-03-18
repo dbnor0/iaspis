@@ -15,6 +15,8 @@ import Data.Foldable
 import Iaspis.Grammar (Identifier)
 import Data.Text qualified as T
 import Utils.Text
+import Analysis.Utils (getProxy, getFacet)
+import Control.Monad.Writer
 
 
 type ScopeSetter = Lens' BuildInfo (Maybe Identifier)
@@ -36,7 +38,7 @@ class HasScope a where
   enterScope :: BuildContext m  => a -> m ()
   enterScope e = do
     modify (setType . setScope)
-    traverse_ bringInScope (scopeDecls e)
+    traverse_ (\id -> when (id /= "") (bringInScope id)) (scopeDecls e)
     where setScope = (buildInfo . biScope) %~ updateScope (scopeId e)
           setType = (buildInfo . scopeSetter e) ?~ scopeId e
 
@@ -46,7 +48,6 @@ class HasScope a where
     modify (setType . setScope)
     where setScope = (buildInfo . biScope) %~ revertScope
           setType = (buildInfo . scopeSetter e) .~ Nothing
-
 
 instance HasScope I.Module where
   scopeSetter _ = biModule
@@ -64,6 +65,20 @@ instance HasScope I.ProxyContract where
 instance HasScope I.FacetContract where
   scopeSetter _ = biFacet
   scopeId I.FacetContract{ I.facetName } = facetName
+  enterScope e = do
+    f <- getFacet (I.facetName e)
+    modify (setType . setScope)
+    traverse_ bringInScope (scopeDecls e)
+    toggleProxyScope (f ^. facetProxy) True
+    where setScope = (buildInfo . biScope) %~ updateScope (scopeId e)
+          setType = (buildInfo . scopeSetter e) ?~ scopeId e
+  exitScope e = do
+    f <- getFacet (I.facetName e)
+    clearScope
+    modify (setType . setScope)
+    toggleProxyScope (f ^. facetProxy) False
+    where setScope = (buildInfo . biScope) %~ revertScope
+          setType = (buildInfo . scopeSetter e) .~ Nothing
 
 instance HasScope I.Function where
   scopeSetter _ = biFn
@@ -96,9 +111,15 @@ bringInScope id = do
   modify $ fields %~ M.adjust (\f -> f & fdInScope .~ True) (scopedId s)
   where scopedId s = s <> "::" <> id
 
+toggleProxyScope :: BuildContext m => I.Identifier -> Bool -> m ()
+toggleProxyScope pId flag = do
+  p <- getProxy pId
+  let fs = (\f -> p ^. proxyScope <> "::" <> p ^. proxyId <> "::" <> f) <$> (p ^. proxyFields)
+  traverse_ (\f -> modify $ fields %~ M.adjust (\f -> f & fdInScope .~ flag) f) fs
+
 clearScope :: BuildContext m => m ()
 clearScope = do
   s <- gets (^. (buildInfo . biScope))
-  fsInScope <- gets (Prelude.filter (T.isPrefixOf s) . (dropField <$>) . M.keys . (^. fields))
+  fsInScope <- gets (Prelude.filter (T.isPrefixOf s . dropField) . M.keys . (^. fields))
   traverse_ (\fd -> modify $ fields %~ M.adjust (\f -> f & fdInScope .~ False) fd) fsInScope
   where dropField = T.intercalate "::" . Prelude.init . T.splitOn "::"

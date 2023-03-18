@@ -25,6 +25,7 @@ import Analysis.Mutability
 import Analysis.Contract
 import Analysis.TypeCheck (typeCheck)
 import Analysis.Environment
+import Control.Monad.Writer
 
 
 hasExt :: FilePath -> FilePath -> Bool
@@ -48,10 +49,15 @@ loadFile fp = do
 analyze :: BuildContext m => [Module] -> m ()
 analyze ms = do
   build ms
+  tell ["Finished build pass"]
   mutCheck ms
+  tell ["Finished mutability pass"]
   memCheck ms
+  tell ["Finished memory pass"]
   contractChecks ms
+  tell ["Finished contract pass"]
   typeCheck ms
+  tell ["Finished typecheck pass"]
 
 writeEIP2535 :: IO ()
 writeEIP2535 = do
@@ -67,12 +73,13 @@ main = do
     print $ "Parser error(s): " <> show (lefts parsed)
   else
     let modules = rights parsed
-        (err, e) = runState (runExceptT $ analyze modules) mkEnv
-    in
+        ((err, output), e) = runState (runWriterT (runExceptT $ analyze modules)) mkEnv
+    in do
+      print "Output: "
+      traverse_ print output
       case err of
         Left be -> do
           Prelude.writeFile "output.json" (BS.unpack $ encode e)
           print be
         Right _ -> do
           Prelude.writeFile "output.json" (BS.unpack $ encode e)
-          T.putStrLn "cool"

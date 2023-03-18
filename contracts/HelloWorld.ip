@@ -5,14 +5,14 @@ import S, Z, T, Q, States from Structs;
 contract Contract {
   public mut uint a <- 123;
   public uint b;
-  private string x;
+  private string j;
   private C myC;
   private S myS;
  
   constructor() {
     myC <- new C(10);
     a <- 0;
-    x <- "0";
+    j <- "0";
   }
 
   public mut fn fact (uint n) -> uint {
@@ -44,8 +44,12 @@ open proxy Proxy for Facet1, Facet2 {
 
 facet Facet1 to Proxy {
   public mut fn f1 (uint uh) -> string {
+    x <- "123";
+    y <- "3";
     mut uint z := 123;
+    mut string y := "false";
     mut string c := "123";
+    y := "true";
     mut string q := "abc";
     if (true) {
       mut string stuff := "stuff";
@@ -58,8 +62,8 @@ facet Facet1 to Proxy {
 }
 
 facet Facet2 to Proxy {
-  private fn sq(uint x) -> uint {
-    return x * x;
+  private fn sq(uint o) -> uint {
+    return o * o;
   }
 
   private mut fn f2 () -> bool {
