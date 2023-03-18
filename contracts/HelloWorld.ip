@@ -27,6 +27,7 @@ contract Contract {
 
   public mut fn f1 () override {
     a <- 123;
+    address addr := 0x1234567890123456789012345678901234567890;
     if (true) {
       return;
     } else {

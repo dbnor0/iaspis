@@ -127,7 +127,11 @@ typeCheckLit :: BuildContext m => Value -> m Type
 typeCheckLit = \case
   AddressV _ -> return AddressT
   BoolV _ -> return BoolT
-  BytesV b -> return $ BytesT size
+  BytesV b -> 
+    if T.length b == 40 then
+      return AddressT
+    else
+      return $ BytesT size
     where size = T.length b `div` 2
   UIntV _ -> return UIntT
   StringV _ -> return StringT
