@@ -1,4 +1,4 @@
-{-# LANGUAGE NamedFieldPuns #-}
+
 {-# LANGUAGE FlexibleContexts #-}
 
 module Analysis.Module where

@@ -75,7 +75,6 @@ main = do
     let modules = rights parsed
         ((err, output), e) = runState (runWriterT (runExceptT $ analyze modules)) mkEnv
     in do
-      print "Output: "
       traverse_ print output
       case err of
         Left be -> do
