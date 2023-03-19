@@ -184,6 +184,7 @@ statement = backtrack
   , expressionStmt
   , blockStmt
   , ifStmt
+  , whileStmt
   , breakStmt
   , continueStmt
   ]
@@ -222,6 +223,10 @@ ifStmt :: Parser Statement
 ifStmt = IfStmt <$> cond <*> statement <*> elseBranch
   where cond       = reserved "if" *> parens expression
         elseBranch = optional $ reserved "else" *> statement
+
+whileStmt :: Parser Statement
+whileStmt = WhileStmt <$> cond <*> statement
+  where cond = reserved "while" *> parens expression
 
 -- expressions
 

@@ -161,6 +161,10 @@ addStmtDecl = \case
     addStmtDecl b1
     exitBlock
     maybe (return ()) (\s -> enterBlock >> addStmtDecl s >> exitBlock) b2
+  WhileStmt _ b -> do
+    enterBlock
+    addStmtDecl b
+    exitBlock
   BlockStmt ss -> do
     enterBlock
     traverse_ addStmtDecl ss

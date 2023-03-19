@@ -11,7 +11,7 @@ import Iaspis.Grammar
 import Data.Foldable
 import Analysis.Utils
 import Control.Monad
-import Data.Text as T
+import Data.Text as T hiding (elem)
 import Lens.Micro.Platform
 import Iaspis.TypeUtils
 import Analysis.Scope
@@ -73,8 +73,16 @@ typeCheckStmt fn = \case
       (throwError $ InvalidExpressionType cond (Left BoolT) ct)
     typeCheckStmt fn b1
     exitBlock
-    -- TODO
+    enterBlock
     maybe (return ()) (typeCheckStmt fn) b2
+    exitBlock
+  WhileStmt cond b -> do
+    enterBlock
+    ct <- typeCheckExpr cond
+    unless (ct == BoolT)
+      (throwError $ InvalidExpressionType cond (Left BoolT) ct)
+    typeCheckStmt fn b
+    exitBlock
   BlockStmt stmts -> do
     enterBlock
     traverse_ (typeCheckStmt fn) stmts
@@ -174,23 +182,23 @@ typeCheckBinaryExpr e1 e2 op = do
   t2 <- typeCheckExpr e2
   case op of
     op
-      | Data.Foldable.elem op arithOps || Data.Foldable.elem op relationalOps -> do
+      | op `elem` arithOps || op `elem` relationalOps -> do
         unless (isNumeric t1)
           (throwError $ InvalidExpressionType e1 (Right "numeric") t1)
         unless (isNumeric t2)
           (throwError $ InvalidExpressionType e2 (Right "numeric") t2)
-        return t1
-      | Data.Foldable.elem op eqOps -> do
+        return $ if op `elem` arithOps then t1 else BoolT
+      | op `elem` eqOps -> do
         unless (t1 == t2)
           (throwError $ InvalidExpressionType e2 (Left t1) t2)
         return BoolT
-      | Data.Foldable.elem op logicalOps -> do
+      | op `elem` logicalOps -> do
         unless (t1 == BoolT)
           (throwError $ InvalidExpressionType e1 (Left BoolT) t1)
         unless (t2 == BoolT)
           (throwError $ InvalidExpressionType e2 (Left BoolT) t2)
         return t1
-      | Data.Foldable.elem op bitwiseOps -> do
+      | op `elem` bitwiseOps -> do
         unless (isBitwise t1)
           (throwError $ InvalidExpressionType e1 (Right "bitwise") t1)
         unless (isBitwise t2)

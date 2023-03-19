@@ -154,6 +154,7 @@ data Statement
   | AssignmentStmt Expression MemoryLocation Expression 
   | ReturnStmt (Maybe Expression)
   | IfStmt Expression Statement (Maybe Statement)
+  | WhileStmt Expression Statement
   | BlockStmt [Statement]
   | BreakStmt
   | ContinueStmt

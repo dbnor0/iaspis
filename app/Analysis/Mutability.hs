@@ -51,6 +51,10 @@ mutCheckStmt = \case
     enterBlock
     maybe (return ()) mutCheckStmt b2
     exitBlock
+  WhileStmt _ b -> do
+    enterBlock
+    mutCheckStmt b
+    exitBlock
   BlockStmt stmts -> do
     enterBlock
     traverse_ mutCheckStmt stmts

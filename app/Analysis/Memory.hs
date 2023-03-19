@@ -67,6 +67,10 @@ memCheckStmt = \case
     enterBlock
     maybe (return ()) memCheckStmt b2
     exitBlock
+  WhileStmt _ b -> do
+    enterBlock
+    memCheckStmt b
+    exitBlock
   BlockStmt stmts -> do
     enterBlock
     traverse_ memCheckStmt stmts
