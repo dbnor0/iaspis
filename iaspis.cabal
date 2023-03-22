@@ -35,9 +35,7 @@ executable iaspis
     Analysis.Environment
     Analysis.TypeCheck
     Codegen.Generate
-    Codegen.Transpile
     Codegen.Types
-    Codegen.Utils
     Iaspis.DeclUtils
     Iaspis.Grammar
     Iaspis.TypeUtils
@@ -46,6 +44,14 @@ executable iaspis
     Parser.Types
     Parser.Utils
     Solidity.Grammar
+    Transpile.Common
+    Transpile.Contract
+    Transpile.Facet
+    Transpile.Module
+    Transpile.Proxy
+    Transpile.Storage
+    Transpile.Types
+    Transpile.Utils
     Utils.Error
     Utils.Text
     Yul.Grammar
@@ -102,6 +108,7 @@ executable iaspis
     , containers
     , directory
     , either
+    , extra
     , filepath
     , megaparsec
     , microlens-platform
