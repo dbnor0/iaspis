@@ -26,6 +26,8 @@ import Analysis.Contract
 import Analysis.TypeCheck (typeCheck)
 import Analysis.Environment
 import Control.Monad.Writer
+import Codegen.Generate
+import Transpile.Module
 
 
 hasExt :: FilePath -> FilePath -> Bool
@@ -65,6 +67,11 @@ writeEIP2535 = do
   cs <- traverse T.readFile fps
   traverse_ (uncurry T.writeFile) $ Prelude.zip (("./output/" <>) . takeFileName <$> fps) cs
 
+writeModules :: FilePath -> [I.Module] -> IO ()
+writeModules out ms = do
+  writeEIP2535
+  traverse_ (genFile out) (genModule <$> transpile ms)
+
 main :: IO ()
 main = do
   files <- getContractFiles ".ip" "./contracts"
@@ -82,3 +89,4 @@ main = do
           print be
         Right _ -> do
           Prelude.writeFile "output.json" (BS.unpack $ encode e)
+          writeModules "./output" modules

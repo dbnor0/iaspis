@@ -15,7 +15,7 @@ import Analysis.Module
 import Data.Map as M
 import Data.Foldable
 import Lens.Micro.Platform
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, mapMaybe)
 import Iaspis.TypeUtils
 import Control.Monad
 import Analysis.Scope

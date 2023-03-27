@@ -25,6 +25,10 @@ isTruthy = \case
   BoolT -> True
   _ -> False
 
+isUserDefined :: Type -> Bool
+isUserDefined (UserDefinedT _) = True
+isUserDefined _ = False
+
 numericUnaryOps :: [UnaryOp]
 numericUnaryOps = [ArithmeticNegationOp, IncrementOp, DecrementOp]
 

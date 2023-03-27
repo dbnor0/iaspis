@@ -9,9 +9,9 @@ import Transpile.Types qualified as T
 import Solidity.Grammar qualified as S
 import Transpile.Common
 
-transpileContract :: ([I.Import], I.ImmutableContract) -> Maybe T.Module
+transpileContract :: ([I.Import], I.ImmutableContract) -> T.Module
 transpileContract (is, I.ImmutableContract { I.contractName, I.contractFields, I.contractFns }) =
-  Just $ T.Module { T.moduleId=contractName, T.imports=I.importIds =<< is, T.decls=[T.ContractDef contractDef] }
+  T.Module { T.moduleId=contractName, T.imports=I.importIds =<< is, T.decls=[T.ContractDef contractDef] }
   where contractDef =
           S.ContractDefinition
           { S.contractAbstractSpec = False

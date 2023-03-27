@@ -11,9 +11,9 @@ import Iaspis.DeclUtils
 import Transpile.Types qualified as T
 import Transpile.Utils
 
-transpileProxy :: ([I.Import], I.ProxyContract, [Facet]) -> Maybe T.Module
+transpileProxy :: ([I.Import], I.ProxyContract, [Facet]) -> T.Module
 transpileProxy (is, p@I.ProxyContract { I.proxyName, I.facetList }, facets) =
-  Just $ T.Module { T.moduleId=proxyName, T.imports=is', T.decls=proxyDecl }
+  T.Module { T.moduleId=proxyName, T.imports=is', T.decls=proxyDecl }
   where proxyDecl = transpileProxyContract p facets
         is' = defaultProxyImports <> (I.importIds =<< is) <> facetList
 

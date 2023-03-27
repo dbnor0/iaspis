@@ -11,9 +11,9 @@ import Transpile.Common
 import Transpile.Utils
 
 
-transpileFacet :: ([I.Import], I.FacetContract) -> Maybe T.Module
+transpileFacet :: ([I.Import], I.FacetContract) -> T.Module
 transpileFacet (is, f@I.FacetContract { I.facetName, I.proxyList }) =
-  Just $ T.Module
+  T.Module
     { T.moduleId=facetName
     , T.imports=(I.importIds =<< is) <> [proxyList]
     , T.decls=transpileFacetContract f
