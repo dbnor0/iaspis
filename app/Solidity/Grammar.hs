@@ -202,5 +202,6 @@ data Literal
   | NumberLit Int 
   | BooleanLit Bool
   | HexLit T.Text
+  | EnumLit T.Text T.Text
   | StructLit Identifier [(Identifier, Expression)]
   deriving stock (Eq, Show)

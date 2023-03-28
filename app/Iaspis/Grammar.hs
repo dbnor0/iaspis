@@ -34,6 +34,7 @@ data Value
   | UIntV Int
   | StringV Text
   | StructV StructValue
+  | EnumV Text Text
   deriving stock (Eq, Show, Generic)
 
 instance ToJSON Value where

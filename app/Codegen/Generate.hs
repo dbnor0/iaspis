@@ -215,6 +215,7 @@ genLit = \case
   S.NumberLit n -> showT n
   S.BooleanLit b -> T.toLower $ showT b
   S.HexLit v -> v
+  S.EnumLit e v -> e <> "." <> v
   S.StructLit id ms -> id <> "({" <> T.concat (L.intersperse "," (genStructLitMember <$> ms)) <> "})"
 
 genStructLitMember :: (S.Identifier, S.Expression) -> SolText

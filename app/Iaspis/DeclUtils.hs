@@ -8,10 +8,6 @@ import Data.Maybe
 import Prelude hiding (Enum)
 
 
--- import Iaspis.Grammar as I
--- import Data.Maybe
-
-
 type Facet = (Identifier, [Function])
 
 contractDecls :: Module -> [([Import], ImmutableContract)]
@@ -28,9 +24,9 @@ proxyDecls fs Module{ imports, declarations } = mapMaybe getContract declaration
                   | otherwise = Nothing
         getContract _ = Nothing
 
-facetDecls :: Module -> [([Import], FacetContract)]
-facetDecls Module{ imports, declarations } = mapMaybe getContract declarations
-  where getContract (FacetDecl f@FacetContract{}) = Just (imports, f)
+facetDecls :: Module -> [([Import], Module, FacetContract)]
+facetDecls m@Module{ imports, declarations } = mapMaybe getContract declarations
+  where getContract (FacetDecl f@FacetContract{}) = Just (imports, m, f)
         getContract _ = Nothing
 
 structDecls :: Module -> [Struct]

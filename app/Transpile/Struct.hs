@@ -1,5 +1,6 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Transpile.Struct where
 
@@ -8,13 +9,15 @@ import Solidity.Grammar qualified as S
 import Transpile.Types qualified as T
 import Transpile.Common
 import Data.Maybe
+import Analysis.Environment
 
-transpileStruct :: I.Struct -> T.Module
-transpileStruct s@I.Struct{ I.structName, I.structFields } = T.Module
-  { T.imports = deps
-  , T.moduleId = structName
-  , T.decls = [T.StructTypeDef $ transpileStructDecl s]
-  }
+transpileStruct :: BuildContext m => I.Struct -> m T.Module
+transpileStruct s@I.Struct{ I.structName, I.structFields } = 
+  return T.Module
+    { T.imports = deps
+    , T.moduleId = structName
+    , T.decls = [T.StructTypeDef $ transpileStructDecl s]
+    }
   where depId (I.UserDefinedT id) = Just id
         depId _ = Nothing
         deps = mapMaybe (depId . I.structFieldType) structFields

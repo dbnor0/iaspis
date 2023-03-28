@@ -1,6 +1,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Transpile.Proxy where
   
@@ -10,10 +11,11 @@ import Yul.Grammar qualified as Y
 import Iaspis.DeclUtils
 import Transpile.Types qualified as T
 import Transpile.Utils
+import Analysis.Environment
 
-transpileProxy :: ([I.Import], I.ProxyContract, [Facet]) -> T.Module
+transpileProxy :: BuildContext m => ([I.Import], I.ProxyContract, [Facet]) -> m T.Module
 transpileProxy (is, p@I.ProxyContract { I.proxyName, I.facetList }, facets) =
-  T.Module { T.moduleId=proxyName, T.imports=is', T.decls=proxyDecl }
+  return T.Module { T.moduleId=proxyName, T.imports=is', T.decls=proxyDecl }
   where proxyDecl = transpileProxyContract p facets
         is' = defaultProxyImports <> (I.importIds =<< is) <> facetList
 

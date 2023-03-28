@@ -140,7 +140,8 @@ transpileValue = \case
   I.BytesV v -> S.HexLit v
   I.UIntV n -> S.NumberLit n
   I.StringV v -> S.StringLit v
-  I.StructV (I.StructValue id ms) -> S.StructLit id (transpileStructMem <$> ms) 
+  I.StructV (I.StructValue id ms) -> S.StructLit id (transpileStructMem <$> ms)
+  I.EnumV e v -> S.EnumLit e v
 
 transpileStructMem :: I.StructValueMember -> (S.Identifier, S.Expression)
 transpileStructMem (I.StructValueMember id e) = (id, transpileExpr e)

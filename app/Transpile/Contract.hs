@@ -1,6 +1,7 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Transpile.Contract where
 
@@ -8,10 +9,11 @@ import Iaspis.Grammar qualified as I
 import Transpile.Types qualified as T
 import Solidity.Grammar qualified as S
 import Transpile.Common
+import Analysis.Environment
 
-transpileContract :: ([I.Import], I.ImmutableContract) -> T.Module
+transpileContract :: BuildContext m => ([I.Import], I.ImmutableContract) -> m T.Module
 transpileContract (is, I.ImmutableContract { I.contractName, I.contractFields, I.contractFns }) =
-  T.Module { T.moduleId=contractName, T.imports=I.importIds =<< is, T.decls=[T.ContractDef contractDef] }
+  return $ T.Module { T.moduleId=contractName, T.imports=I.importIds =<< is, T.decls=[T.ContractDef contractDef] }
   where contractDef =
           S.ContractDefinition
           { S.contractAbstractSpec = False

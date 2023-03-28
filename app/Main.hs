@@ -67,10 +67,15 @@ writeEIP2535 = do
   cs <- traverse T.readFile fps
   traverse_ (uncurry T.writeFile) $ Prelude.zip (("./output/" <>) . takeFileName <$> fps) cs
 
-writeModules :: FilePath -> [I.Module] -> IO ()
-writeModules out ms = do
+writeModules :: FilePath -> [I.Module] -> BuildEnv -> IO ()
+writeModules out ms env = do
   writeEIP2535
-  traverse_ (genFile out) (genModule <$> transpile ms)
+  case fst tms of
+    Left e -> do
+      print "Transpile error"
+      print e
+    Right rs -> traverse_ (genFile out) (genModule <$> rs)
+  where tms = evalState (runWriterT (runExceptT $ transpile ms)) env
 
 main :: IO ()
 main = do
@@ -89,4 +94,4 @@ main = do
           print be
         Right _ -> do
           Prelude.writeFile "output.json" (BS.unpack $ encode e)
-          writeModules "./output" modules
+          writeModules "./output" modules e

@@ -94,12 +94,8 @@ typeCheckExpr :: BuildContext m => Expression -> m Type
 typeCheckExpr = \case
   LiteralE l -> typeCheckLit l
   IdentifierE id -> do
-    e <- getFieldEnum id
-    case e of
-      Nothing -> do
-        f <- getField id
-        return $ f ^. fdType
-      Just ed -> return $ EnumT ed
+    f <- getField id
+    return $ f ^. fdType
   MemberAccessE (IdentifierE base) mem -> do
     f <- getField base
     case f ^. fdType of
@@ -158,6 +154,11 @@ typeCheckLit = \case
           (throwError $ InvalidStructLiteral id fs structValueMembers)
         return s
       _ -> throwError InvalidStructType
+  EnumV e v -> do
+    enum <- getFieldEnum e v
+    case enum of
+      Nothing -> throwError $ Debug ""
+      Just e' -> return $ EnumT e'
 
 typeCheckUnaryExpr :: BuildContext m => Expression -> UnaryOp -> m Type
 typeCheckUnaryExpr e op = do

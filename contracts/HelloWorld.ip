@@ -6,11 +6,9 @@ contract Contract {
   public mut uint a <- 123;
   public uint b;
   private string j;
-  private C myC;
   private S myS;
  
   constructor() {
-    myC <- new C(10);
     a <- 0;
     j <- "0";
   }
@@ -47,10 +45,13 @@ open proxy Proxy for Facet1, Facet2 {
 facet Facet1 to Proxy {
   public mut fn f1 (uint uh) -> string {
     x <- "123";
+    test <- "yeeeeeeee";
     mut uint z := 123;
     mut string y := "false";
     mut string c := y;
-    States st := STARTED;
+    mut string x := "heh";
+    x := "dd";
+    States st := States::STARTED;
     y := "true";
     mut string q := "abc";
     if (true) {
@@ -59,9 +60,12 @@ facet Facet1 to Proxy {
         mut string kek := "kek";
         mut uint i := 5;
         while (i > 0) {
+          test <- "uh oh";
           --i;
         }
       }
+    } else {
+      test <- "hey";
     }
     return c;
   }

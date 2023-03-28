@@ -29,11 +29,12 @@ class HasScope a where
   scopeDecls :: a -> [Identifier]
   scopeDecls _ = []
 
-  withScope :: BuildContext m => a -> m () -> m ()
+  withScope :: BuildContext m => a -> m b -> m b
   withScope e f = do
     enterScope e
-    _ <- f
+    b <- f
     exitScope e
+    return b
 
   enterScope :: BuildContext m  => a -> m ()
   enterScope e = do

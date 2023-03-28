@@ -373,6 +373,7 @@ literal = backtrack
   , bytesLit
   , stringLit
   , uintLit
+  , enumLit
   ]
 
 boolLit :: Parser Value
@@ -392,6 +393,9 @@ structLit = StructV <$> structValue
   where structValue = StructValue <$> identifier <*> braces structMembers
         structMembers = sepBy structValMember comma
         structValMember = StructValueMember <$> identifier <*> (reserved "=" *> expression)
+
+enumLit :: Parser Value
+enumLit = EnumV <$> identifier <*> (reserved "::" *> identifier)
 
 -- raw values
 

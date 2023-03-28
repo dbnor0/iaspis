@@ -17,6 +17,7 @@ import Data.Maybe
 import Control.Monad.Writer
 import Prelude hiding (Enum)
 import Data.Foldable
+import Transpile.Storage
 
 getFacet :: BuildContext m => Identifier -> m FacetEntry
 getFacet id = do
@@ -47,17 +48,36 @@ getField id = do
       case findInScope id ps fs of
         [] -> throwError $ FieldNotInScope id s
         fd : _ -> do
-          facetFieldCheck id
+          _ <- facetFieldCheck id
           unless (fd ^. fdInScope) (throwError $ FieldNotInScope id s)
           return fd
     fd : _ -> do
       unless (fd ^. fdInScope) (throwError $ FieldNotInScope id s)
       return fd
 
+getFacetField :: BuildContext m => Identifier -> m (FieldEntry, Maybe Identifier)
+getFacetField id = do
+  s <- gets (^. (buildInfo . biScope))
+  ls <- localScopes
+  fs <- gets (^. fields)
+  case findInScope id ls fs of
+    [] -> do
+      ps <- proxyFieldsScope
+      case findInScope id ps fs of
+        [] -> throwError $ FieldNotInScope id s
+        fd : _ -> do
+          fId <- facetFieldCheck id
+          unless (fd ^. fdInScope) (throwError $ FieldNotInScope id s)
+          return (fd, fId)
+    fd : _ -> do
+      unless (fd ^. fdInScope) (throwError $ FieldNotInScope id s)
+      return (fd, Nothing)
+
+
 findInScope :: Identifier -> [Scope] -> Bindings FieldEntry -> [FieldEntry]
 findInScope id ss fs = filter (^. fdInScope) $ mapMaybe (\s -> M.lookup (s <> "::" <> id) fs) ss
 
-facetFieldCheck :: BuildContext m => Identifier -> m ()
+facetFieldCheck :: BuildContext m => Identifier -> m (Maybe Identifier)
 facetFieldCheck id = do
   s <- gets (^. (buildInfo . biScope))
   fId <- gets (^. (buildInfo . biFacet))
@@ -68,10 +88,11 @@ facetFieldCheck id = do
       case find (\f -> fst f == id) (p ^. proxyFields) of
         Nothing -> throwError $ FieldNotInScope id s
         Just (_, Nothing) -> throwError $ FieldNotInScope id s
+        Just (_, Just SharedProxyMember) -> return $ Just sharedStorageId
         Just (_, Just (UniqueProxyMember f')) -> do
           unless (f' == fId) (throwError $ FieldNotInScope id s)
-        _ -> return ()
-    Nothing -> return ()
+          return $ Just fId
+    Nothing -> return Nothing
 
 getFn :: BuildContext m => Identifier -> m FunctionEntry
 getFn id = do
@@ -116,7 +137,8 @@ getStructField t memId = do
         Just m -> return m
     _ -> throwError NotYetImplemented
 
-getFieldEnum :: BuildContext m => Identifier -> m (Maybe Enum)
-getFieldEnum id = do
+getFieldEnum :: BuildContext m => Identifier -> Identifier -> m (Maybe Enum)
+getFieldEnum e id = do
   es <- gets (^. enums)
+  unless (e `elem` M.keys es) (throwError $ Debug "")
   return $ view enumDef <$> find (\e -> id `elem` enumFields (e ^. enumDef)) es
