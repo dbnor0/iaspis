@@ -46,10 +46,12 @@ executable iaspis
     Solidity.Grammar
     Transpile.Common
     Transpile.Contract
+    Transpile.Enum
     Transpile.Facet
     Transpile.Module
     Transpile.Proxy
     Transpile.Storage
+    Transpile.Struct
     Transpile.Types
     Transpile.Utils
     Utils.Error
