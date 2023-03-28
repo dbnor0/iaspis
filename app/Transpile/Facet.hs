@@ -9,7 +9,7 @@ import Solidity.Grammar qualified as S
 import Transpile.Types qualified as T
 import Transpile.Common
 import Iaspis.Grammar (Identifier)
-import Transpile.Storage (qualifiedTypeId, storageGetterId, storageModuleId)
+import Transpile.Storage (qualifiedTypeId, storageGetterId, storageModuleId, sharedStorageId)
 
 
 transpileFacet :: ([I.Import], I.FacetContract) -> T.Module
@@ -22,10 +22,10 @@ transpileFacet (is, f@I.FacetContract { I.facetName, I.proxyList }) =
 
 transpileFacetContract :: I.FacetContract -> [T.Declaration]
 transpileFacetContract (I.FacetContract fId pId fns) = [T.ContractDef contractDef]
-  where contractDef = S.ContractDefinition False fId [] (transpileFacetFn <$> fns)
+  where contractDef = S.ContractDefinition False fId [] (transpileFacetFn fId <$> fns)
 
-transpileFacetFn :: I.Function -> S.ContractBodyElem
-transpileFacetFn (I.Function hd body) = S.FunctionDef $ S.FunctionDefinition
+transpileFacetFn :: Identifier -> I.Function -> S.ContractBodyElem
+transpileFacetFn fId (I.Function hd body) = S.FunctionDef $ S.FunctionDefinition
   { S.functionId = I.functionName hd
   , S.functionVisibility = transpileVisibility . Just $ I.functionVisibility hd
   , S.functionMutability = transpileMutability $ I.functionMutability hd
@@ -34,11 +34,17 @@ transpileFacetFn (I.Function hd body) = S.FunctionDef $ S.FunctionDefinition
   , S.functionOverrideSpec = False
   , S.functionArgs = transpileFunctionArg <$> I.functionArgs hd
   , S.functionReturnType = [transpileFunctionArg $ I.functionReturnType hd]
-  , S.functionBody = transpileStmt <$> body
+  , S.functionBody = storageStructDecls fId <> (transpileStmt <$> body)
   }
 
 storageStructId :: Identifier -> Identifier
 storageStructId = (<> "Ds")
+
+storageStructDecls :: Identifier -> [S.Statement]
+storageStructDecls pId =
+  [ transpileStorageStructDecl pId
+  , transpileStorageStructDecl sharedStorageId
+  ]
 
 transpileStorageStructDecl :: Identifier -> S.Statement
 transpileStorageStructDecl id = S.VarDeclStmt arg (Just expr)

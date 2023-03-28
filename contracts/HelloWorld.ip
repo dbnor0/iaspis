@@ -39,7 +39,7 @@ contract Contract {
 }
 
 open proxy Proxy for Facet1, Facet2 {
-  @      *   public      string test;
+  @      *   public  mut string test;
   @ Facet1   private mut string x;
   @ Facet2   private mut string y; 
 }
@@ -47,7 +47,6 @@ open proxy Proxy for Facet1, Facet2 {
 facet Facet1 to Proxy {
   public mut fn f1 (uint uh) -> string {
     x <- "123";
-    y <- "3";
     mut uint z := 123;
     mut string y := "false";
     mut string c := y;
@@ -87,4 +86,8 @@ facet Facet2 to Proxy {
   }
 }
 
-facet Facet3 to Proxy {}
+facet Facet3 to Proxy {
+  public mut fn m() {
+    test <- "!23";
+  }
+}

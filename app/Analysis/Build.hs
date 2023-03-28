@@ -15,7 +15,7 @@ import Analysis.Module
 import Data.Map as M
 import Data.Foldable
 import Lens.Micro.Platform
-import Data.Maybe (fromJust, mapMaybe)
+import Data.Maybe (fromJust)
 import Iaspis.TypeUtils
 import Control.Monad
 import Analysis.Scope
@@ -68,8 +68,8 @@ addDecls = \case
     s <- gets (^. (buildInfo . biScope))
     uniqueId proxyName (ns <> (m ^. moduleImportedDecls)) (DupId ProxyId)
     modify $ proxies %~ M.insert (s <> "::" <> proxyName) (entry s)
-    where entry = ProxyEntry proxyName facetList fieldNames
-          fieldNames = fieldName <$> proxyDecls
+    where entry = ProxyEntry proxyName facetList fields
+          fields = zip (fieldName <$> proxyDecls) (fieldProxyKind <$> proxyDecls)
   FacetDecl (FacetContract{ facetName, proxyList, facetDecls }) -> do
     ns <- contractNamespace
     m <- currentModule

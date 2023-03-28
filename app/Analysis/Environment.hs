@@ -50,7 +50,7 @@ makeLenses ''ContractEntry
 data ProxyEntry = ProxyEntry
   { _proxyId :: Identifier
   , _proxyFacetList :: [Identifier]
-  , _proxyFields :: [Identifier]
+  , _proxyFields :: [(Identifier, Maybe ProxyMemberKind)]
   , _proxyScope :: Scope
   } deriving stock (Eq, Generic, Show)
 

@@ -114,7 +114,7 @@ bringInScope id = do
 toggleProxyScope :: BuildContext m => I.Identifier -> Bool -> m ()
 toggleProxyScope pId flag = do
   p <- getProxy pId
-  let fs = (\f -> p ^. proxyScope <> "::" <> p ^. proxyId <> "::" <> f) <$> (p ^. proxyFields)
+  let fs = (\f -> p ^. proxyScope <> "::" <> p ^. proxyId <> "::" <> f) <$> (view _1 <$> p ^. proxyFields)
   traverse_ (\f -> modify $ fields %~ M.adjust (\f -> f & fdInScope .~ flag) f) fs
 
 clearScope :: BuildContext m => m ()
