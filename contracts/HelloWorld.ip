@@ -15,7 +15,8 @@ contract Contract {
     j <- "0";
   }
 
-  public mut fn fact (uint n) -> uint {
+
+  public mut fn fact (uint n) -> uint memory {
     Z v storage <- Z { h = T { b = Q { q = true }, z = 123 }, x = 1, y = "2" };
     mut bool aaa := v.h.b.q;
     if (n == 1) {

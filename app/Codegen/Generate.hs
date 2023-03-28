@@ -132,7 +132,7 @@ genStmt = \case
     b' <- withIndent $ genStmt b
     return $ "for(" <> s' <> " " <> c' <> " " <> i' <> ")" <> b'
   S.WhileStmt cond b -> do
-    c <- genText $ "while(" <> genExpr cond <> ")"
+    c <- genText $ "while(" <> genExpr cond <> ") {"
     ss <- withIndent $ genStmt b
     cb <- genText "}"
     return $ c <> ss <> cb
@@ -321,6 +321,7 @@ genLocationWithType t l =
     (ArrayT _, l) -> genLocation l
     (MappingT _, l) -> genLocation l
     (PrimitiveT BytesDynamicT, l) -> genLocation l
+    (PrimitiveT StringT, l) -> genLocation l
     (PrimitiveT (StructT _), l) -> genLocation l
     (PrimitiveT (ContractT _), l) -> genLocation l
     _ -> ""

@@ -14,17 +14,30 @@ import Data.List.Extra
 import Data.Maybe
 import Transpile.Utils
 import Transpile.Common
+import Solidity.Grammar (Identifier)
 
 type StorageElem = (S.StateVarDeclaration, S.StructDefinition, S.FunctionDefinition)
+
+qualifiedTypeId :: Identifier -> Identifier
+qualifiedTypeId id = "StorageStructs." <> storageStructId id
+
+storageModuleId :: Identifier
+storageModuleId = "StorageStructs"
+
+storageStructId :: Identifier -> Identifier
+storageStructId = (<> "_storage_struct")
+
+storageGetterId :: Identifier -> Identifier
+storageGetterId= (<> "Storage")
 
 storageModule :: [([I.Import], I.ProxyContract, [Facet])] -> T.Module
 storageModule ps =
   T.Module
   { T.imports = I.importIds =<< ((^. _1) =<< ps)
-  , T.moduleId = "StorageStructs"
+  , T.moduleId = storageModuleId
   , T.decls = [T.LibraryDef libraryDef]
   }
-  where libraryDef = S.LibraryDefinition "StorageStructs" (storageModuleElems . (^. _2) =<< ps)
+  where libraryDef = S.LibraryDefinition storageModuleId (storageModuleElems . (^. _2) =<< ps)
 
 storageModuleElems :: I.ProxyContract -> [S.ContractBodyElem]
 storageModuleElems (I.ProxyContract _ _ _ fs) = let x = toElems . storageTuple =<< fieldMappings in x
@@ -47,8 +60,8 @@ storageTuple (sName, fs) = (ptrDecl, structDef, fnDef)
                   , S.stateVarInitializer = Just ptrExpr
                   }
         ptrName = sName <> "_storage_position"
-        ptrExpr = S.FunctionCallE (S.IdentifierE "keccak256") [S.LiteralE (S.StringLit (sName <> "_storage_struct"))]
-        structDef = S.StructDefinition (sName <> "_storage_struct") (structMember <$> fs)
+        ptrExpr = S.FunctionCallE (S.IdentifierE "keccak256") [S.LiteralE (S.StringLit (storageStructId sName))]
+        structDef = S.StructDefinition (storageStructId sName) (structMember <$> fs)
         structMember I.Field{I.fieldName, I.fieldType} = S.StructMember (transpileType fieldType) fieldName
         fnDef = S.FunctionDefinition
                 { S.functionId = sName <> "Storage"
@@ -58,7 +71,7 @@ storageTuple (sName, fs) = (ptrDecl, structDef, fnDef)
                 , S.functionVirtualSpec = False
                 , S.functionOverrideSpec = False
                 , S.functionArgs = []
-                , S.functionReturnType = [S.FunctionArg (struct (sName <> "_storage_struct")) S.Storage "ds"]
+                , S.functionReturnType = [S.FunctionArg (struct (storageStructId sName)) S.Storage "ds"]
                 , S.functionBody = fnBody
                 }
         fnBody = [ S.VarDeclStmt (S.FunctionArg (bytes 32) S.Memory "position") (Just (S.IdentifierE ptrName))
