@@ -1,5 +1,7 @@
 module Structs;
 
+import Test from Test;
+
 struct S {
   uint x;
   uint y;

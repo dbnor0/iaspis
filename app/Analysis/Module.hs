@@ -17,7 +17,7 @@ import Analysis.Error
 import Data.Map as M
 
 
-type ImportGraph = M.Map Identifier [Identifier]
+type DependencyGraph = M.Map Identifier [Identifier]
 
 checkCyclicImports :: BuildContext m =>  m ()
 checkCyclicImports = do
@@ -30,8 +30,8 @@ checkImportedDecls :: BuildContext m =>  m ()
 checkImportedDecls = do
   ms <- gets (^. modules)
   traverse_ (checkImport ms) (view moduleImports =<< M.elems ms)
-  where checkImport ms (Import ids mod) = 
-          unless (all (`elem` ((ms M.! mod) ^. moduleDecls)) ids) 
+  where checkImport ms (Import ids mod) =
+          unless (all (`elem` ((ms M.! mod) ^. moduleDecls)) ids)
             (throwError UndefinedImport)
 
 checkImports :: BuildContext m =>  m ()
@@ -48,10 +48,10 @@ uniqueId :: BuildContext m
          -> m ()
 uniqueId id env err = when (id `elem` env) (throwError $ err id)
 
-detectCycles ::ImportGraph -> Bool
-detectCycles graph = and $ evalState (traverse go (M.keys graph)) (graph, [])
+detectCycles :: DependencyGraph -> Bool
+detectCycles graph = or $ flip evalState (graph, []) . go <$> M.keys graph
 
-go :: Identifier -> State (ImportGraph, [Identifier]) Bool
+go :: Identifier -> State (DependencyGraph, [Identifier]) Bool
 go id = do
   (graph, vis) <- get
   if duplicates vis then

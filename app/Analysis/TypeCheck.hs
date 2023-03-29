@@ -2,6 +2,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 
 module Analysis.TypeCheck where
 import Analysis.Environment
@@ -15,10 +16,25 @@ import Data.Text as T hiding (elem)
 import Lens.Micro.Platform
 import Iaspis.TypeUtils
 import Analysis.Scope
+import Control.Monad.State.Class
+import Data.Map qualified as M
+import Analysis.Module (detectCycles)
+import Utils.Text
+import Control.Monad.Writer
 
 
 typeCheck :: BuildContext m => [Module] -> m ()
-typeCheck = traverse_ typeCheckModule
+typeCheck ms = do
+  checkRecursiveTypes
+  traverse_ typeCheckModule ms
+
+checkRecursiveTypes :: BuildContext m => m ()
+checkRecursiveTypes = do
+  ss <- gets (^. structs)
+  let graph = M.map (\s -> name . structFieldType <$> structFields (s ^. structDef)) ss
+  tell [showT graph]
+  tell [showT $ detectCycles graph]
+  when (detectCycles graph) (throwError $ Debug "Recursive types are not allowed")
 
 typeCheckModule :: BuildContext m => Module -> m ()
 typeCheckModule m = withScope m $ traverse_ typeCheckDecl (declarations m)
@@ -30,12 +46,12 @@ typeCheckDecl = \case
   _ -> return ()
 
 typeCheckContract :: BuildContext m => ImmutableContract -> m ()
-typeCheckContract (ImmutableContract _ fields fns) = do 
-  traverse_ typeCheckField fields 
+typeCheckContract (ImmutableContract _ fields fns) = do
+  traverse_ typeCheckField fields
   traverse_ typeCheckFn fns
 
 typeCheckFacet :: BuildContext m => FacetContract -> m ()
-typeCheckFacet (FacetContract _ _ fns) = traverse_ typeCheckFn fns 
+typeCheckFacet (FacetContract _ _ fns) = traverse_ typeCheckFn fns
 
 typeCheckField :: BuildContext m => Field -> m ()
 typeCheckField Field{ fieldType, fieldName, fieldInitializer } =
@@ -134,7 +150,7 @@ typeCheckLit :: BuildContext m => Value -> m Type
 typeCheckLit = \case
   AddressV _ -> return AddressT
   BoolV _ -> return BoolT
-  BytesV b -> 
+  BytesV b ->
     if T.length b == 40 then
       return AddressT
     else
@@ -150,7 +166,7 @@ typeCheckLit = \case
             structIds = structFieldName <$> fs
             structTs = structFieldType <$> fs
         memTs <- traverse typeCheckExpr (structMemberValueExpr <$> structValueMembers)
-        unless (memIds == structIds && memTs == structTs) 
+        unless (memIds == structIds && memTs == structTs)
           (throwError $ InvalidStructLiteral id fs structValueMembers)
         return s
       _ -> throwError InvalidStructType
