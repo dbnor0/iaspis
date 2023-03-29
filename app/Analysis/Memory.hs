@@ -68,6 +68,13 @@ memCheckStmt = \case
       Just fdLoc -> do
         unless (fdLoc == assignLoc) 
           (throwError $ InvalidAssignOp (f ^. fdId) assignLoc)
+  AssignmentStmt (SubscriptE (IdentifierE id) _) assignLoc _ -> do
+    f <- getField id
+    case typeLoc $ f ^. fdType of
+      Nothing -> return ()
+      Just fdLoc -> do
+        unless (fdLoc == assignLoc) 
+          (throwError $ InvalidAssignOp (f ^. fdId) assignLoc)
   AssignmentStmt e _ _ -> do
     throwError $ InvalidLValue e
   IfStmt _ b1 b2 -> do

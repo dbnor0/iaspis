@@ -109,6 +109,10 @@ transpileFacetExpr fId = \case
     case facet of
       Nothing -> return $ S.IdentifierE id
       Just f -> return $ S.MemberAccessE (S.IdentifierE (storageStructId f)) (S.IdentifierE id)
+  I.SubscriptE e idx -> do
+    te <- transpileFacetExpr fId e
+    tidx <- transpileFacetExpr fId idx
+    return $ S.SubscriptE te tidx
   I.MemberAccessE lv id -> do
     tlv <- transpileFacetExpr fId lv
     tid <- transpileFacetExpr fId $ I.IdentifierE id

@@ -12,7 +12,7 @@ import Iaspis.Grammar
 import Data.Foldable
 import Analysis.Utils
 import Control.Monad
-import Data.Text as T hiding (zipWith, all, elem)
+import Data.Text as T hiding (tail, zipWith, all, elem)
 import Lens.Micro.Platform
 import Iaspis.TypeUtils
 import Analysis.Scope
@@ -116,7 +116,7 @@ typeCheckExpr = \case
     f <- getField id
     return $ f ^. fdType
   MemberAccessE (IdentifierE base) mem -> do
-    f <- getField base 
+    f <- getField base
     case f ^. fdType of
       StructT _ _ -> do
         m <- getStructField (f ^. fdType) mem
@@ -136,6 +136,18 @@ typeCheckExpr = \case
         m <- getStructField t mem
         return $ structFieldType m
       _ -> throwError NotYetImplemented
+  SubscriptE e idx -> do
+    t <- typeCheckExpr e
+    case t of
+      ArrayT at ads al -> do
+        tidx <- typeCheckExpr idx
+        -- indexes must be integers for arrays
+        unless (tidx `strictEq` UIntT) (throwError $ Debug "")
+        case ads of
+          [] -> throwError $ Debug ""
+          [_] -> return (withLoc at al)
+          _ -> return $ ArrayT at (tail ads) al
+      _ -> throwError $ Debug ""
   MemberAccessE _ _ -> throwError InvalidMemberAccessOp
   FunctionCallE id args -> do
     fn <- getFn id

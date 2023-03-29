@@ -2,10 +2,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Iaspis.TypeUtils where
-  
+
 import Iaspis.Grammar
 import Data.Text as T
 import Utils.Text
+import Prelude hiding (concatMap)
 
 
 isNumeric :: Type -> Bool
@@ -83,6 +84,9 @@ name (StringT l) = "string " <> locName l
 name UnitT = "unit"
 name (UserDefinedT id l) = id <> " " <> locName l
 name (StructT s l) = structName s <> " " <> locName l
+name (ArrayT t ds l) = name t <> T.concat (nameD <$> ds) <> " " <> locName l
+  where nameD Nothing = "[]"
+        nameD (Just n) = "[" <> showT n <> "]"
 name (EnumT e) = enumName e
 name (ContractT id) = id
 
@@ -93,8 +97,8 @@ locName (Just Memory) = "memory"
 
 typeLoc :: Type -> Maybe MemoryLocation
 typeLoc (StringT l) = l
-typeLoc (StructT _ l) = l  
-typeLoc (UserDefinedT _ l) = l 
+typeLoc (StructT _ l) = l
+typeLoc (UserDefinedT _ l) = l
 typeLoc _ = Nothing
 
 withLoc :: Type -> Maybe MemoryLocation -> Type

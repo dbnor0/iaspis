@@ -7,6 +7,7 @@ module Transpile.Common where
 
 import Iaspis.Grammar qualified as I
 import Solidity.Grammar qualified as S
+import Solidity.Grammar (ArrayType(ArrayType))
 
 
 transpileFunctionDef :: I.Function -> S.FunctionDefinition
@@ -53,6 +54,7 @@ transpileExpr :: I.Expression -> S.Expression
 transpileExpr = \case
   I.LiteralE v -> S.LiteralE $ transpileValue v
   I.IdentifierE id -> S.IdentifierE id
+  I.SubscriptE e idx -> S.SubscriptE (transpileExpr e) (transpileExpr idx)
   I.MemberAccessE lv id -> S.MemberAccessE (transpileExpr lv) (transpileExpr $ I.IdentifierE id)
   I.FunctionCallE id es -> S.FunctionCallE (S.IdentifierE id) (transpileExpr <$> es)
   I.InstantiationE id es -> S.InstantiationE (S.IdentifierE id) (transpileExpr <$> es)
@@ -104,7 +106,8 @@ transpileType = \case
   I.StringT l -> S.PrimitiveT $ S.StringT (transpileLocation <$> l)
   I.UnitT -> S.PrimitiveT S.UnitT
   I.UserDefinedT id l -> S.PrimitiveT $ S.UserDefinedT id (transpileLocation <$> l)
-  I.StructT s  l -> S.PrimitiveT $ S.StructT (I.structName s) (transpileLocation <$> l)
+  I.StructT s l -> S.PrimitiveT $ S.StructT (I.structName s) (transpileLocation <$> l)
+  I.ArrayT t ds l -> S.ArrayT $ ArrayType (transpileType t) ds (transpileLocation <$> l)
   I.EnumT e -> S.PrimitiveT $ S.EnumT (I.enumName e)
   I.ContractT id -> S.PrimitiveT $ S.ContractT id
 

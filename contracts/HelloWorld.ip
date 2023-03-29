@@ -2,12 +2,20 @@ module HelloWorld;
 
 import S, Z, T, Q, States from Structs;
 
+struct WA {
+  uint[][5] f;
+}
+
 contract Contract {
   public mut uint a <- 123;
   public uint b;
   private string j;
   private S myS;
   private Z zzz;
+  private uint[] xs;
+  private uint[][] xxs;
+  private WA wa;
+
   
   constructor() {
     a <- 0;
@@ -21,6 +29,9 @@ contract Contract {
       uint wallagong := 23;
       return 1;
     }
+    wa.f[1][2] <- 5;
+    uint haha := xs[0];
+    uint[] storage test <- xxs[0];
     return n * fact(n - 1);
   }
 

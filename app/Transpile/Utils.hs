@@ -23,8 +23,8 @@ unit = PrimitiveT UnitT
 address :: Type
 address = PrimitiveT AddressT
 
-array :: Type -> Maybe Expression -> Type
-array t s = ArrayT $ ArrayType t s
+array :: Type -> [Maybe Int] -> Maybe MemoryLocation -> Type
+array t ds l = ArrayT $ ArrayType t ds l
 
 mapping :: PrimitiveType -> Type -> Type
 mapping k v = MappingT $ MappingType k v

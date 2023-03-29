@@ -134,7 +134,8 @@ data MappingType = MappingType
 
 data ArrayType = ArrayType
   { arrayType :: Type
-  , arraySize :: Maybe Expression
+  , arraySize :: [Maybe Int]
+  , arrayLocation :: Maybe MemoryLocation
   } deriving stock (Eq, Show)
 
 data Expression

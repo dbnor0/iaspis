@@ -255,9 +255,10 @@ baseExpr = backtrack
 memberExpr :: Parser Expression
 memberExpr = do
   struct <- factor
-  members <- many1 member
-  return $ Prelude.foldl MemberAccessE struct members
+  members <- many1 $ Left <$> member <|> Right <$> subscript
+  return $ Prelude.foldl (\exp -> either (MemberAccessE exp) (SubscriptE exp)) struct members
   where member = reserved "." *> identifier
+        subscript = brackets expression
 
 unaryExpr :: Parser UnaryExpression
 unaryExpr = choice $ uncurry mkUnaryExpr <$>
@@ -338,6 +339,17 @@ bitwiseOps = choice $ uncurry mkBinaryExpr <$>
 -- type with no data location, used for structs
 type' :: Parser Type
 type' = backtrack
+  [ ArrayT <$> nonArrayType <*> arrayDims <*> pure Nothing
+  , reserved' "address" AddressT
+  , reserved' "bool" BoolT
+  , reserved' "string" (StringT Nothing)
+  , reserved' "uint" UIntT
+  , chunk "bytes" *> sizedType BytesT bytesPredicates
+  , UserDefinedT <$> identifier <*> pure Nothing
+  ]
+
+nonArrayType :: Parser Type 
+nonArrayType = backtrack
   [ reserved' "address" AddressT
   , reserved' "bool" BoolT
   , reserved' "string" (StringT Nothing)
@@ -349,7 +361,8 @@ type' = backtrack
 -- used for contract & proxy field declarations
 storageType :: Parser Type
 storageType = backtrack
-  [ reserved' "address" AddressT
+  [ ArrayT <$> nonArrayType <*> arrayDims <*> pure (Just Storage)
+  , reserved' "address" AddressT
   , reserved' "bool" BoolT
   , reserved' "string" (StringT (Just Storage))
   , reserved' "uint" UIntT
@@ -359,13 +372,17 @@ storageType = backtrack
 
 typeWithLoc :: Parser Type
 typeWithLoc = backtrack
-  [ reserved' "address" AddressT
+  [ ArrayT <$> nonArrayType <*> arrayDims <*> (Just <$> memoryLocation)
+  , reserved' "address" AddressT
   , reserved' "bool" BoolT
   , StringT <$> (reserved "string" *> (Just <$> memoryLocation))
   , reserved' "uint" UIntT
   , chunk "bytes" *> sizedType BytesT bytesPredicates
   , UserDefinedT <$> identifier <*> option Nothing (Just <$> memoryLocation)
   ]
+
+arrayDims :: Parser [Maybe Int]
+arrayDims = many1 $ reserved "[" *> optional uintRaw <* reserved "]"
 
 sizedType :: (Int -> Type) -> [Int -> Bool] -> Parser Type
 sizedType c ps = c <$> typeSize ps

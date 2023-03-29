@@ -45,7 +45,7 @@ proxyConstructorBody :: [Facet] -> [S.Statement]
 proxyConstructorBody facets =
   [ S.ExpressionStmt $ S.FunctionCallE (S.IdentifierE "LibDiamond.setContractOwner") [S.IdentifierE "_contractOwner"]
   , S.VarDeclStmt
-    (S.FunctionArg (array (struct "IDiamondCut.FacetCut" (Just S.Memory)) Nothing) "cut")
+    (S.FunctionArg (array (struct "IDiamondCut.FacetCut" (Just S.Memory)) [Nothing] (Just S.Memory)) "cut")
     (Just $ S.ArrayInstantiationE "IDiamondCut.FacetCut" (S.LiteralE (S.NumberLit (length facets))))
   ]
   <>
@@ -61,7 +61,7 @@ proxyConstructorBody facets =
 
 proxyFacetCutInit :: (Int, Facet) -> [S.Statement]
 proxyFacetCutInit (idx, (fId, fFns)) =
-  [ S.VarDeclStmt (S.FunctionArg (array (bytes 4) Nothing) (fId <> "functionSelectors"))
+  [ S.VarDeclStmt (S.FunctionArg (array (bytes 4) [Nothing] (Just S.Memory)) (fId <> "functionSelectors"))
     (Just $ S.ArrayInstantiationE "bytes4" (S.LiteralE (S.NumberLit 1)))
   ]
   <>

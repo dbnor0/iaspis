@@ -74,7 +74,7 @@ genStateVarDecl (StateVarDeclaration t v m id e) = genText decl
 genFunction :: FunctionDefinition -> SolTextGen
 genFunction f@FunctionDefinition{ functionBody } = do
   h <- genFunctionHeader f
-  b <- withIndent' genStmt functionBody  
+  b <- withIndent' genStmt functionBody
   cb <- genText "}\n\n"
   if Data.List.null functionBody then
     return $ h <> ";\n\n"
@@ -157,15 +157,15 @@ genYulStmt = \case
   Y.VarDeclStmt id e -> do
     genText $ "let " <> id <> " := " <> genYulExpr e  <> "\n"
   Y.AssignmentStmt lv e -> do
-    genText $ genYulExpr lv <> " := " <> genYulExpr e <> "\n" 
+    genText $ genYulExpr lv <> " := " <> genYulExpr e <> "\n"
   Y.IfStmt c b -> do
     c' <- genText $ "if " <> genYulExpr c <> " {\n"
     b' <- withIndent $ genYulStmt b
     e <- genText "}\n"
     return $ c' <> b' <> e
   Y.ExpressionStmt e -> do
-    e' <- withIndent $ pure $ genYulExpr e 
-    genText $ e' <> "\n" 
+    e' <- withIndent $ pure $ genYulExpr e
+    genText $ e' <> "\n"
   Y.SwitchStmt cond bs -> do
     s <- genText $ "switch " <> genYulExpr cond <> "\n"
     bs' <- withIndent' genYulSwitchCase bs
@@ -185,7 +185,7 @@ genYulSwitchCase (c, s) = do
 
 
 genYulExpr :: Y.Expression -> SolText
-genYulExpr = \case  
+genYulExpr = \case
   Y.IdentifierE id -> id
   Y.BuiltinE b -> genYulBuiltin b
   Y.PathE lv m -> genYulExpr lv <> "." <> genYulExpr m
@@ -303,11 +303,13 @@ genPlainType = \case
   PrimitiveT BytesDynamicT -> "bytes"
   PrimitiveT UnitT -> ""
   PrimitiveT (UserDefinedT id _) -> id
-  PrimitiveT (StructT id _) -> id 
+  PrimitiveT (StructT id _) -> id
   PrimitiveT (EnumT id) -> id
   PrimitiveT (ContractT id) -> id
   MappingT (MappingType k v) -> "mapping (" <> genType (PrimitiveT k) <> " => " <> genType v <> ")"
-  ArrayT (ArrayType t e) -> genType t <> "[" <> maybe "" genExpr e <> "]"
+  ArrayT (ArrayType t ds _) -> genType t <> T.concat (genDim <$> ds)
+  where genDim Nothing = "[]"
+        genDim (Just n) = "[" <> showT n <> "]"
 
 
 genType :: Type -> SolText
@@ -326,7 +328,9 @@ genType = \case
   PrimitiveT (EnumT id) -> id
   PrimitiveT (ContractT id) -> id
   MappingT (MappingType k v) -> "mapping (" <> genType (PrimitiveT k) <> " => " <> genType v <> ")"
-  ArrayT (ArrayType t e) -> genType t <> "[" <> maybe "" genExpr e <> "]"
+  ArrayT (ArrayType t ds l) -> genType t <> T.concat (genDim <$> ds) <> " " <> genLocation l
+  where genDim Nothing = "[]"
+        genDim (Just n) = "[" <> showT n <> "]"
 
 genVisibility :: Visibility -> SolText
 genVisibility = \case

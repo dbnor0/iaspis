@@ -21,6 +21,7 @@ data Type
   | EnumT Enum
   | ContractT Identifier
   | StructT Struct (Maybe MemoryLocation)
+  | ArrayT Type [Maybe Int] (Maybe MemoryLocation)
   | StringT (Maybe MemoryLocation)
   -- default value for parsed types 
   -- that don't belong to any other type
@@ -78,6 +79,7 @@ data Expression
   = LiteralE Value
   | IdentifierE Identifier
   | MemberAccessE Expression Identifier
+  | SubscriptE Expression Expression
   | FunctionCallE Identifier [Expression]
   | InstantiationE Identifier [Expression]
   | UnaryE UnaryOp Expression
