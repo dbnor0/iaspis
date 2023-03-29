@@ -58,8 +58,8 @@ storageStructDecls pId =
 
 transpileStorageStructDecl :: Identifier -> S.Statement
 transpileStorageStructDecl id = S.VarDeclStmt arg (Just expr)
-  where arg = S.FunctionArg argType  S.Storage (storageStructId id)
-        argType = S.PrimitiveT $ S.UserDefinedT (qualifiedTypeId id)
+  where arg = S.FunctionArg argType (storageStructId id)
+        argType = S.PrimitiveT $ S.UserDefinedT (qualifiedTypeId id) (Just S.Storage)
         expr = S.FunctionCallE (S.IdentifierE $ storageGetterId id) []
 
 transpileFacetStmt :: BuildContext m => Identifier -> I.Statement -> m S.Statement

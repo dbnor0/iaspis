@@ -18,7 +18,7 @@ transpileStruct s@I.Struct{ I.structName, I.structFields } =
     , T.moduleId = structName
     , T.decls = [T.StructTypeDef $ transpileStructDecl s]
     }
-  where depId (I.UserDefinedT id) = Just id
+  where depId (I.UserDefinedT id _) = Just id
         depId _ = Nothing
         deps = mapMaybe (depId . I.structFieldType) structFields
 

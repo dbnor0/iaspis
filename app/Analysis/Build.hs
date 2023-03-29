@@ -81,7 +81,7 @@ addDecls = \case
   StructDecl s@Struct{ structName } -> do
     ts <- gets (M.elems . (^. types))
     uniqueId structName (name <$> ts) (DupId TypeId)
-    modify $ types %~ M.insert structName (StructT s)
+    modify $ types %~ M.insert structName (StructT s Nothing)
     modify $ structs %~ M.insert structName entry
     where entry = StructEntry structName s
   EnumDecl e@Enum{ enumName, enumFields } -> do
@@ -128,7 +128,7 @@ addField Field{ fieldName, fieldType, fieldMutability, fieldLocation } = do
   uniqueId fieldName evs (DupId FieldId)
   uniqueId (scopedName s) (fst <$> fs) (DupId FieldId)
   modify $ fields %~ M.insert (scopedName s) entry
-  where entry = FieldEntry fieldName fieldType fieldMutability fieldLocation False
+  where entry = FieldEntry fieldName fieldType fieldMutability False
         scopedName s = s <> "::" <> fieldName
 
 addFnArg :: BuildContext m => FunctionArg -> m ()
@@ -139,18 +139,18 @@ addFnArg FunctionArg{ argName, argType } = do
   uniqueId argName evs (DupId FieldId)
   uniqueId (scopedName s) (fst <$> fs) (DupId FieldId)
   modify $ fields %~ M.insert (scopedName s) entry
-  where entry = FieldEntry argName argType Mutable Memory False
+  where entry = FieldEntry argName argType Mutable False
         scopedName s = s <> "::" <> argName
 
 addDeclArg :: BuildContext m => DeclArg -> m ()
-addDeclArg DeclArg{ declName, declType, declMutability, declLocation } = do
+addDeclArg DeclArg{ declName, declType, declMutability } = do
   fs <- gets (M.assocs . (^. fields))
   s <- gets (^. (buildInfo . biScope))
   evs <- enumValues
   uniqueId declName evs (DupId FieldId)
   uniqueId (scopedName s) (fst <$> fs) (DupId FieldId)
   modify $ fields %~ M.insert (scopedName s) entry
-  where entry = FieldEntry declName declType declMutability declLocation False
+  where entry = FieldEntry declName declType declMutability False
         scopedName s = s <> "::" <> declName
 
 addStmtDecl :: BuildContext m => Statement -> m ()
@@ -179,7 +179,7 @@ updateFieldTypes = do
   traverse_ updateFieldType fs
 
 updateFieldType :: BuildContext m => (Identifier, FieldEntry) -> m ()
-updateFieldType (fId, FieldEntry _ (UserDefinedT tId) _ _ _) = do
+updateFieldType (fId, FieldEntry _ (UserDefinedT tId _)  _ _) = do
   fType <- gets (M.lookup tId . (^. types))
   case fType of
     Nothing -> throwError $ UndefinedType tId
@@ -190,19 +190,19 @@ updateFieldType _ = return ()
 updateStructType :: BuildContext m => (Identifier, Type) -> m ()
 updateStructType (tId, t) = do
   case t of
-    StructT s@(Struct _ sFs) -> do
-      traverse_ (updateStructFieldType tId s) sFs
+    StructT s@(Struct _ sFs) l -> do
+      traverse_ (updateStructFieldType tId s l) sFs
     _ -> return ()
 
-updateStructFieldType:: BuildContext m => Identifier -> Struct -> StructField -> m ()
-updateStructFieldType tId (Struct sId fs) (StructField (UserDefinedT id) fId) = do
+updateStructFieldType:: BuildContext m => Identifier -> Struct -> Maybe MemoryLocation -> StructField -> m ()
+updateStructFieldType tId (Struct sId fs) l (StructField (UserDefinedT id _) fId) = do
   fType <- gets (M.lookup id . (^. types))
   case fType of
     Nothing -> throwError $ UndefinedType id
     Just t -> do
-      modify $ types %~ M.adjust (const $ StructT $ Struct sId newFields) tId
+      modify $ types %~ M.adjust (const $ StructT (Struct sId newFields) l) tId
       where newFields = StructField t fId : Prelude.filter ((/= fId) . structFieldName) fs
-updateStructFieldType _ _ _ = return ()
+updateStructFieldType _ _ _ _ = return ()
 
 contractNamespace :: BuildContext m => m [Identifier]
 contractNamespace = do

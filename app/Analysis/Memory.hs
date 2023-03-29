@@ -13,6 +13,7 @@ import Analysis.Utils
 import Control.Monad
 import Lens.Micro.Platform
 import Analysis.Scope
+import Iaspis.TypeUtils
 
 
 memCheck :: BuildContext m => [Module] -> m ()
@@ -47,17 +48,26 @@ memCheckStmt = \case
   VarDeclStmt DeclArg{ declName } assigLoc _ -> do
     bringInScope declName
     f <- getField declName
-    when (f ^. fdLocation == Storage && not (canBeStorage (f ^. fdType))) 
-      (throwError $ InvalidMemoryLocationType declName (f ^. fdType))
-    unless ((f ^. fdLocation) == assigLoc) (throwError $ InvalidAssignOp declName assigLoc)
+    case typeLoc $ f ^. fdType of 
+      Nothing -> return ()
+      Just fdLoc -> do
+        when (fdLoc == Storage && not (canBeStorage (f ^. fdType))) 
+          (throwError $ InvalidMemoryLocationType declName (f ^. fdType))
+        unless (fdLoc == assigLoc) (throwError $ InvalidAssignOp declName assigLoc)
   AssignmentStmt (IdentifierE id) assignLoc _ -> do
     f <- getField id
-    unless (f ^. fdLocation == assignLoc) 
-      (throwError $ InvalidAssignOp (f ^. fdId) assignLoc)
+    case typeLoc $ f ^. fdType of
+      Nothing -> return ()
+      Just fdLoc -> do
+        unless (fdLoc == assignLoc) 
+          (throwError $ InvalidAssignOp (f ^. fdId) assignLoc)
   AssignmentStmt (MemberAccessE (IdentifierE id) _) assignLoc _ -> do
     f <- getField id
-    unless (f ^. fdLocation == assignLoc) 
-      (throwError $ InvalidAssignOp (f ^. fdId) assignLoc)
+    case typeLoc $ f ^. fdType of
+      Nothing -> return ()
+      Just fdLoc -> do
+        unless (fdLoc == assignLoc) 
+          (throwError $ InvalidAssignOp (f ^. fdId) assignLoc)
   AssignmentStmt e _ _ -> do
     throwError $ InvalidLValue e
   IfStmt _ b1 b2 -> do
@@ -79,6 +89,6 @@ memCheckStmt = \case
 
 canBeStorage :: Type -> Bool
 canBeStorage = \case
-  StringT -> True
-  StructT _ -> True
+  StringT _ -> True
+  StructT _ _ -> True
   _ -> False

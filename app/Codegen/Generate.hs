@@ -96,10 +96,10 @@ genFunctionHeader (FunctionDefinition id v m p vt o args rt _) = genText header
           | otherwise = "function "
 
 genFunctionArg :: FunctionArg -> SolText
-genFunctionArg (FunctionArg t loc id) = genType t <> " " <> genLocationWithType t loc <> " " <> id
+genFunctionArg (FunctionArg t id) = genType t <> " " <> id
 
 genReturnType :: [FunctionArg] -> SolText
-genReturnType [FunctionArg (PrimitiveT UnitT) _ _] = ""
+genReturnType [FunctionArg (PrimitiveT UnitT) _] = ""
 genReturnType [a] = "returns (" <> genFunctionArg a <> ")"
 genReturnType args = "returns (" <> T.concat (L.intersperse "," (genFunctionArg <$> args)) <> ")"
 
@@ -111,7 +111,7 @@ genStmt = \case
     cb <- genText "}\n"
     return $ ob <> ss <> cb
   S.VarDeclStmt f e -> do
-    let decl = genType (functionArgType f) <> " " <> genLocationWithType (functionArgType f) (functionArgLocation f) <> " " <>  functionArgId f
+    let decl = genType (functionArgType f) <> " " <>  functionArgId f
         expr = maybe "" (\e -> " = " <> genExpr e) e
     genText $ decl <> expr <> ";\n"
   S.AssignmentStmt id e -> genText $ genExpr id <> " = " <> genExpr e <> ";\n"
@@ -296,14 +296,14 @@ genType = \case
   PrimitiveT AddressT -> "address"
   PrimitiveT PayableAddressT -> "payable address"
   PrimitiveT BoolT -> "bool"
-  PrimitiveT StringT -> "string"
+  PrimitiveT (StringT l) -> "string " <> genLocation l
   PrimitiveT (BytesT n) -> "bytes" <> showT n
   PrimitiveT (IntT n) -> "int" <> showT n
   PrimitiveT (UintT n) -> "uint" <> showT n
   PrimitiveT BytesDynamicT -> "bytes"
   PrimitiveT UnitT -> ""
-  PrimitiveT (UserDefinedT id) -> id
-  PrimitiveT (StructT id) -> id
+  PrimitiveT (UserDefinedT id l) -> id <> " " <> genLocation l
+  PrimitiveT (StructT id l) -> id <> " " <> genLocation l
   PrimitiveT (EnumT id) -> id
   PrimitiveT (ContractT id) -> id
   MappingT (MappingType k v) -> "mapping (" <> genType (PrimitiveT k) <> " => " <> genType v <> ")"
@@ -319,19 +319,20 @@ genVisibility = \case
 genLocationWithType :: Type -> MemoryLocation -> SolText
 genLocationWithType t l =
   case (t, l) of
-    (ArrayT _, l) -> genLocation l
-    (MappingT _, l) -> genLocation l
-    (PrimitiveT BytesDynamicT, l) -> genLocation l
-    (PrimitiveT StringT, l) -> genLocation l
-    (PrimitiveT (StructT _), l) -> genLocation l
-    (PrimitiveT (ContractT _), l) -> genLocation l
+    (ArrayT _, l) -> genLocation $ Just l
+    (MappingT _, l) -> genLocation $ Just l
+    (PrimitiveT BytesDynamicT, l) -> genLocation $ Just l
+    (PrimitiveT (StringT l), _) -> genLocation l
+    (PrimitiveT (StructT _ l), _) -> genLocation l
+    (PrimitiveT (ContractT _), l) -> genLocation $ Just l
     _ -> ""
 
-genLocation :: MemoryLocation -> SolText
+genLocation :: Maybe MemoryLocation -> SolText
 genLocation = \case
-  Storage -> "storage"
-  Memory -> "memory"
-  Calldata -> "calldata"
+  Nothing -> ""
+  Just Storage -> "storage"
+  Just Memory -> "memory"
+  Just Calldata -> "calldata"
 
 genModifier :: Maybe StateVarModifier -> SolText
 genModifier = \case

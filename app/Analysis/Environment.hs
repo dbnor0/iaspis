@@ -103,7 +103,6 @@ data FieldEntry = FieldEntry
   { _fdId :: Identifier
   , _fdType :: Type
   , _fdMutability :: Mutability
-  , _fdLocation :: MemoryLocation
   , _fdInScope :: Bool
   } deriving stock (Eq, Generic, Show)
 
@@ -186,7 +185,7 @@ preludeFns = M.empty
 preludeTypes :: Bindings Type
 preludeTypes = M.fromList $
   [ ("uint", UIntT)
-  , ("string", StringT)
+  , ("string", StringT Nothing)
   , ("bool", BoolT)
   , ("address", AddressT)
   ] <> preludeByteTypes

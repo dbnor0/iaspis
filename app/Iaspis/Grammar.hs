@@ -17,12 +17,14 @@ data Type
   | BoolT
   | BytesT Int
   | UIntT
-  | StringT
   | UnitT
-  | UserDefinedT Identifier
-  | StructT Struct
   | EnumT Enum
   | ContractT Identifier
+  | StructT Struct (Maybe MemoryLocation)
+  | StringT (Maybe MemoryLocation)
+  -- default value for parsed types 
+  -- that don't belong to any other type
+  | UserDefinedT Identifier (Maybe MemoryLocation)
   deriving stock (Eq, Show, Generic)
 
 instance ToJSON Type where
@@ -124,7 +126,6 @@ instance ToJSON Mutability where
 data FunctionArg = FunctionArg
   { argType :: Type
   , argName :: Identifier
-  , argLocation :: MemoryLocation
   } deriving stock (Eq, Show, Generic)
 
 instance ToJSON FunctionArg where
@@ -133,7 +134,6 @@ data DeclArg = DeclArg
   { declMutability :: Mutability
   , declType :: Type
   , declName :: Identifier
-  , declLocation :: MemoryLocation
   } deriving stock (Eq, Show, Generic)
 
 instance ToJSON DeclArg where

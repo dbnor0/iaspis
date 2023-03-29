@@ -70,7 +70,6 @@ data FunctionDefinition = FunctionDefinition
 
 data FunctionArg = FunctionArg
   { functionArgType :: Type
-  , functionArgLocation :: MemoryLocation
   , functionArgId :: Identifier
   } deriving stock (Eq, Show)
 
@@ -116,14 +115,14 @@ data PrimitiveType
   = AddressT
   | PayableAddressT
   | BoolT
-  | StringT
+  | StringT (Maybe MemoryLocation)
   | BytesT Int
   | IntT Int
   | UintT Int
   | BytesDynamicT
   | UnitT
-  | UserDefinedT Identifier
-  | StructT Identifier
+  | UserDefinedT Identifier (Maybe MemoryLocation)
+  | StructT Identifier (Maybe MemoryLocation)
   | EnumT Identifier
   | ContractT Identifier
   deriving stock (Eq, Show)

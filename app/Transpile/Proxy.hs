@@ -37,7 +37,7 @@ transpileProxyConstructor facets = S.ConstructorDef $ S.FunctionDefinition
   , S.functionVirtualSpec = False
   , S.functionOverrideSpec = False
   , S.functionArgs = proxyConstructorArgs $ fst <$> facets
-  , S.functionReturnType = [S.FunctionArg unit S.Memory ""]
+  , S.functionReturnType = [S.FunctionArg unit ""]
   , S.functionBody = proxyConstructorBody facets
   }
 
@@ -45,7 +45,7 @@ proxyConstructorBody :: [Facet] -> [S.Statement]
 proxyConstructorBody facets =
   [ S.ExpressionStmt $ S.FunctionCallE (S.IdentifierE "LibDiamond.setContractOwner") [S.IdentifierE "_contractOwner"]
   , S.VarDeclStmt
-    (S.FunctionArg (array (struct "IDiamondCut.FacetCut") Nothing) S.Memory "cut")
+    (S.FunctionArg (array (struct "IDiamondCut.FacetCut" (Just S.Memory)) Nothing) "cut")
     (Just $ S.ArrayInstantiationE "IDiamondCut.FacetCut" (S.LiteralE (S.NumberLit (length facets))))
   ]
   <>
@@ -61,7 +61,7 @@ proxyConstructorBody facets =
 
 proxyFacetCutInit :: (Int, Facet) -> [S.Statement]
 proxyFacetCutInit (idx, (fId, fFns)) =
-  [ S.VarDeclStmt (S.FunctionArg (array (bytes 4) Nothing) S.Memory (fId <> "functionSelectors"))
+  [ S.VarDeclStmt (S.FunctionArg (array (bytes 4) Nothing) (fId <> "functionSelectors"))
     (Just $ S.ArrayInstantiationE "bytes4" (S.LiteralE (S.NumberLit 1)))
   ]
   <>
@@ -87,8 +87,8 @@ proxyFacetCutSelectors (idx, fId, I.Function hd _) =
     (S.IdentifierE $ fId <> "." <> I.functionName hd <> ".selector")
 
 proxyConstructorArgs :: [S.Identifier] -> [S.FunctionArg]
-proxyConstructorArgs fIds = S.FunctionArg address S.Memory "_contractOwner" : (facetAddress <$> fIds)
-  where facetAddress fId = S.FunctionArg address S.Memory ("_" <> fId <> "Address")
+proxyConstructorArgs fIds = S.FunctionArg address "_contractOwner" : (facetAddress <$> fIds)
+  where facetAddress fId = S.FunctionArg address ("_" <> fId <> "Address")
 
 transpileProxyFallback :: S.ContractBodyElem
 transpileProxyFallback = S.FallbackDef $ S.FunctionDefinition
@@ -99,16 +99,16 @@ transpileProxyFallback = S.FallbackDef $ S.FunctionDefinition
   , S.functionVirtualSpec = False
   , S.functionOverrideSpec = False
   , S.functionArgs = []
-  , S.functionReturnType = [S.FunctionArg unit S.Memory ""]
+  , S.functionReturnType = [S.FunctionArg unit ""]
   , S.functionBody = proxyFallbackBody
   }
 
 proxyFallbackBody :: [S.Statement]
 proxyFallbackBody =
-  [ S.VarDeclStmt (S.FunctionArg (struct "LibDiamond.DiamondStorage") S.Storage "ds") Nothing
-  , S.VarDeclStmt (S.FunctionArg (bytes 32) S.Memory "position") (Just $ S.IdentifierE "LibDiamond.DIAMOND_STORAGE_POSITION")
+  [ S.VarDeclStmt (S.FunctionArg (struct "LibDiamond.DiamondStorage" (Just S.Storage)) "ds") Nothing
+  , S.VarDeclStmt (S.FunctionArg (bytes 32) "position") (Just $ S.IdentifierE "LibDiamond.DIAMOND_STORAGE_POSITION")
   , S.AssemblyStmt (Y.AssignmentStmt (Y.PathE (Y.IdentifierE "ds") (Y.IdentifierE "slot")) (Y.IdentifierE "position"))
-  , S.VarDeclStmt (S.FunctionArg address S.Memory "facet")
+  , S.VarDeclStmt (S.FunctionArg address "facet")
     (Just $ S.MemberAccessE (S.IdentifierE "ds")
       (S.MemberAccessE
         (S.SubscriptE
@@ -162,7 +162,7 @@ transpileProxyReceive = S.FallbackDef $ S.FunctionDefinition
   , S.functionVirtualSpec = False
   , S.functionOverrideSpec = False
   , S.functionArgs = []
-  , S.functionReturnType = [S.FunctionArg unit S.Memory ""]
+  , S.functionReturnType = [S.FunctionArg unit ""]
   , S.functionBody = [S.NoOpStmt]
   }
 

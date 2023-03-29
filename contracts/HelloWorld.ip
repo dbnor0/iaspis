@@ -1,9 +1,9 @@
 module HelloWorld;
 
-import S, Z, T, Q, States from Structs;
+// import S, Z, T, Q, States from Structs;
 
 contract Contract {
-  public mut uint a <- 123;
+  /*public mut uint a <- 123;
   public uint b;
   private string j;
   private S myS;
@@ -33,10 +33,10 @@ contract Contract {
       return;
     }
     a <- 256;
-  }
+  }*/
 }
 
-open proxy Proxy for Facet1, Facet2 {
+/*open proxy Proxy for Facet1, Facet2 {
   @      *   public  mut string test;
   @ Facet1   private mut string x;
   @ Facet2   private mut string y; 
@@ -94,4 +94,4 @@ facet Facet3 to Proxy {
   public mut fn m() {
     test <- "!23";
   }
-}
+}*/

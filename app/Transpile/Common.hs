@@ -24,18 +24,16 @@ transpileFunctionDef I.Function{ I.functionHeader, I.functionBody } =
     }
 
 transpileFunctionArg :: I.FunctionArg -> S.FunctionArg
-transpileFunctionArg I.FunctionArg{ I.argType, I.argLocation, I.argName } =
+transpileFunctionArg I.FunctionArg{ I.argType, I.argName } =
   S.FunctionArg
     { S.functionArgType = transpileType argType
-    , S.functionArgLocation = transpileLocation argLocation
     , S.functionArgId = argName
     }
 
 transpileDeclArg :: I.DeclArg -> S.FunctionArg
-transpileDeclArg I.DeclArg{ I.declType, I.declLocation, I.declName } =
+transpileDeclArg I.DeclArg{ I.declType, I.declName } =
   S.FunctionArg
     { S.functionArgType = transpileType declType
-    , S.functionArgLocation = transpileLocation declLocation
     , S.functionArgId = declName
     }
 
@@ -94,7 +92,6 @@ transpileReturnType :: I.Type -> S.FunctionArg
 transpileReturnType t =
   S.FunctionArg
     { S.functionArgType = transpileType t
-    , S.functionArgLocation = S.Memory
     , S.functionArgId = ""
     }
 
@@ -104,10 +101,10 @@ transpileType = \case
   I.BoolT -> S.PrimitiveT S.BoolT
   I.BytesT n -> S.PrimitiveT $ S.BytesT n
   I.UIntT -> S.PrimitiveT $ S.UintT 256
-  I.StringT -> S.PrimitiveT S.StringT
+  I.StringT l -> S.PrimitiveT $ S.StringT (transpileLocation <$> l)
   I.UnitT -> S.PrimitiveT S.UnitT
-  I.UserDefinedT id -> S.PrimitiveT $ S.UserDefinedT id
-  I.StructT s -> S.PrimitiveT $ S.StructT (I.structName s)
+  I.UserDefinedT id l -> S.PrimitiveT $ S.UserDefinedT id (transpileLocation <$> l)
+  I.StructT s  l -> S.PrimitiveT $ S.StructT (I.structName s) (transpileLocation <$> l)
   I.EnumT e -> S.PrimitiveT $ S.EnumT (I.enumName e)
   I.ContractT id -> S.PrimitiveT $ S.ContractT id
 

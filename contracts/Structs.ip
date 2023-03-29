@@ -1,6 +1,6 @@
 module Structs;
 
-import Test from Test;
+/*import Test from Test;
 
 struct S {
   uint x;
@@ -26,4 +26,4 @@ enum States {
   STARTED,
   FINISHED,
   FAILED
-}
+}*/

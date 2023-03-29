@@ -29,8 +29,8 @@ array t s = ArrayT $ ArrayType t s
 mapping :: PrimitiveType -> Type -> Type
 mapping k v = MappingT $ MappingType k v
 
-struct :: Identifier -> Type
-struct = PrimitiveT . StructT
+struct :: Identifier -> Maybe MemoryLocation -> Type
+struct id loc = PrimitiveT $ StructT id loc
 
 enum :: Identifier -> Type
 enum = PrimitiveT . EnumT
@@ -38,5 +38,5 @@ enum = PrimitiveT . EnumT
 contract :: Identifier -> Type
 contract = PrimitiveT . ContractT
 
-custom :: Identifier -> Type
-custom = PrimitiveT . UserDefinedT
+custom :: Identifier -> Maybe MemoryLocation -> Type
+custom id loc = PrimitiveT $ UserDefinedT id loc

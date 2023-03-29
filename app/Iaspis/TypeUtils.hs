@@ -16,7 +16,7 @@ isNumeric = \case
 isBitwise :: Type -> Bool
 isBitwise = \case
   BoolT -> False
-  StringT -> False
+  StringT _ -> False
   UnitT -> False
   _ -> True
 
@@ -26,7 +26,7 @@ isTruthy = \case
   _ -> False
 
 isUserDefined :: Type -> Bool
-isUserDefined (UserDefinedT _) = True
+isUserDefined (UserDefinedT _ _) = True
 isUserDefined _ = False
 
 numericUnaryOps :: [UnaryOp]
@@ -52,12 +52,21 @@ name AddressT = "address"
 name BoolT = "bool"
 name (BytesT n) = "bytes" <> showT n
 name UIntT = "uint"
-name StringT = "string"
+name (StringT l) = "string " <> locName l
 name UnitT = "unit"
-name (UserDefinedT id) = id
-name (StructT s) = structName s
+name (UserDefinedT id l) = id <> " " <> locName l
+name (StructT s l) = structName s <> " " <> locName l
 name (EnumT e) = enumName e
 name (ContractT id) = id
 
+locName :: Maybe MemoryLocation -> T.Text
+locName Nothing = ""
+locName (Just Storage) = "storage"
+locName (Just Memory) = "memory"
 
+typeLoc :: Type -> Maybe MemoryLocation
+typeLoc (StringT l) = l
+typeLoc (StructT _ l) = l  
+typeLoc (UserDefinedT _ l) = l 
+typeLoc _ = Nothing
 

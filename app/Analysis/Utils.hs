@@ -130,7 +130,7 @@ proxyFieldsScope = do
 getStructField :: BuildContext m => Type -> Identifier -> m StructField
 getStructField t memId = do
   case t of
-    StructT (Struct _ sMems) -> do
+    StructT (Struct _ sMems) _ -> do
       let mem = find ((== memId) . structFieldName) sMems
       case mem of
         Nothing -> throwError NotYetImplemented

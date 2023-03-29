@@ -73,17 +73,15 @@ enum = Enum <$> name <*> fields
 fnArgDecl :: Parser FunctionArg
 fnArgDecl =
   FunctionArg
-  <$> type'
+  <$> typeWithLoc
   <*> identifier
-  <*> option Memory memoryLocation
 
 declArg :: Parser DeclArg
 declArg =
   DeclArg
   <$> option View mutability
-  <*> type'
+  <*> typeWithLoc
   <*> identifier
-  <*> option Memory memoryLocation
 
 contractFieldDecl :: Parser Field
 contractFieldDecl =
@@ -91,7 +89,7 @@ contractFieldDecl =
   <$> optional fieldProxyKind
   <*> optional visibility
   <*> mutability
-  <*> type'
+  <*> storageType
   <*> pure Storage
   <*> identifier
   <*> optional (reserved' "<-" Storage *> expression)
@@ -116,7 +114,7 @@ userDefinedHeader
   = FunctionHeader <$> visibility <*> payability <*> mutability <*> name <*> argList <*> returnArg <*> overrideSpecifier
   where name       = reserved "fn" *> identifier
         argList    = parens (sepBy fnArgDecl comma)
-        returnArg  = FunctionArg <$> option UnitT (reserved "->" *> type') <*> pure "" <*> option Memory memoryLocation
+        returnArg  = FunctionArg <$> option UnitT (reserved "->" *> typeWithLoc) <*> pure ""
         -- returnArg = option UnitT $ reserved "->" *> type'
 
 constructorHeader :: Parser FunctionHeader
@@ -124,21 +122,21 @@ constructorHeader
   = FunctionHeader Public <$> payability <*> pure Mutable <*> name <*> argList <*> returnArg <*> pure False
   where name    = lexeme' "constructor"
         argList = parens (sepBy fnArgDecl comma)
-        returnArg  = pure (FunctionArg UnitT "" Memory)
+        returnArg  = pure (FunctionArg UnitT "")
 
 receiveHeader :: Parser FunctionHeader
 receiveHeader
   = FunctionHeader External Payable <$> mutability <*> name <*> argList <*> returnArg <*> pure False
   where name    = lexeme' "receive"
         argList = parens spaceOrComment $> []
-        returnArg  = pure (FunctionArg UnitT "" Memory)
+        returnArg  = pure (FunctionArg UnitT "")
 
 fallbackHeader :: Parser FunctionHeader
 fallbackHeader
   = FunctionHeader External NonPayable <$> mutability <*> name <*> argList <*> returnArg <*> pure False
   where name    = lexeme' "fallback"
         argList = parens spaceOrComment $> []
-        returnArg  = pure (FunctionArg UnitT "" Memory)
+        returnArg  = pure (FunctionArg UnitT "")
 
 -- syntax elements
 
@@ -336,18 +334,37 @@ bitwiseOps = choice $ uncurry mkBinaryExpr <$>
 
 -- types
 
-type' :: Parser Type
-type'
-  =   primitiveType
-  <|> UserDefinedT <$> identifier
 
-primitiveType :: Parser Type
-primitiveType = backtrack
+-- type with no data location, used for structs
+type' :: Parser Type
+type' = backtrack
   [ reserved' "address" AddressT
   , reserved' "bool" BoolT
-  , reserved' "string" StringT
+  , reserved' "string" (StringT Nothing)
   , reserved' "uint" UIntT
   , chunk "bytes" *> sizedType BytesT bytesPredicates
+  , UserDefinedT <$> identifier <*> pure Nothing
+  ]
+
+-- used for contract & proxy field declarations
+storageType :: Parser Type
+storageType = backtrack
+  [ reserved' "address" AddressT
+  , reserved' "bool" BoolT
+  , reserved' "string" (StringT (Just Storage))
+  , reserved' "uint" UIntT
+  , chunk "bytes" *> sizedType BytesT bytesPredicates
+  , UserDefinedT <$> identifier <*> pure (Just Storage)
+  ]
+
+typeWithLoc :: Parser Type
+typeWithLoc = backtrack
+  [ reserved' "address" AddressT
+  , reserved' "bool" BoolT
+  , StringT <$> (reserved "string" *> (Just <$> memoryLocation))
+  , reserved' "uint" UIntT
+  , chunk "bytes" *> sizedType BytesT bytesPredicates
+  , UserDefinedT <$> identifier <*> (Just <$> memoryLocation)
   ]
 
 sizedType :: (Int -> Type) -> [Int -> Bool] -> Parser Type

@@ -74,9 +74,9 @@ storageTuple (sName, fs) = (ptrDecl, structDef, fnDef)
                 , S.functionVirtualSpec = False
                 , S.functionOverrideSpec = False
                 , S.functionArgs = []
-                , S.functionReturnType = [S.FunctionArg (struct (storageStructId sName)) S.Storage "ds"]
+                , S.functionReturnType = [S.FunctionArg (struct (storageStructId sName) (Just S.Storage)) "ds"]
                 , S.functionBody = fnBody
                 }
-        fnBody = [ S.VarDeclStmt (S.FunctionArg (bytes 32) S.Memory "position") (Just (S.IdentifierE ptrName))
+        fnBody = [ S.VarDeclStmt (S.FunctionArg (bytes 32) "position") (Just (S.IdentifierE ptrName))
                  , S.AssemblyStmt (Y.AssignmentStmt (Y.PathE (Y.IdentifierE "ds") (Y.IdentifierE "slot")) (Y.IdentifierE "position"))
                  ]

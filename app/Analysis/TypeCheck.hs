@@ -113,23 +113,23 @@ typeCheckExpr = \case
     f <- getField id
     return $ f ^. fdType
   MemberAccessE (IdentifierE base) mem -> do
-    f <- getField base
+    f <- getField base 
     case f ^. fdType of
-      StructT _ -> do
+      StructT _ _ -> do
         m <- getStructField (f ^. fdType) mem
         return $ structFieldType m
       _ -> throwError NotYetImplemented
   MemberAccessE e@(MemberAccessE _ _) mem -> do
     t <- typeCheckExpr e
     case t of
-      StructT _ -> do
+      StructT _ _ -> do
         m <- getStructField t mem
         return $ structFieldType m
       _ -> throwError NotYetImplemented
   MemberAccessE e@(FunctionCallE _ _) mem -> do
     t <- typeCheckExpr e
     case t of
-      StructT _ -> do
+      StructT _ _ -> do
         m <- getStructField t mem
         return $ structFieldType m
       _ -> throwError NotYetImplemented
@@ -157,11 +157,11 @@ typeCheckLit = \case
       return $ BytesT size
     where size = T.length b `div` 2
   UIntV _ -> return UIntT
-  StringV _ -> return StringT
+  StringV _ -> return $ StringT (Just Memory)
   StructV StructValue{ structValueName, structValueMembers } -> do
     t <- getType structValueName
     case t of
-      s@(StructT (Struct id fs)) -> do
+      s@(StructT (Struct id fs) _) -> do
         let memIds = structMemberValueName <$> structValueMembers
             structIds = structFieldName <$> fs
             structTs = structFieldType <$> fs

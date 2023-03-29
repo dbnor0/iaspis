@@ -1,6 +1,6 @@
 module Test;
 
-import ContractX from Utils;
+/*import ContractX from Utils;
 
 enum States2 {
   RED,
@@ -21,4 +21,4 @@ struct S3 {
 
 contract Test {
 
-}
+}*/
