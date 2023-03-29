@@ -12,7 +12,7 @@ import Iaspis.Grammar
 import Data.Foldable
 import Analysis.Utils
 import Control.Monad
-import Data.Text as T hiding (elem)
+import Data.Text as T hiding (zipWith, all, elem)
 import Lens.Micro.Platform
 import Iaspis.TypeUtils
 import Analysis.Scope
@@ -67,16 +67,23 @@ typeCheckStmt fn = \case
     bringInScope (declName f)
     field <- getField (declName f)
     et <- typeCheckExpr ex
-    unless (field ^. fdType == et)
-      (throwError $ InvalidAssigType (field ^. fdId) (field ^. fdType) et)
+    case typeLoc $ field ^. fdType of
+      Just Storage -> do
+        case typeLoc et of
+          Just Storage -> do
+            return ()
+          _ -> throwError $ Debug "Storage pointers can only be initialized with storage values"
+      _ -> do
+        unless (field ^. fdType == et)
+          (throwError $ InvalidAssigType (field ^. fdId) (field ^. fdType) et)
   AssignmentStmt (IdentifierE fId) _ ex -> do
     f <- getField fId
     et <- typeCheckExpr ex
-    unless (f ^. fdType == et)
+    unless ((f ^. fdType) `laxEq` et)
       (throwError $ InvalidAssigType (f ^. fdId) (f ^. fdType) et)
   ReturnStmt ex -> do
     et <- maybe (pure UnitT) typeCheckExpr ex
-    unless ((argType . functionReturnType) fn == et)
+    unless ((argType . functionReturnType) fn `strictEq` et)
       (throwError $ InvalidReturnType (functionName fn) ((argType . functionReturnType) fn) et)
   IfStmt cond b1 b2 -> do
     enterBlock
@@ -162,7 +169,7 @@ typeCheckLit = \case
             structIds = structFieldName <$> fs
             structTs = structFieldType <$> fs
         memTs <- traverse typeCheckExpr (structMemberValueExpr <$> structValueMembers)
-        unless (memIds == structIds && memTs == structTs)
+        unless (memIds == structIds && and (zipWith laxEq memTs structTs))
           (throwError $ InvalidStructLiteral id fs structValueMembers)
         return s
       _ -> throwError InvalidStructType

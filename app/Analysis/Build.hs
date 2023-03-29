@@ -121,7 +121,7 @@ addFn f@(Function hd bd) = do
         scopedName s = s <> "::" <> functionName hd
 
 addField :: BuildContext m => Field -> m ()
-addField Field{ fieldName, fieldType, fieldMutability, fieldLocation } = do
+addField Field{ fieldName, fieldType, fieldMutability } = do
   fs <- gets (M.assocs . (^. fields))
   s <- gets (^. (buildInfo . biScope))
   evs <- enumValues
@@ -179,12 +179,12 @@ updateFieldTypes = do
   traverse_ updateFieldType fs
 
 updateFieldType :: BuildContext m => (Identifier, FieldEntry) -> m ()
-updateFieldType (fId, FieldEntry _ (UserDefinedT tId _)  _ _) = do
+updateFieldType (fId, FieldEntry _ (UserDefinedT tId l)  _ _) = do
   fType <- gets (M.lookup tId . (^. types))
   case fType of
     Nothing -> throwError $ UndefinedType tId
     Just t -> do
-      modify $ fields %~ M.adjust (\f -> f & fdType .~ t) fId
+      modify $ fields %~ M.adjust (\f -> f & fdType .~ withLoc t l) fId
 updateFieldType _ = return ()
 
 updateStructType :: BuildContext m => (Identifier, Type) -> m ()

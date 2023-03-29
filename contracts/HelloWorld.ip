@@ -7,6 +7,7 @@ contract Contract {
   public uint b;
   private string j;
   private S myS;
+  private Z zzz;
   
   constructor() {
     a <- 0;
@@ -14,7 +15,7 @@ contract Contract {
   }
 
   public mut fn fact (uint n) -> uint {
-    Z storage v <- Z { h = T { b = Q { q = true }, z = 123 }, x = 1, y = "2" };
+    Z storage v <- zzz;
     mut bool aaa := v.h.b.q;
     if (n == 1) {
       uint wallagong := 23;
@@ -42,7 +43,7 @@ open proxy Proxy for Facet1, Facet2 {
 }
 
 facet Facet1 to Proxy {
-  public mut fn f1 (uint uh) -> string storage {
+  public mut fn f1 (uint uh) -> string memory {
     x <- "123";
     test <- "yeeeeeeee";
     mut uint z := 123;

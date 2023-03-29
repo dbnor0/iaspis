@@ -68,7 +68,7 @@ genContractBodyElem = \case
 
 genStateVarDecl :: StateVarDeclaration -> SolTextGen
 genStateVarDecl (StateVarDeclaration t v m id e) = genText decl
-  where decl = genType t <> " " <> genVisibility v <> " " <> genModifier m <> " " <> id <> init e <> ";\n"
+  where decl = genPlainType t <> " " <> genVisibility v <> " " <> genModifier m <> " " <> id <> init e <> ";\n"
         init = maybe "" (\e -> " = " <> genExpr e)
 
 genFunction :: FunctionDefinition -> SolTextGen
@@ -214,7 +214,7 @@ genLit = \case
   S.StringLit v -> "\"" <> v <> "\""
   S.NumberLit n -> showT n
   S.BooleanLit b -> T.toLower $ showT b
-  S.HexLit v -> v
+  S.HexLit v -> "0x" <> v
   S.EnumLit e v -> e <> "." <> v
   S.StructLit id ms -> id <> "({" <> T.concat (L.intersperse "," (genStructLitMember <$> ms)) <> "})"
 
@@ -290,6 +290,25 @@ genEnum EnumDefinition{ enumId, enumMembers } = do
 
 genEnumMember :: S.Identifier -> SolTextGen
 genEnumMember id = genText $ id <> ",\n"
+
+genPlainType :: Type -> SolText
+genPlainType = \case
+  PrimitiveT AddressT -> "address"
+  PrimitiveT PayableAddressT -> "payable address"
+  PrimitiveT BoolT -> "bool"
+  PrimitiveT (StringT _) -> "string"
+  PrimitiveT (BytesT n) -> "bytes" <> showT n
+  PrimitiveT (IntT n) -> "int" <> showT n
+  PrimitiveT (UintT n) -> "uint" <> showT n
+  PrimitiveT BytesDynamicT -> "bytes"
+  PrimitiveT UnitT -> ""
+  PrimitiveT (UserDefinedT id _) -> id
+  PrimitiveT (StructT id _) -> id 
+  PrimitiveT (EnumT id) -> id
+  PrimitiveT (ContractT id) -> id
+  MappingT (MappingType k v) -> "mapping (" <> genType (PrimitiveT k) <> " => " <> genType v <> ")"
+  ArrayT (ArrayType t e) -> genType t <> "[" <> maybe "" genExpr e <> "]"
+
 
 genType :: Type -> SolText
 genType = \case
