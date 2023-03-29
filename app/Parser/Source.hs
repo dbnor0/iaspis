@@ -364,7 +364,7 @@ typeWithLoc = backtrack
   , StringT <$> (reserved "string" *> (Just <$> memoryLocation))
   , reserved' "uint" UIntT
   , chunk "bytes" *> sizedType BytesT bytesPredicates
-  , UserDefinedT <$> identifier <*> (Just <$> memoryLocation)
+  , UserDefinedT <$> identifier <*> option Nothing (Just <$> memoryLocation)
   ]
 
 sizedType :: (Int -> Type) -> [Int -> Bool] -> Parser Type

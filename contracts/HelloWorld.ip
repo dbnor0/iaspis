@@ -1,21 +1,20 @@
 module HelloWorld;
 
-// import S, Z, T, Q, States from Structs;
+import S, Z, T, Q, States from Structs;
 
 contract Contract {
-  /*public mut uint a <- 123;
+  public mut uint a <- 123;
   public uint b;
   private string j;
   private S myS;
- 
+  
   constructor() {
     a <- 0;
     j <- "0";
   }
 
-
-  public mut fn fact (uint n) -> uint memory {
-    Z v storage <- Z { h = T { b = Q { q = true }, z = 123 }, x = 1, y = "2" };
+  public mut fn fact (uint n) -> uint {
+    Z storage v <- Z { h = T { b = Q { q = true }, z = 123 }, x = 1, y = "2" };
     mut bool aaa := v.h.b.q;
     if (n == 1) {
       uint wallagong := 23;
@@ -33,31 +32,31 @@ contract Contract {
       return;
     }
     a <- 256;
-  }*/
+  }
 }
 
-/*open proxy Proxy for Facet1, Facet2 {
+open proxy Proxy for Facet1, Facet2 {
   @      *   public  mut string test;
   @ Facet1   private mut string x;
   @ Facet2   private mut string y; 
 }
 
 facet Facet1 to Proxy {
-  public mut fn f1 (uint uh) -> string {
+  public mut fn f1 (uint uh) -> string storage {
     x <- "123";
     test <- "yeeeeeeee";
     mut uint z := 123;
-    mut string y := "false";
-    mut string c := y;
-    mut string x := "heh";
+    mut string memory y := "false";
+    mut string memory c := y;
+    mut string memory x := "heh";
     x := "dd";
     States st := States::STARTED;
     y := "true";
-    mut string q := "abc";
+    mut string memory q := "abc";
     if (true) {
-      mut string stuff := "stuff";
+      mut string memory stuff := "stuff";
       if (true) {
-        mut string kek := "kek";
+        mut string memory kek := "kek";
         mut uint i := 5;
         while (i > 0) {
           test <- "uh oh";
@@ -94,4 +93,4 @@ facet Facet3 to Proxy {
   public mut fn m() {
     test <- "!23";
   }
-}*/
+}

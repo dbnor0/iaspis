@@ -19,8 +19,6 @@ import Analysis.Scope
 import Control.Monad.State.Class
 import Data.Map qualified as M
 import Analysis.Module (detectCycles)
-import Utils.Text
-import Control.Monad.Writer
 
 
 typeCheck :: BuildContext m => [Module] -> m ()
@@ -32,8 +30,6 @@ checkRecursiveTypes :: BuildContext m => m ()
 checkRecursiveTypes = do
   ss <- gets (^. structs)
   let graph = M.map (\s -> name . structFieldType <$> structFields (s ^. structDef)) ss
-  tell [showT graph]
-  tell [showT $ detectCycles graph]
   when (detectCycles graph) (throwError $ Debug "Recursive types are not allowed")
 
 typeCheckModule :: BuildContext m => Module -> m ()

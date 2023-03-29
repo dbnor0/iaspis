@@ -1,7 +1,7 @@
 module Utils;
 
 
-/*contract C {
+contract C {
   private uint a;
 
   constructor(uint aa) {
@@ -11,4 +11,4 @@ module Utils;
 
 contract ContractX {
 
-}*/
+}
