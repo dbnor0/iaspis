@@ -24,31 +24,36 @@ executable iaspis
   main-is:
     Main.hs
   other-modules:
-    Analysis.ContractCheck
-    Analysis.Environment.AltBuild
-    Analysis.Environment.Build
-    Analysis.Environment.AltEnvironment
-    Analysis.Environment.Environment
-    Analysis.Environment.Error
-    Analysis.Environment.Traversals
-    Analysis.Environment.Utils
-    Analysis.ImportCheck
-    Analysis.MemoryCheck
-    Analysis.MutabilityCheck
+    Analysis.Build
+    Analysis.Error
+    Analysis.Module
+    Analysis.Mutability
+    Analysis.Memory
+    Analysis.Utils
+    Analysis.Scope
+    Analysis.Contract
+    Analysis.Environment
     Analysis.TypeCheck
     Codegen.Generate
-    Codegen.Transpile
     Codegen.Types
-    Codegen.Utils
     Iaspis.DeclUtils
     Iaspis.Grammar
-    Iaspis.Prelude
     Iaspis.TypeUtils
     Parser.Base
     Parser.Source
     Parser.Types
     Parser.Utils
     Solidity.Grammar
+    Transpile.Common
+    Transpile.Contract
+    Transpile.Enum
+    Transpile.Facet
+    Transpile.Module
+    Transpile.Proxy
+    Transpile.Storage
+    Transpile.Struct
+    Transpile.Types
+    Transpile.Utils
     Utils.Error
     Utils.Text
     Yul.Grammar

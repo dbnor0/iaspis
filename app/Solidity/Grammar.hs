@@ -70,7 +70,6 @@ data FunctionDefinition = FunctionDefinition
 
 data FunctionArg = FunctionArg
   { functionArgType :: Type
-  , functionArgLocation :: MemoryLocation
   , functionArgId :: Identifier
   } deriving stock (Eq, Show)
 
@@ -116,26 +115,27 @@ data PrimitiveType
   = AddressT
   | PayableAddressT
   | BoolT
-  | StringT
+  | StringT (Maybe MemoryLocation)
   | BytesT Int
   | IntT Int
   | UintT Int
   | BytesDynamicT
   | UnitT
-  | UserDefinedT Identifier
-  | StructT Identifier
+  | UserDefinedT Identifier (Maybe MemoryLocation)
+  | StructT Identifier (Maybe MemoryLocation)
   | EnumT Identifier
   | ContractT Identifier
   deriving stock (Eq, Show)
 
 data MappingType = MappingType
-  { mappingKeyType :: PrimitiveType
+  { mappingKeyType :: Type
   , mappingValueType :: Type
   } deriving stock (Eq, Show)
 
 data ArrayType = ArrayType
   { arrayType :: Type
-  , arraySize :: Maybe Expression
+  , arraySize :: [Maybe Int]
+  , arrayLocation :: Maybe MemoryLocation
   } deriving stock (Eq, Show)
 
 data Expression
@@ -202,5 +202,7 @@ data Literal
   | NumberLit Int 
   | BooleanLit Bool
   | HexLit T.Text
+  | EnumLit T.Text T.Text
   | StructLit Identifier [(Identifier, Expression)]
+  | ArrayLit [Expression]
   deriving stock (Eq, Show)

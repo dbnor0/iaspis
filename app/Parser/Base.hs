@@ -73,5 +73,8 @@ parens = between (reserved "(") (reserved ")")
 brackets :: Parser a -> Parser a
 brackets = between (reserved "[") (reserved "]")
 
+braces :: Parser a -> Parser a
+braces = between (reserved "{") (reserved "}")
+
 block :: Parser a -> Parser a
 block = between (reserved "{") (reserved "}")

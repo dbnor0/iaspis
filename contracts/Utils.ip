@@ -1,9 +1,14 @@
 module Utils;
 
-contract C {
-  private uint256 a;
 
-  constructor(uint256 aa) {
+contract C {
+  private uint a;
+
+  constructor(uint aa) {
     a <- aa;
   }
+}
+
+contract ContractX {
+
 }

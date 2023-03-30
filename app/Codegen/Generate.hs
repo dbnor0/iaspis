@@ -5,7 +5,7 @@
 
 module Codegen.Generate where
 
-import Codegen.Types as CG
+import Codegen.Types
 import Data.Text as T
 import Solidity.Grammar as S
 import Data.Text.IO as T
@@ -15,7 +15,7 @@ import Data.Function
 import Lens.Micro.Platform
 import Yul.Grammar as Y
 import Utils.Text
-import Codegen.Utils
+import Transpile.Types qualified as T
 import Data.List qualified
 
 
@@ -24,8 +24,8 @@ type SolTextGen = State GenState SolText
 genFile :: FilePath -> (FilePath, SolText) -> IO ()
 genFile dir (name, code) = T.writeFile (dir <> "\\" <> name <> ".sol") code
 
-genModule :: Module -> (FilePath, SolText)
-genModule Module{ moduleId, imports, decls } = (T.unpack moduleId, code)
+genModule :: T.Module -> (FilePath, SolText)
+genModule T.Module{ T.moduleId, T.imports, T.decls } = (T.unpack moduleId, code)
   where code = evalState genModule' (GenState 0)
         genModule' = do
           l <- genLicense
@@ -39,13 +39,13 @@ genLicense = return "// SPDX-License-Identifier: MIT\n"
 genImport :: S.Identifier -> SolTextGen
 genImport i = return $ "import \"./" <> i <> ".sol\";\n"
 
-genDecl :: Declaration -> SolTextGen
+genDecl :: T.Declaration -> SolTextGen
 genDecl = \case
-  CG.ContractDef cd -> genContract cd
-  CG.InterfaceDef id -> genInterface id
-  CG.LibraryDef ld -> genLibrary ld
-  CG.StructTypeDef sd -> genStruct sd
-  CG.EnumDef ed -> genEnum ed
+  T.ContractDef cd -> genContract cd
+  T.InterfaceDef id -> genInterface id
+  T.LibraryDef ld -> genLibrary ld
+  T.StructTypeDef sd -> genStruct sd
+  T.EnumDef ed -> genEnum ed
 
 genContract :: ContractDefinition -> SolTextGen
 genContract (ContractDefinition as cId inhL b) = do
@@ -68,13 +68,13 @@ genContractBodyElem = \case
 
 genStateVarDecl :: StateVarDeclaration -> SolTextGen
 genStateVarDecl (StateVarDeclaration t v m id e) = genText decl
-  where decl = genType t <> " " <> genVisibility v <> " " <> genModifier m <> " " <> id <> init e <> ";\n"
+  where decl = genPlainType t <> " " <> genVisibility v <> " " <> genModifier m <> " " <> id <> init e <> ";\n"
         init = maybe "" (\e -> " = " <> genExpr e)
 
 genFunction :: FunctionDefinition -> SolTextGen
 genFunction f@FunctionDefinition{ functionBody } = do
   h <- genFunctionHeader f
-  b <- withIndent' genStmt functionBody  
+  b <- withIndent' genStmt functionBody
   cb <- genText "}\n\n"
   if Data.List.null functionBody then
     return $ h <> ";\n\n"
@@ -96,10 +96,10 @@ genFunctionHeader (FunctionDefinition id v m p vt o args rt _) = genText header
           | otherwise = "function "
 
 genFunctionArg :: FunctionArg -> SolText
-genFunctionArg (FunctionArg t loc id) = genType t <> " " <> genLocationWithType t loc <> " " <> id
+genFunctionArg (FunctionArg t id) = genType t <> " " <> id
 
 genReturnType :: [FunctionArg] -> SolText
-genReturnType [FunctionArg (PrimitiveT UnitT) _ _] = ""
+genReturnType [FunctionArg (PrimitiveT UnitT) _] = ""
 genReturnType [a] = "returns (" <> genFunctionArg a <> ")"
 genReturnType args = "returns (" <> T.concat (L.intersperse "," (genFunctionArg <$> args)) <> ")"
 
@@ -111,7 +111,7 @@ genStmt = \case
     cb <- genText "}\n"
     return $ ob <> ss <> cb
   S.VarDeclStmt f e -> do
-    let decl = genType (functionArgType f) <> " " <> genLocationWithType (functionArgType f) (functionArgLocation f) <> " " <>  functionArgId f
+    let decl = genType (functionArgType f) <> " " <>  functionArgId f
         expr = maybe "" (\e -> " = " <> genExpr e) e
     genText $ decl <> expr <> ";\n"
   S.AssignmentStmt id e -> genText $ genExpr id <> " = " <> genExpr e <> ";\n"
@@ -132,7 +132,7 @@ genStmt = \case
     b' <- withIndent $ genStmt b
     return $ "for(" <> s' <> " " <> c' <> " " <> i' <> ")" <> b'
   S.WhileStmt cond b -> do
-    c <- genText $ "while(" <> genExpr cond <> ")"
+    c <- genText $ "while(" <> genExpr cond <> ") {"
     ss <- withIndent $ genStmt b
     cb <- genText "}"
     return $ c <> ss <> cb
@@ -157,15 +157,15 @@ genYulStmt = \case
   Y.VarDeclStmt id e -> do
     genText $ "let " <> id <> " := " <> genYulExpr e  <> "\n"
   Y.AssignmentStmt lv e -> do
-    genText $ genYulExpr lv <> " := " <> genYulExpr e <> "\n" 
+    genText $ genYulExpr lv <> " := " <> genYulExpr e <> "\n"
   Y.IfStmt c b -> do
     c' <- genText $ "if " <> genYulExpr c <> " {\n"
     b' <- withIndent $ genYulStmt b
     e <- genText "}\n"
     return $ c' <> b' <> e
   Y.ExpressionStmt e -> do
-    e' <- withIndent $ pure $ genYulExpr e 
-    genText $ e' <> "\n" 
+    e' <- withIndent $ pure $ genYulExpr e
+    genText $ e' <> "\n"
   Y.SwitchStmt cond bs -> do
     s <- genText $ "switch " <> genYulExpr cond <> "\n"
     bs' <- withIndent' genYulSwitchCase bs
@@ -185,7 +185,7 @@ genYulSwitchCase (c, s) = do
 
 
 genYulExpr :: Y.Expression -> SolText
-genYulExpr = \case  
+genYulExpr = \case
   Y.IdentifierE id -> id
   Y.BuiltinE b -> genYulBuiltin b
   Y.PathE lv m -> genYulExpr lv <> "." <> genYulExpr m
@@ -214,8 +214,10 @@ genLit = \case
   S.StringLit v -> "\"" <> v <> "\""
   S.NumberLit n -> showT n
   S.BooleanLit b -> T.toLower $ showT b
-  S.HexLit v -> v
+  S.HexLit v -> "0x" <> v
+  S.EnumLit e v -> e <> "." <> v
   S.StructLit id ms -> id <> "({" <> T.concat (L.intersperse "," (genStructLitMember <$> ms)) <> "})"
+  S.ArrayLit es -> "[" <> T.concat (L.intersperse "," (genExpr <$> es)) <> "]"
 
 genStructLitMember :: (S.Identifier, S.Expression) -> SolText
 genStructLitMember (id, e) = id <> ": " <> genExpr e
@@ -290,23 +292,46 @@ genEnum EnumDefinition{ enumId, enumMembers } = do
 genEnumMember :: S.Identifier -> SolTextGen
 genEnumMember id = genText $ id <> ",\n"
 
-genType :: Type -> SolText
-genType = \case
+genPlainType :: Type -> SolText
+genPlainType = \case
   PrimitiveT AddressT -> "address"
   PrimitiveT PayableAddressT -> "payable address"
   PrimitiveT BoolT -> "bool"
-  PrimitiveT StringT -> "string"
+  PrimitiveT (StringT _) -> "string"
   PrimitiveT (BytesT n) -> "bytes" <> showT n
   PrimitiveT (IntT n) -> "int" <> showT n
   PrimitiveT (UintT n) -> "uint" <> showT n
   PrimitiveT BytesDynamicT -> "bytes"
   PrimitiveT UnitT -> ""
-  PrimitiveT (UserDefinedT id) -> id
-  PrimitiveT (StructT id) -> id
+  PrimitiveT (UserDefinedT id _) -> id
+  PrimitiveT (StructT id _) -> id
   PrimitiveT (EnumT id) -> id
   PrimitiveT (ContractT id) -> id
-  MappingT (MappingType k v) -> "mapping (" <> genType (PrimitiveT k) <> " => " <> genType v <> ")"
-  ArrayT (ArrayType t e) -> genType t <> "[" <> maybe "" genExpr e <> "]"
+  MappingT (MappingType k v) -> "mapping (" <> genType k <> " => " <> genType v <> ")"
+  ArrayT (ArrayType t ds _) -> genType t <> T.concat (genDim <$> ds)
+  where genDim Nothing = "[]"
+        genDim (Just n) = "[" <> showT n <> "]"
+
+
+genType :: Type -> SolText
+genType = \case
+  PrimitiveT AddressT -> "address"
+  PrimitiveT PayableAddressT -> "payable address"
+  PrimitiveT BoolT -> "bool"
+  PrimitiveT (StringT l) -> "string " <> genLocation l
+  PrimitiveT (BytesT n) -> "bytes" <> showT n
+  PrimitiveT (IntT n) -> "int" <> showT n
+  PrimitiveT (UintT n) -> "uint" <> showT n
+  PrimitiveT BytesDynamicT -> "bytes"
+  PrimitiveT UnitT -> ""
+  PrimitiveT (UserDefinedT id l) -> id <> " " <> genLocation l
+  PrimitiveT (StructT id l) -> id <> " " <> genLocation l
+  PrimitiveT (EnumT id) -> id
+  PrimitiveT (ContractT id) -> id
+  MappingT (MappingType k v) -> "mapping (" <> genType k <> " => " <> genType v <> ")"
+  ArrayT (ArrayType t ds l) -> genType t <> T.concat (genDim <$> ds) <> " " <> genLocation l
+  where genDim Nothing = "[]"
+        genDim (Just n) = "[" <> showT n <> "]"
 
 genVisibility :: Visibility -> SolText
 genVisibility = \case
@@ -318,18 +343,20 @@ genVisibility = \case
 genLocationWithType :: Type -> MemoryLocation -> SolText
 genLocationWithType t l =
   case (t, l) of
-    (ArrayT _, l) -> genLocation l
-    (MappingT _, l) -> genLocation l
-    (PrimitiveT BytesDynamicT, l) -> genLocation l
-    (PrimitiveT (StructT _), l) -> genLocation l
-    (PrimitiveT (ContractT _), l) -> genLocation l
+    (ArrayT _, l) -> genLocation $ Just l
+    (MappingT _, l) -> genLocation $ Just l
+    (PrimitiveT BytesDynamicT, l) -> genLocation $ Just l
+    (PrimitiveT (StringT l), _) -> genLocation l
+    (PrimitiveT (StructT _ l), _) -> genLocation l
+    (PrimitiveT (ContractT _), l) -> genLocation $ Just l
     _ -> ""
 
-genLocation :: MemoryLocation -> SolText
+genLocation :: Maybe MemoryLocation -> SolText
 genLocation = \case
-  Storage -> "storage"
-  Memory -> "memory"
-  Calldata -> "calldata"
+  Nothing -> ""
+  Just Storage -> "storage"
+  Just Memory -> "memory"
+  Just Calldata -> "calldata"
 
 genModifier :: Maybe StateVarModifier -> SolText
 genModifier = \case

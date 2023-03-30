@@ -4,7 +4,7 @@
 
 module Iaspis.Grammar where
 
-import Data.Text
+import Data.Text ( Text )
 import Prelude hiding (Enum)
 import GHC.Generics
 import Data.Aeson hiding (Value)
@@ -13,17 +13,20 @@ import Data.Aeson hiding (Value)
 type Identifier = Text
 
 data Type
-  = AddressT 
+  = AddressT
   | BoolT
   | BytesT Int
-  | BytesDynamicT
-  | UIntT Int
-  | StringT
+  | UIntT
   | UnitT
-  | UserDefinedT Identifier
-  | StructT Identifier
-  | EnumT Identifier
+  | EnumT Enum
   | ContractT Identifier
+  | StructT Struct (Maybe MemoryLocation)
+  | ArrayT Type [Maybe Int] (Maybe MemoryLocation)
+  | StringT (Maybe MemoryLocation)
+  | MappingT Type Type
+  -- default value for parsed types 
+  -- that don't belong to any other type
+  | UserDefinedT Identifier (Maybe MemoryLocation)
   deriving stock (Eq, Show, Generic)
 
 instance ToJSON Type where
@@ -34,6 +37,9 @@ data Value
   | BytesV Text
   | UIntV Int
   | StringV Text
+  | StructV StructValue
+  | EnumV Text Text
+  | ArrayV [Expression]
   deriving stock (Eq, Show, Generic)
 
 instance ToJSON Value where
@@ -74,6 +80,8 @@ instance ToJSON UnaryOp where
 data Expression
   = LiteralE Value
   | IdentifierE Identifier
+  | MemberAccessE Expression Identifier
+  | SubscriptE Expression Expression
   | FunctionCallE Identifier [Expression]
   | InstantiationE Identifier [Expression]
   | UnaryE UnaryOp Expression
@@ -119,6 +127,21 @@ data Mutability
 
 instance ToJSON Mutability where
 
+data FunctionArg = FunctionArg
+  { argType :: Type
+  , argName :: Identifier
+  } deriving stock (Eq, Show, Generic)
+
+instance ToJSON FunctionArg where
+
+data DeclArg = DeclArg
+  { declMutability :: Mutability
+  , declType :: Type
+  , declName :: Identifier
+  } deriving stock (Eq, Show, Generic)
+
+instance ToJSON DeclArg where
+
 data Field = Field
   { fieldProxyKind :: Maybe ProxyMemberKind
   , fieldVisibility :: Maybe MemberVisibility
@@ -126,15 +149,17 @@ data Field = Field
   , fieldType :: Type
   , fieldLocation :: MemoryLocation
   , fieldName :: Identifier
+  , fieldInitializer :: Maybe Expression
   } deriving stock (Eq, Show, Generic)
 
 instance ToJSON Field where
 
 data Statement
-  = VarDeclStmt Field MemoryLocation Expression
+  = VarDeclStmt DeclArg MemoryLocation Expression
   | AssignmentStmt Expression MemoryLocation Expression 
   | ReturnStmt (Maybe Expression)
   | IfStmt Expression Statement (Maybe Statement)
+  | WhileStmt Expression Statement
   | BlockStmt [Statement]
   | BreakStmt
   | ContinueStmt
@@ -149,8 +174,8 @@ data FunctionHeader = FunctionHeader
   , functionPayability :: PayabilityKind
   , functionMutability :: Mutability
   , functionName :: Identifier
-  , functionArgs :: [Field]
-  , functionReturnType :: Type
+  , functionArgs :: [FunctionArg]
+  , functionReturnType :: FunctionArg
   , overrideSpecifier :: Bool
   } deriving stock (Show, Generic)
 
@@ -183,6 +208,8 @@ data Declaration
   = ContractDecl ImmutableContract
   | ProxyDecl ProxyContract
   | FacetDecl FacetContract
+  | StructDecl Struct
+  | EnumDecl Enum
   deriving stock (Show, Generic)
 
 instance ToJSON Declaration where
@@ -210,8 +237,42 @@ data FacetContract = FacetContract
   , facetDecls :: [Function] 
   } deriving stock (Show, Generic)
   
-
 instance ToJSON FacetContract where
+
+data Struct = Struct
+  { structName :: Identifier
+  , structFields :: [StructField]
+  } deriving stock (Eq, Show, Generic)
+
+instance ToJSON Struct where
+
+data StructField = StructField
+  { structFieldType :: Type
+  , structFieldName :: Identifier
+  } deriving stock (Eq, Show, Generic)
+
+instance ToJSON StructField where
+
+data StructValue = StructValue
+  { structValueName :: Identifier
+  , structValueMembers :: [StructValueMember]
+  } deriving stock (Eq, Show, Generic)
+
+instance ToJSON StructValue where
+
+data StructValueMember = StructValueMember
+  { structMemberValueName :: Identifier
+  , structMemberValueExpr :: Expression
+  } deriving stock (Eq, Show, Generic)
+
+instance ToJSON StructValueMember where
+
+data Enum = Enum
+  { enumName :: Identifier
+  , enumFields :: [Identifier]
+  } deriving stock (Eq, Show, Generic)
+
+instance ToJSON Enum where
 
 data Import = Import
   { importIds :: [Identifier]

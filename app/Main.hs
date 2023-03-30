@@ -10,27 +10,24 @@ import Control.Monad
 import System.Directory
 import Control.Monad.State
 import Iaspis.Grammar as I
-import Analysis.Environment.Build
-import Utils.Error
-import Analysis.ContractCheck
-import Analysis.MemoryCheck (memCheck)
-import Analysis.Environment.Error
 import Control.Monad.Except
-import Analysis.MutabilityCheck
-import Analysis.TypeCheck (typeCheck)
-import Analysis.ImportCheck
 import System.FilePath
 import Data.Text as T
 import Data.Either.Combinators
 import Utils.Text
 import Data.Either
 import Data.Foldable
-import Analysis.Environment.Environment
-import Analysis.Environment.Utils
-import Codegen.Transpile (transpile)
-import Codegen.Generate
-import Data.Aeson
+import Analysis.Build (build)
 import Data.ByteString.Lazy.Char8 as BS (unpack)
+import Data.Aeson
+import Analysis.Memory
+import Analysis.Mutability
+import Analysis.Contract
+import Analysis.TypeCheck (typeCheck)
+import Analysis.Environment
+import Control.Monad.Writer
+import Codegen.Generate
+import Transpile.Module
 
 
 hasExt :: FilePath -> FilePath -> Bool
@@ -51,16 +48,18 @@ loadFile fp = do
   file <- T.readFile fp
   return $ mapLeft showT $ runParser Parser.Source.module' "" file
 
-validate :: MonadState BuildEnv m => MonadError BuildError m => I.Module -> m ()
-validate m = do
-  checkImports m
-  checkContracts m
-  memCheck m
-  mutCheck m
-  typeCheck m
-
-writeModules :: FilePath -> [I.Module] -> IO ()
-writeModules out ms = traverse_ (genFile out) (genModule <$> transpile ms)
+analyze :: BuildContext m => [Module] -> m ()
+analyze ms = do
+  build ms
+  tell ["Finished build pass"]
+  mutCheck ms
+  tell ["Finished mutability pass"]
+  memCheck ms
+  tell ["Finished memory pass"]
+  contractChecks ms
+  tell ["Finished contract pass"]
+  typeCheck ms
+  tell ["Finished typecheck pass"]
 
 writeEIP2535 :: IO ()
 writeEIP2535 = do
@@ -68,28 +67,31 @@ writeEIP2535 = do
   cs <- traverse T.readFile fps
   traverse_ (uncurry T.writeFile) $ Prelude.zip (("./output/" <>) . takeFileName <$> fps) cs
 
+writeModules :: FilePath -> [I.Module] -> BuildEnv -> IO ()
+writeModules out ms env = do
+  writeEIP2535
+  case fst tms of
+    Left e -> do
+      print "Transpile error"
+      print e
+    Right rs -> traverse_ (genFile out) (genModule <$> rs)
+  where tms = evalState (runWriterT (runExceptT $ transpile ms)) env
+
 main :: IO ()
 main = do
   files <- getContractFiles ".ip" "./contracts"
   parsed <- traverse loadFile files
-  if Prelude.null $ rights parsed then
+  if Data.Foldable.length parsed /= Data.Foldable.length (rights parsed) then
     print $ "Parser error(s): " <> show (lefts parsed)
   else
     let modules = rights parsed
-        (err, e) = runState (runExceptT $ traverse_ buildEnv modules) mkEnv
-    in
+        ((err, output), e) = runState (runWriterT (runExceptT $ analyze modules)) mkEnv
+    in do
+      traverse_ print output
+      Prelude.writeFile "output.json" (BS.unpack $ encode e)
+      Prelude.writeFile "ast.json" (BS.unpack $ encode modules)
       case err of
-        Left be -> print $ showErr be
+        Left be -> do
+          print be
         Right _ -> do
-          let (err, env) = runState (runExceptT $ traverse_ validate modules) e
-          case err of
-            Left be -> do
-              Prelude.writeFile "output.json" (BS.unpack $ encode env)
-              Prelude.writeFile "ast.json" (BS.unpack $ encode modules)
-              print $ showErr be
-            Right _ -> do
-              writeEIP2535
-              writeModules "./output" modules
-
-
-
+          writeModules "./output" modules e
