@@ -1,0 +1,14 @@
+module Utils;
+
+
+contract C {
+  private uint a;
+
+  constructor(uint aa) {
+    a <- aa;
+  }
+}
+
+contract ContractX {
+
+}

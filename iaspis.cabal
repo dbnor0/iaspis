@@ -21,27 +21,100 @@ maintainer:         dbnor0@gmail.com
 -- category:
 
 executable iaspis
-    main-is:
-        Main.hs
-    other-modules:
-        CLI.Commands
-        CLI.Parser
-        CLI.Types
-        CLI.Util
-        Iaspis.Source
-        Parser.Base
-        Parser.Source
-        Parser.Types
-        Parser.Util
-    other-extensions:
-        OverloadedStrings
-        RecordWildCards
-        ViewPatterns
-    build-depends:    
-        base ^>=4.14.3.0
-        , directory
-        , text
-        , megaparsec
-        , optparse-applicative
-    hs-source-dirs:   app
-    default-language: Haskell2010
+  main-is:
+    Main.hs
+  other-modules:
+    Analysis.Build
+    Analysis.Error
+    Analysis.Module
+    Analysis.Mutability
+    Analysis.Memory
+    Analysis.Utils
+    Analysis.Scope
+    Analysis.Contract
+    Analysis.Environment
+    Analysis.TypeCheck
+    Codegen.Generate
+    Codegen.Types
+    Iaspis.DeclUtils
+    Iaspis.Grammar
+    Iaspis.TypeUtils
+    Parser.Base
+    Parser.Source
+    Parser.Types
+    Parser.Utils
+    Solidity.Grammar
+    Transpile.Common
+    Transpile.Contract
+    Transpile.Enum
+    Transpile.Facet
+    Transpile.Module
+    Transpile.Proxy
+    Transpile.Storage
+    Transpile.Struct
+    Transpile.Types
+    Transpile.Utils
+    Utils.Error
+    Utils.Text
+    Yul.Grammar
+  other-extensions:
+    ApplicativeDo
+    BlockArguments
+    DataKinds
+    DefaultSignatures
+    DeriveAnyClass
+    DerivingStrategies
+    DerivingVia
+    DuplicateRecordFields
+    FunctionalDependencies
+    GADTs
+    GeneralizedNewtypeDeriving
+    LambdaCase
+    MagicHash
+    MultiWayIf
+    NegativeLiterals
+    NoMonomorphismRestriction
+    NoStarIsType
+    OverloadedLabels
+    OverloadedStrings
+    PartialTypeSignatures
+    PatternSynonyms
+    QuantifiedConstraints
+    RecordWildCards
+    RecursiveDo
+    TemplateHaskell
+    TypeFamilies
+    TypeFamilyDependencies
+    UnboxedSums
+    UnboxedTuples
+    UndecidableInstances
+    ViewPatterns
+  ghc-options:
+    -threaded
+    -rtsopts
+    -with-rtsopts=-N
+    -Wall
+    -Wcompat
+    -Widentities
+    -Wmissing-deriving-strategies
+    -Wno-name-shadowing
+    -Wno-unticked-promoted-constructors
+    -Wpartial-fields
+    -Wprepositive-qualified-module
+    -Wredundant-constraints
+    -Wunused-packages
+  build-depends:    
+    base ^>=4.16.4.0
+    , aeson
+    , bytestring
+    , containers
+    , directory
+    , either
+    , extra
+    , filepath
+    , megaparsec
+    , microlens-platform
+    , mtl
+    , text
+  hs-source-dirs:   app
+  default-language: Haskell2010

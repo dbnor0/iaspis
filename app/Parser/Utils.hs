@@ -1,4 +1,4 @@
-module Parser.Util where
+module Parser.Utils where
 
 
 uintPredicates :: [Int -> Bool]

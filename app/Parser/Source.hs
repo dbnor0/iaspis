@@ -7,87 +7,99 @@ import Data.Char (isHexDigit, isAlpha, isAlphaNum)
 import Data.Text
 import Parser.Base
 import Parser.Types
-import Parser.Util
-import Iaspis.Source hiding (moduleDecl, fieldProxyKind, functionHeader, overrideSpecifier)
+import Parser.Utils
+import Iaspis.Grammar hiding (moduleDecl, fieldProxyKind, functionHeader, overrideSpecifier)
 import Text.Megaparsec
 import Text.Megaparsec.Char (char)
 import Text.Megaparsec.Char.Lexer (decimal, charLiteral)
 import Data.Functor (($>))
+import Data.Either
+import Prelude hiding (Enum)
 
 
 module' :: Parser Module
 module' = module'' <* eof
-  where module'' = Module <$> moduleDecl <*> many (try importStmt) <*> many decl
+  where module'' = Module <$> moduleDecl <*> many importStmt <*> many decl
 
 -- top level elements
 
-moduleDecl :: Parser ModuleDecl
-moduleDecl = ModuleDecl <$> endsIn ";" (reserved "module" *> identifier)
+moduleDecl :: Parser Identifier
+moduleDecl = endsIn ";" (reserved "module" *> identifier)
 
 importStmt :: Parser Import
-importStmt = Import <$> endsIn ";" import'
-  where import' = reserved "import" *> identifier
+importStmt = endsIn ";" stmt
+  where stmt = Import <$> (reserved "import" *> sepBy1 identifier comma) <*> (reserved "from" *> identifier)
 
 decl :: Parser Declaration
-decl = backtrack [struct, enum, contract, interface]
+decl = backtrack
+  [ ContractDecl <$> immutableContract
+  , ProxyDecl <$> proxyContract
+  , FacetDecl <$> facetContract
+  , StructDecl <$> struct
+  , EnumDecl <$> enum
+  ]
 
-struct :: Parser Declaration
-struct = StructDecl <$> (Struct <$> name <*> fields)
-  where name      = reserved "struct" *> identifier
-        fields    = block . many $ endsIn ";" fieldDecl
+immutableContract :: Parser ImmutableContract
+immutableContract = do
+  name <- reserved "contract" *> identifier
+  memberList <- block $ many (backtrack [Left <$> endsIn ";" contractFieldDecl, Right <$> function])
+  return $ ImmutableContract name (lefts memberList) (rights memberList)
 
-enum :: Parser Declaration
-enum = EnumDecl <$> (Enum <$> name <*> fields)
-  where name   = reserved "enum" *> identifier
-        fields = block $ sepBy1 identifier comma
-
-contract :: Parser Declaration
-contract = ContractDecl <$> backtrack [immutableContract, proxyContract, facetContract]
-
-immutableContract :: Parser Contract
-immutableContract = ImmutableContract <$> abstractSpecifier <*> name <*> inheritanceList <*> memberList
-  where name            = reserved "contract" *> identifier
-        inheritanceList = sepBy identifier comma
-        memberList      = block $ many member
-        member          = backtrack [FieldDecl <$> endsIn ";" fieldDecl, FunctionImpl <$> function]
-
-proxyContract :: Parser Contract
+proxyContract :: Parser ProxyContract
 proxyContract = ProxyContract <$> proxyKind' <*> name  <*> facetList <*> memberList
   where proxyKind' = proxyKind <* reserved "proxy"
         name       = identifier <* reserved "for"
         facetList  = sepBy identifier comma
-        memberList = block $ many (endsIn ";" fieldDecl)
+        memberList = block $ many (endsIn ";" contractFieldDecl)
 
-facetContract :: Parser Contract
-facetContract = FacetContract <$> name <*> proxyList <*> memberList
+facetContract :: Parser FacetContract
+facetContract = FacetContract <$> name <*> proxy <*> memberList
   where name       = reserved "facet" *> identifier
-        proxyList  = reserved "to" *> sepBy identifier comma
+        proxy  = reserved "to" *> identifier
         memberList = block $ many function
 
-interface :: Parser Declaration
-interface = InterfaceDecl <$> (Interface <$> name <*> inheritanceList <*> memberList)
-  where name            = reserved "interface" *> identifier
-        inheritanceList = sepBy identifier comma
-        memberList      = block . many $ endsIn ";" functionHeader 
+struct :: Parser Struct
+struct = Struct <$> name <*> fields
+  where name      = reserved "struct" *> identifier
+        fields    = block . many $ endsIn ";" structFieldDecl
 
-abstractSpecifier :: Parser Bool
-abstractSpecifier = option False (reserved' "abstract" True)
+enum :: Parser Enum
+enum = Enum <$> name <*> fields
+  where name   = reserved "enum" *> identifier
+        fields = block $ sepBy1 identifier comma
 
 -- field declarations
 
-fieldDecl :: Parser Field
-fieldDecl =
+fnArgDecl :: Parser FunctionArg
+fnArgDecl =
+  FunctionArg
+  <$> typeWithLoc
+  <*> identifier
+
+declArg :: Parser DeclArg
+declArg =
+  DeclArg
+  <$> option View mutability
+  <*> typeWithLoc
+  <*> identifier
+
+contractFieldDecl :: Parser Field
+contractFieldDecl =
   Field
   <$> optional fieldProxyKind
   <*> optional visibility
   <*> mutability
-  <*> type'
-  <*> optional memoryLocation
+  <*> storageType
+  <*> pure Storage
   <*> identifier
+  <*> optional (reserved' "<-" Storage *> expression)
+
+structFieldDecl :: Parser StructField
+structFieldDecl = StructField <$> type' <*> identifier
 
 function :: Parser Function
 function = Function <$> functionHeader <*> body
-  where body = many1 statement
+  where body = block $ many1 statement
 
 functionHeader :: Parser FunctionHeader
 functionHeader = backtrack
@@ -99,29 +111,32 @@ functionHeader = backtrack
 
 userDefinedHeader :: Parser FunctionHeader
 userDefinedHeader
-  = FunctionHeader <$> visibility <*> payability <*> mutability <*> name <*> argList <*> returnType <*> overrideSpecifier
+  = FunctionHeader <$> visibility <*> payability <*> mutability <*> name <*> argList <*> returnArg <*> overrideSpecifier
   where name       = reserved "fn" *> identifier
-        body       = many statement
-        argList    = parens (sepBy fieldDecl comma)
-        returnType = optional $ reserved "->" *> type'
+        argList    = parens (sepBy fnArgDecl comma)
+        returnArg  = FunctionArg <$> option UnitT (reserved "->" *> typeWithLoc) <*> pure ""
+        -- returnArg = option UnitT $ reserved "->" *> type'
 
 constructorHeader :: Parser FunctionHeader
 constructorHeader
-  = FunctionHeader Public <$> payability <*> pure Mutable <*> name <*> argList <*> pure Nothing <*> pure False
+  = FunctionHeader Public <$> payability <*> pure Mutable <*> name <*> argList <*> returnArg <*> pure False
   where name    = lexeme' "constructor"
-        argList = parens (sepBy fieldDecl comma)
+        argList = parens (sepBy fnArgDecl comma)
+        returnArg  = pure (FunctionArg UnitT "")
 
 receiveHeader :: Parser FunctionHeader
 receiveHeader
-  = FunctionHeader External Payable <$> mutability <*> name <*> argList <*> pure Nothing <*> pure False
+  = FunctionHeader External Payable <$> mutability <*> name <*> argList <*> returnArg <*> pure False
   where name    = lexeme' "receive"
         argList = parens spaceOrComment $> []
+        returnArg  = pure (FunctionArg UnitT "")
 
 fallbackHeader :: Parser FunctionHeader
 fallbackHeader
-  = FunctionHeader External NonPayable <$> mutability <*> name <*> argList <*> pure Nothing <*> pure False
+  = FunctionHeader External NonPayable <$> mutability <*> name <*> argList <*> returnArg <*> pure False
   where name    = lexeme' "fallback"
         argList = parens spaceOrComment $> []
+        returnArg  = pure (FunctionArg UnitT "")
 
 -- syntax elements
 
@@ -164,13 +179,10 @@ statement = backtrack
   [ varDeclStmt
   , returnStmt
   , assignmentStmt
-  , requireStmt
   , expressionStmt
   , blockStmt
   , ifStmt
   , whileStmt
-  , forStmt
-  , forEachStmt
   , breakStmt
   , continueStmt
   ]
@@ -181,36 +193,18 @@ expressionStmt = endsIn ";" stmt
 
 varDeclStmt :: Parser Statement
 varDeclStmt = endsIn ";" stmt
-  where stmt = VarDeclStmt <$> fieldDecl <*> optional ((,) <$> assignmentSymbol <*> expression)
+  where stmt = VarDeclStmt <$> declArg <*> assignmentSymbol <*> expression
 
 returnStmt :: Parser Statement
 returnStmt = endsIn ";" stmt
-  where stmt = ReturnStmt <$> optional (reserved "return" *> expression)
+  where stmt = ReturnStmt <$> (reserved "return" *> optional expression)
 
 assignmentStmt :: Parser Statement
 assignmentStmt = endsIn ";" stmt
-  where stmt = AssignmentStmt <$> identifier <*> assignmentSymbol <*> expression
+  where stmt = AssignmentStmt <$> lvalueExpr <*> assignmentSymbol <*> expression
 
 assignmentSymbol :: Parser MemoryLocation
 assignmentSymbol = reserved' "<-" Storage <|> reserved' ":=" Memory
-
-whileStmt :: Parser Statement
-whileStmt = WhileStmt <$> cond <*> body
-  where cond = reserved "while" *> reserved "(" *> expression <* reserved ")"
-        body = statement
-
-forStmt :: Parser Statement
-forStmt = ForStmt <$> decl <*> cond <*> step <*> body
-  where decl = reserved "for" *> reserved "(" *> optional stmt <* reserved ";"
-        stmt = VarDeclStmt <$> fieldDecl <*> optional ((,) <$> assignmentSymbol <*> expression)
-        cond = optional expression <* reserved ";"
-        step = optional expression <* reserved ")"
-        body = statement
-
-forEachStmt :: Parser Statement
-forEachStmt = ForEachStmt <$> id <*> expression <*> body
-  where id        = reserved "for" *> identifier <* reserved "in"
-        body      = statement
 
 breakStmt :: Parser Statement
 breakStmt = endsIn ";" stmt
@@ -228,11 +222,9 @@ ifStmt = IfStmt <$> cond <*> statement <*> elseBranch
   where cond       = reserved "if" *> parens expression
         elseBranch = optional $ reserved "else" *> statement
 
-requireStmt :: Parser Statement
-requireStmt = endsIn ";" stmt
-  where stmt = RequireStmt <$> exp <*> msg <* reserved ")" 
-        exp  = reserved "require" *> reserved "(" *> expression
-        msg  = optional (comma *> expression)
+whileStmt :: Parser Statement
+whileStmt = WhileStmt <$> cond <*> statement
+  where cond = reserved "while" *> parens expression
 
 -- expressions
 
@@ -247,6 +239,12 @@ expression =
   `chainl1` logicalOps
   `chainl1` bitwiseOps
 
+lvalueExpr :: Parser Expression
+lvalueExpr = backtrack
+  [ memberExpr
+  , IdentifierE <$> identifier
+  ]
+
 baseExpr :: Parser Expression
 baseExpr = backtrack
   [ memberExpr
@@ -259,7 +257,7 @@ memberExpr = do
   struct <- factor
   members <- many1 $ Left <$> member <|> Right <$> subscript
   return $ Prelude.foldl (\exp -> either (MemberAccessE exp) (SubscriptE exp)) struct members
-  where member    = reserved "." *> identifier
+  where member = reserved "." *> identifier
         subscript = brackets expression
 
 unaryExpr :: Parser UnaryExpression
@@ -274,9 +272,10 @@ unaryExpr = choice $ uncurry mkUnaryExpr <$>
 factor :: Parser Expression
 factor =
   parens expression
+  <|> try instantiationExpr
   <|> try functionCallExpr
-  <|> literalExpr
-  <|> identifierExpr
+  <|> try literalExpr
+  <|> try identifierExpr
 
 literalExpr :: Parser Expression
 literalExpr = LiteralE <$> literal
@@ -286,6 +285,10 @@ identifierExpr = IdentifierE <$> identifier
 
 functionCallExpr :: Parser Expression
 functionCallExpr = FunctionCallE <$> identifier <*> argList
+  where argList = parens (sepBy expression comma)
+
+instantiationExpr :: Parser Expression
+instantiationExpr = InstantiationE <$> (reserved "new" *> identifier) <*> argList
   where argList = parens (sepBy expression comma)
 
 mkBinaryExpr :: Text -> BinaryOp -> Parser BinaryExpression
@@ -332,28 +335,72 @@ bitwiseOps = choice $ uncurry mkBinaryExpr <$>
 
 -- types
 
-type' :: Parser Type
-type' = backtrack [mappingType, arrayType, primitiveType]
 
-primitiveType :: Parser Type
-primitiveType = backtrack
-  [ reserved' "address" AddressT
+-- type with no data location, used for structs
+type' :: Parser Type
+type' = backtrack
+  [ ArrayT <$> nonArrayType <*> arrayDims <*> pure Nothing
+  , reserved' "address" AddressT
   , reserved' "bool" BoolT
-  , reserved' "string" StringT
-  , chunk "uint" *> sizedType UIntT uintPredicates
+  , reserved' "string" (StringT Nothing)
+  , reserved' "uint" UIntT
   , chunk "bytes" *> sizedType BytesT bytesPredicates
-  , reserved' "bytes" BytesDynamicT
-  , UserDefinedT <$> identifier
+  , mappingType
+  , UserDefinedT <$> identifier <*> pure Nothing
   ]
 
-arrayType :: Parser Type
-arrayType = ArrayT <$> primitiveType <*> dimensions
-  where dimensions = many $ reserved "[" *> optional uintRaw <* reserved "]"
+nonArrayType :: Parser Type 
+nonArrayType = backtrack
+  [ reserved' "address" AddressT
+  , reserved' "bool" BoolT
+  , reserved' "string" (StringT Nothing)
+  , reserved' "uint" UIntT
+  , chunk "bytes" *> sizedType BytesT bytesPredicates
+  , UserDefinedT <$> identifier <*> pure Nothing
+  ]
+
+mappingKeyType :: Parser Type
+mappingKeyType = backtrack
+  [ reserved' "address" AddressT
+  , reserved' "bool" BoolT
+  , reserved' "string" (StringT Nothing)
+  , reserved' "uint" UIntT
+  , chunk "bytes" *> sizedType BytesT bytesPredicates
+  ]
+
+-- used for contract & proxy field declarations
+storageType :: Parser Type
+storageType = backtrack
+  [ ArrayT <$> nonArrayType <*> arrayDims <*> pure (Just Storage)
+  , reserved' "address" AddressT
+  , reserved' "bool" BoolT
+  , reserved' "string" (StringT (Just Storage))
+  , reserved' "uint" UIntT
+  , chunk "bytes" *> sizedType BytesT bytesPredicates
+  , mappingType
+  , UserDefinedT <$> identifier <*> pure (Just Storage)
+  ]
+
+typeWithLoc :: Parser Type
+typeWithLoc = backtrack
+  [ ArrayT <$> nonArrayType <*> arrayDims <*> (Just <$> memoryLocation)
+  , reserved' "address" AddressT
+  , reserved' "bool" BoolT
+  , StringT <$> (reserved "string" *> (Just <$> memoryLocation))
+  , reserved' "uint" UIntT
+  , chunk "bytes" *> sizedType BytesT bytesPredicates
+  , mappingType
+  , UserDefinedT <$> identifier <*> option Nothing (Just <$> memoryLocation)
+  ]
 
 mappingType :: Parser Type
-mappingType = MappingT <$> key <*> value
-  where key   = reserved "mapping" *> reserved "(" *> type' <* reserved "=>"
-        value = type' <* reserved ")"
+mappingType = 
+  MappingT 
+  <$> (reserved "mapping" *> reserved "(" *> mappingKeyType) 
+  <*> (reserved "=>" *> type' <* reserved ")")
+
+arrayDims :: Parser [Maybe Int]
+arrayDims = many1 $ reserved "[" *> optional uintRaw <* reserved "]"
 
 sizedType :: (Int -> Type) -> [Int -> Bool] -> Parser Type
 sizedType c ps = c <$> typeSize ps
@@ -373,16 +420,14 @@ identifier = lexeme' $ cons <$> satisfy isAlpha <*> takeWhileP Nothing isAlphaNu
 
 literal :: Parser Value
 literal = backtrack
-  [ arrayLit
-  , addressLit
+  [ structLit
   , boolLit
   , bytesLit
   , stringLit
   , uintLit
+  , enumLit
+  , arrayLit
   ]
-
-addressLit :: Parser Value
-addressLit = AddressV <$> bytesRaw
 
 boolLit :: Parser Value
 boolLit = BoolV <$> boolRaw
@@ -396,14 +441,22 @@ stringLit = StringV <$> stringRaw
 uintLit :: Parser Value
 uintLit = UIntV <$> uintRaw
 
+structLit :: Parser Value
+structLit = StructV <$> structValue
+  where structValue = StructValue <$> identifier <*> braces structMembers
+        structMembers = sepBy structValMember comma
+        structValMember = StructValueMember <$> identifier <*> (reserved "=" *> expression)
+
+enumLit :: Parser Value
+enumLit = EnumV <$> identifier <*> (reserved "::" *> identifier)
+
 arrayLit :: Parser Value
-arrayLit = ArrayV <$> brackets values
-  where values = sepBy1 expression comma
+arrayLit = ArrayV <$> brackets (sepBy expression comma)
 
 -- raw values
 
 stringRaw :: Parser Text
-stringRaw = pack <$> (char '\"' *> manyTill charLiteral (char '\"'))
+stringRaw = lexeme' $ pack <$> (char '\"' *> manyTill charLiteral (char '\"'))
 
 uintRaw :: Parser Int
 uintRaw = lexeme' decimal

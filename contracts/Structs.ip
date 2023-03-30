@@ -1,0 +1,29 @@
+module Structs;
+
+import Test from Test;
+
+struct S {
+  uint x;
+  uint y;
+}
+
+struct Z {
+  uint x;
+  string y;
+  T h;
+}
+
+struct T {
+  Q b;
+  uint z;
+}
+
+struct Q {
+  bool q;
+}
+
+enum States {
+  STARTED,
+  FINISHED,
+  FAILED
+}
