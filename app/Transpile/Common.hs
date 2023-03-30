@@ -108,6 +108,7 @@ transpileType = \case
   I.UserDefinedT id l -> S.PrimitiveT $ S.UserDefinedT id (transpileLocation <$> l)
   I.StructT s l -> S.PrimitiveT $ S.StructT (I.structName s) (transpileLocation <$> l)
   I.ArrayT t ds l -> S.ArrayT $ ArrayType (transpileType t) ds (transpileLocation <$> l)
+  I.MappingT t1 t2 -> S.MappingT $ S.MappingType (transpileType t1) (transpileType t2)
   I.EnumT e -> S.PrimitiveT $ S.EnumT (I.enumName e)
   I.ContractT id -> S.PrimitiveT $ S.ContractT id
 

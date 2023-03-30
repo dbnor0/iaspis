@@ -19,7 +19,8 @@ import Analysis.Scope
 import Control.Monad.State.Class
 import Data.Map qualified as M
 import Analysis.Module (detectCycles)
-
+import Control.Monad.Writer
+import Utils.Text
 
 typeCheck :: BuildContext m => [Module] -> m ()
 typeCheck ms = do
@@ -133,7 +134,11 @@ typeCheckExpr = \case
           [] -> throwError $ Debug ""
           [_] -> return (withLoc at al)
           _ -> return $ ArrayT at (tail ads) al
-      _ -> throwError $ Debug ""
+      MappingT t1 t2 -> do
+        tidx <- typeCheckExpr idx
+        unless (tidx `laxEq` t1) (throwError $ Debug $ "Expected " <> name t1 <> ", got " <> name tidx)
+        return t2
+      _ -> throwError $ Debug $ "Can't use subscript operator on type " <> name t
   FunctionCallE id args -> do
     fn <- getFn id
     ts <- traverse typeCheckExpr args
@@ -174,7 +179,10 @@ typeCheckLit = \case
     when (null es) (throwError $ Debug "Empty arrays are not supported yet")
     tes <- traverse typeCheckExpr es
     unless (and $ fmap (head tes ==) tes) (throwError $ Debug "")
-    return $ ArrayT (head tes) [Just $ Prelude.length es] (Just Memory)
+    case head tes of
+      ArrayT t' ds' _ -> do
+        return $ ArrayT t' (Just (Prelude.length es) : ds') (Just Memory)
+      _ -> return $ ArrayT (head tes) [Just $ Prelude.length es] (Just Memory)
   EnumV e v -> do
     enum <- getFieldEnum e v
     case enum of

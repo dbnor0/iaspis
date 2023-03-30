@@ -307,7 +307,7 @@ genPlainType = \case
   PrimitiveT (StructT id _) -> id
   PrimitiveT (EnumT id) -> id
   PrimitiveT (ContractT id) -> id
-  MappingT (MappingType k v) -> "mapping (" <> genType (PrimitiveT k) <> " => " <> genType v <> ")"
+  MappingT (MappingType k v) -> "mapping (" <> genType k <> " => " <> genType v <> ")"
   ArrayT (ArrayType t ds _) -> genType t <> T.concat (genDim <$> ds)
   where genDim Nothing = "[]"
         genDim (Just n) = "[" <> showT n <> "]"
@@ -328,7 +328,7 @@ genType = \case
   PrimitiveT (StructT id l) -> id <> " " <> genLocation l
   PrimitiveT (EnumT id) -> id
   PrimitiveT (ContractT id) -> id
-  MappingT (MappingType k v) -> "mapping (" <> genType (PrimitiveT k) <> " => " <> genType v <> ")"
+  MappingT (MappingType k v) -> "mapping (" <> genType k <> " => " <> genType v <> ")"
   ArrayT (ArrayType t ds l) -> genType t <> T.concat (genDim <$> ds) <> " " <> genLocation l
   where genDim Nothing = "[]"
         genDim (Just n) = "[" <> showT n <> "]"

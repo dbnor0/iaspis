@@ -99,4 +99,5 @@ canBeStorage = \case
   StringT _ -> True
   StructT _ _ -> True
   ArrayT{} -> True
+  MappingT _ _ -> True
   _ -> False

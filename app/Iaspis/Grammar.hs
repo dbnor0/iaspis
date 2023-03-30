@@ -23,6 +23,7 @@ data Type
   | StructT Struct (Maybe MemoryLocation)
   | ArrayT Type [Maybe Int] (Maybe MemoryLocation)
   | StringT (Maybe MemoryLocation)
+  | MappingT Type Type
   -- default value for parsed types 
   -- that don't belong to any other type
   | UserDefinedT Identifier (Maybe MemoryLocation)

@@ -26,7 +26,7 @@ address = PrimitiveT AddressT
 array :: Type -> [Maybe Int] -> Maybe MemoryLocation -> Type
 array t ds l = ArrayT $ ArrayType t ds l
 
-mapping :: PrimitiveType -> Type -> Type
+mapping :: Type -> Type -> Type
 mapping k v = MappingT $ MappingType k v
 
 struct :: Identifier -> Maybe MemoryLocation -> Type

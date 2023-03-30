@@ -345,6 +345,7 @@ type' = backtrack
   , reserved' "string" (StringT Nothing)
   , reserved' "uint" UIntT
   , chunk "bytes" *> sizedType BytesT bytesPredicates
+  , mappingType
   , UserDefinedT <$> identifier <*> pure Nothing
   ]
 
@@ -358,6 +359,15 @@ nonArrayType = backtrack
   , UserDefinedT <$> identifier <*> pure Nothing
   ]
 
+mappingKeyType :: Parser Type
+mappingKeyType = backtrack
+  [ reserved' "address" AddressT
+  , reserved' "bool" BoolT
+  , reserved' "string" (StringT Nothing)
+  , reserved' "uint" UIntT
+  , chunk "bytes" *> sizedType BytesT bytesPredicates
+  ]
+
 -- used for contract & proxy field declarations
 storageType :: Parser Type
 storageType = backtrack
@@ -367,6 +377,7 @@ storageType = backtrack
   , reserved' "string" (StringT (Just Storage))
   , reserved' "uint" UIntT
   , chunk "bytes" *> sizedType BytesT bytesPredicates
+  , mappingType
   , UserDefinedT <$> identifier <*> pure (Just Storage)
   ]
 
@@ -378,8 +389,15 @@ typeWithLoc = backtrack
   , StringT <$> (reserved "string" *> (Just <$> memoryLocation))
   , reserved' "uint" UIntT
   , chunk "bytes" *> sizedType BytesT bytesPredicates
+  , mappingType
   , UserDefinedT <$> identifier <*> option Nothing (Just <$> memoryLocation)
   ]
+
+mappingType :: Parser Type
+mappingType = 
+  MappingT 
+  <$> (reserved "mapping" *> reserved "(" *> mappingKeyType) 
+  <*> (reserved "=>" *> type' <* reserved ")")
 
 arrayDims :: Parser [Maybe Int]
 arrayDims = many1 $ reserved "[" *> optional uintRaw <* reserved "]"

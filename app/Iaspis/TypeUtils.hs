@@ -89,6 +89,7 @@ name (StructT s l) = structName s <> " " <> locName l
 name (ArrayT t ds l) = name t <> T.concat (nameD <$> ds) <> " " <> locName l
   where nameD Nothing = "[]"
         nameD (Just n) = "[" <> showT n <> "]"
+name (MappingT t1 t2) = "mapping(" <> name t1 <> " => " <> name t2 <> ")"
 name (EnumT e) = enumName e
 name (ContractT id) = id
 
@@ -102,6 +103,7 @@ typeLoc (StringT l) = l
 typeLoc (StructT _ l) = l
 typeLoc (UserDefinedT _ l) = l
 typeLoc (ArrayT _ _ l) = l
+typeLoc (MappingT _ _) = Just Storage
 typeLoc _ = Nothing
 
 withLoc :: Type -> Maybe MemoryLocation -> Type

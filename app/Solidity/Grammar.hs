@@ -128,7 +128,7 @@ data PrimitiveType
   deriving stock (Eq, Show)
 
 data MappingType = MappingType
-  { mappingKeyType :: PrimitiveType
+  { mappingKeyType :: Type
   , mappingValueType :: Type
   } deriving stock (Eq, Show)
 

@@ -191,6 +191,26 @@ updateFieldType (fId, FieldEntry _ (ArrayT (UserDefinedT tId l) ds al)  _ _) = d
     Nothing -> throwError $ UndefinedType tId
     Just t -> do
       modify $ fields %~ M.adjust (\f -> f & fdType .~ withLoc (ArrayT t ds al) l) fId
+updateFieldType (fId, FieldEntry _ (MappingT (UserDefinedT tId1 _) (UserDefinedT tId2 _))  _ _) = do
+  fType1 <- gets (M.lookup tId1 . (^. types))
+  fType2 <- gets (M.lookup tId2 . (^. types))
+  case (fType1, fType2) of
+    (Nothing, _) -> throwError $ UndefinedType tId1
+    (_, Nothing) -> throwError $ UndefinedType tId2
+    (Just t1, Just t2) -> do
+      modify $ fields %~ M.adjust (\f -> f & fdType .~ MappingT t1 t2) fId
+updateFieldType (fId, FieldEntry _ (MappingT (UserDefinedT tId _) t2)  _ _) = do
+  fType <- gets (M.lookup tId . (^. types))
+  case fType of
+    Nothing -> throwError $ UndefinedType tId
+    Just t -> do
+      modify $ fields %~ M.adjust (\f -> f & fdType .~ MappingT t t2) fId
+updateFieldType (fId, FieldEntry _ (MappingT t1 (UserDefinedT tId _))  _ _) = do
+  fType <- gets (M.lookup tId . (^. types))
+  case fType of
+    Nothing -> throwError $ UndefinedType tId
+    Just t -> do
+      modify $ fields %~ M.adjust (\f -> f & fdType .~ MappingT t1 t) fId
 updateFieldType _ = return ()
 
 updateStructType :: BuildContext m => (Identifier, Type) -> m ()
@@ -198,11 +218,6 @@ updateStructType (tId, t) = do
   case t of
     StructT s@(Struct _ sFs) l -> do
       traverse_ (updateStructFieldType tId s l) sFs
-    ArrayT (UserDefinedT id _) ads al -> do
-      fType <- gets (M.lookup id . (^. types))
-      case fType of 
-        Nothing -> throwError $ UndefinedType id
-        Just t' -> modify $ types %~ M.adjust (const $ ArrayT t' ads al) tId
     _ -> return ()
 updateStructFieldType:: BuildContext m => Identifier -> Struct -> Maybe MemoryLocation -> StructField -> m ()
 updateStructFieldType tId (Struct sId fs) l (StructField (UserDefinedT id _) fId) = do
