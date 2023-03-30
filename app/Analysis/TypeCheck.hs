@@ -76,11 +76,11 @@ typeCheckStmt fn = \case
       _ -> do
         unless (field ^. fdType == et)
           (throwError $ InvalidAssigType (field ^. fdId) (field ^. fdType) et)
-  AssignmentStmt (IdentifierE fId) _ ex -> do
-    f <- getField fId
+  AssignmentStmt e _ ex -> do
+    ft <- typeCheckExpr e
     et <- typeCheckExpr ex
-    unless ((f ^. fdType) `laxEq` et)
-      (throwError $ InvalidAssigType (f ^. fdId) (f ^. fdType) et)
+    unless (ft `laxEq` et)
+      (throwError $ InvalidAssigType "" ft et)
   ReturnStmt ex -> do
     et <- maybe (pure UnitT) typeCheckExpr ex
     unless ((argType . functionReturnType) fn `strictEq` et)
@@ -115,27 +115,13 @@ typeCheckExpr = \case
   IdentifierE id -> do
     f <- getField id
     return $ f ^. fdType
-  MemberAccessE (IdentifierE base) mem -> do
-    f <- getField base
-    case f ^. fdType of
-      StructT _ _ -> do
-        m <- getStructField (f ^. fdType) mem
-        return $ structFieldType m
-      _ -> throwError NotYetImplemented
-  MemberAccessE e@(MemberAccessE _ _) mem -> do
+  MemberAccessE e mem -> do
     t <- typeCheckExpr e
     case t of
       StructT _ _ -> do
         m <- getStructField t mem
         return $ structFieldType m
-      _ -> throwError NotYetImplemented
-  MemberAccessE e@(FunctionCallE _ _) mem -> do
-    t <- typeCheckExpr e
-    case t of
-      StructT _ _ -> do
-        m <- getStructField t mem
-        return $ structFieldType m
-      _ -> throwError NotYetImplemented
+      _ -> throwError $ Debug "huh?"
   SubscriptE e idx -> do
     t <- typeCheckExpr e
     case t of
@@ -148,7 +134,6 @@ typeCheckExpr = \case
           [_] -> return (withLoc at al)
           _ -> return $ ArrayT at (tail ads) al
       _ -> throwError $ Debug ""
-  MemberAccessE _ _ -> throwError InvalidMemberAccessOp
   FunctionCallE id args -> do
     fn <- getFn id
     ts <- traverse typeCheckExpr args

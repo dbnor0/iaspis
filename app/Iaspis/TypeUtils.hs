@@ -99,10 +99,12 @@ typeLoc :: Type -> Maybe MemoryLocation
 typeLoc (StringT l) = l
 typeLoc (StructT _ l) = l
 typeLoc (UserDefinedT _ l) = l
+typeLoc (ArrayT _ _ l) = l
 typeLoc _ = Nothing
 
 withLoc :: Type -> Maybe MemoryLocation -> Type
 withLoc (StringT _) l = StringT l
 withLoc (UserDefinedT id _) l = UserDefinedT id l
 withLoc (StructT s _) l = StructT s l
+withLoc (ArrayT t ds _) l = ArrayT t ds l
 withLoc t _ = t

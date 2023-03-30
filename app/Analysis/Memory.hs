@@ -61,15 +61,15 @@ memCheckStmt = \case
       Just fdLoc -> do
         unless (fdLoc == assignLoc) 
           (throwError $ InvalidAssignOp (f ^. fdId) assignLoc)
-  AssignmentStmt (MemberAccessE (IdentifierE id) _) assignLoc _ -> do
-    f <- getField id
+  AssignmentStmt (MemberAccessE e _) assignLoc _ -> do
+    f <- getRootField e
     case typeLoc $ f ^. fdType of
       Nothing -> return ()
       Just fdLoc -> do
         unless (fdLoc == assignLoc) 
           (throwError $ InvalidAssignOp (f ^. fdId) assignLoc)
-  AssignmentStmt (SubscriptE (IdentifierE id) _) assignLoc _ -> do
-    f <- getField id
+  AssignmentStmt (SubscriptE e _) assignLoc _ -> do
+    f <- getRootField e
     case typeLoc $ f ^. fdType of
       Nothing -> return ()
       Just fdLoc -> do
@@ -98,4 +98,5 @@ canBeStorage :: Type -> Bool
 canBeStorage = \case
   StringT _ -> True
   StructT _ _ -> True
+  ArrayT{} -> True
   _ -> False

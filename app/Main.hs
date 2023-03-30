@@ -88,10 +88,10 @@ main = do
         ((err, output), e) = runState (runWriterT (runExceptT $ analyze modules)) mkEnv
     in do
       traverse_ print output
+      Prelude.writeFile "output.json" (BS.unpack $ encode e)
+      Prelude.writeFile "ast.json" (BS.unpack $ encode modules)
       case err of
         Left be -> do
-          Prelude.writeFile "output.json" (BS.unpack $ encode e)
           print be
         Right _ -> do
-          Prelude.writeFile "output.json" (BS.unpack $ encode e)
           writeModules "./output" modules e

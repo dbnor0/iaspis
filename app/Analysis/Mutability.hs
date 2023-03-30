@@ -10,7 +10,7 @@ import Control.Monad.State.Class
 import Control.Monad.Error.Class
 import Analysis.Error
 import Analysis.Environment hiding (contractFns)
-import Analysis.Utils
+import Analysis.Utils ( getField, getRootField )
 import Data.Foldable
 import Control.Monad
 import Lens.Micro.Platform
@@ -39,11 +39,16 @@ mutCheckStmt = \case
     f <- getField id
     unless (f ^. fdMutability == Mutable || fn == "constructor")
       (throwError $ IllegalMutAssig id)
-  AssignmentStmt (MemberAccessE (IdentifierE id) _) _ _ -> do
+  AssignmentStmt (MemberAccessE e _) _ _ -> do
     fn <- gets (fromJust . (^. (buildInfo . biFn)))
-    f <- getField id
+    f <- getRootField e
     unless (f ^. fdMutability == Mutable || fn == "constructor")
-      (throwError $ IllegalMutAssig id)
+      (throwError $ IllegalMutAssig (f ^. fdId))
+  AssignmentStmt (SubscriptE e _) _ _ -> do
+    fn <- gets (fromJust . (^. (buildInfo . biFn)))
+    f <- getRootField e
+    unless (f ^. fdMutability == Mutable || fn == "constructor")
+      (throwError $ IllegalMutAssig (f ^. fdId))
   IfStmt _ b1 b2 -> do
     enterBlock
     mutCheckStmt b1

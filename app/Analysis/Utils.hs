@@ -133,12 +133,18 @@ getStructField t memId = do
     StructT (Struct _ sMems) _ -> do
       let mem = find ((== memId) . structFieldName) sMems
       case mem of
-        Nothing -> throwError NotYetImplemented
+        Nothing -> throwError $ Debug "1"
         Just m -> return m
-    _ -> throwError NotYetImplemented
+    _ -> throwError $ Debug "2"
 
 getFieldEnum :: BuildContext m => Identifier -> Identifier -> m (Maybe Enum)
 getFieldEnum e id = do
   es <- gets (^. enums)
   unless (e `elem` M.keys es) (throwError $ Debug "")
   return $ view enumDef <$> find (\e -> id `elem` enumFields (e ^. enumDef)) es
+
+getRootField :: BuildContext m => Expression -> m FieldEntry
+getRootField (IdentifierE id) = getField id
+getRootField (SubscriptE e _) = getRootField e
+getRootField (MemberAccessE e _) = getRootField e
+getRootField _ = throwError $ Debug "root field"
