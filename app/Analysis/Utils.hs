@@ -75,7 +75,9 @@ getFacetField id = do
 
 
 findInScope :: Identifier -> [Scope] -> Bindings FieldEntry -> [FieldEntry]
-findInScope id ss fs = filter (^. fdInScope) $ mapMaybe (\s -> M.lookup (s <> "::" <> id) fs) ss
+findInScope id ss fs = filter (^. fdInScope) $ mapMaybe (lookupFn fs) ss
+  where lookupFn fs "" = M.lookup id fs
+        lookupFn fs s = M.lookup (s <> "::" <> id) fs
 
 facetFieldCheck :: BuildContext m => Identifier -> m (Maybe Identifier)
 facetFieldCheck id = do
@@ -113,7 +115,7 @@ getType id = do
 localScopes :: BuildContext m => m [Scope]
 localScopes = do
   s <- gets (^. (buildInfo . biScope))
-  return $ scanl localScope s (reverse [1..(scopeSize s)])
+  return $ scanl localScope s (reverse [1..(scopeSize s)]) <> [""]
   where localScope t n = intercalate "::" $ take n $ splitOn "::" t
         scopeSize s = length $ splitOn "::" s
 

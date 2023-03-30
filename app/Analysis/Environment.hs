@@ -173,11 +173,13 @@ mkEnv = BuildEnv
   , _proxies = M.empty
   , _facets = M.empty
   , _functions = M.empty
-  , _fields = M.empty
+  , _fields = preludeFields
   }
 
-preludeFields :: Bindings Field
-preludeFields = M.empty
+preludeFields :: Bindings FieldEntry
+preludeFields = M.fromList
+  [ ("block", FieldEntry "block" (StructT blockType Nothing) View True)
+  ]
 
 preludeFns :: Bindings FunctionHeader
 preludeFns = M.empty
@@ -188,7 +190,19 @@ preludeTypes = M.fromList $
   , ("string", StringT Nothing)
   , ("bool", BoolT)
   , ("address", AddressT)
+  , ("__block", StructT blockType Nothing)
   ] <> preludeByteTypes
+
+blockType :: Struct
+blockType = Struct "__block"
+  [ StructField UIntT "basefee"
+  , StructField UIntT "chainid"
+  , StructField AddressT "coinbase"
+  , StructField UIntT "difficulty"
+  , StructField UIntT "gaslimit"
+  , StructField UIntT "number"
+  , StructField UIntT "timestamp"
+  ]
 
 preludeByteTypes :: [(Identifier, Type)]
 preludeByteTypes = (\n -> ("bytes" <> showT n, BytesT n)) <$> [1..32]
