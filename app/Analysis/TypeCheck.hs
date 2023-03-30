@@ -12,7 +12,7 @@ import Iaspis.Grammar
 import Data.Foldable
 import Analysis.Utils
 import Control.Monad
-import Data.Text as T hiding (tail, zipWith, all, elem)
+import Data.Text as T hiding (null, head, tail, zipWith, all, elem)
 import Lens.Micro.Platform
 import Iaspis.TypeUtils
 import Analysis.Scope
@@ -170,6 +170,11 @@ typeCheckLit = \case
           (throwError $ InvalidStructLiteral id fs structValueMembers)
         return s
       _ -> throwError InvalidStructType
+  ArrayV es -> do
+    when (null es) (throwError $ Debug "Empty arrays are not supported yet")
+    tes <- traverse typeCheckExpr es
+    unless (and $ fmap (head tes ==) tes) (throwError $ Debug "")
+    return $ ArrayT (head tes) [Just $ Prelude.length es] (Just Memory)
   EnumV e v -> do
     enum <- getFieldEnum e v
     case enum of

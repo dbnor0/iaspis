@@ -4,7 +4,7 @@
 module Iaspis.TypeUtils where
 
 import Iaspis.Grammar
-import Data.Text as T
+import Data.Text as T hiding (length)
 import Utils.Text
 import Prelude hiding (concatMap)
 
@@ -58,6 +58,7 @@ strictEq (EnumT e1) (EnumT e2) = e1 == e2
 strictEq (StringT l1) (StringT l2) = l1 == l2
 strictEq (UserDefinedT id1 l1) (UserDefinedT id2 l2) = id1 == id2 && l1 == l2
 strictEq (StructT s1 l1) (StructT s2 l2) = s1 == s2 && l1 == l2
+strictEq (ArrayT t1 ds1 l1) (ArrayT t2 ds2 l2) = t1 `strictEq` t2 && length ds1 == length ds2 && l1 == l2
 strictEq (ContractT id1) (ContractT id2) = id1 == id2
 strictEq _ _ = False
 
@@ -72,6 +73,7 @@ laxEq (EnumT e1) (EnumT e2) = e1 == e2
 laxEq (StringT _) (StringT _) = True
 laxEq (UserDefinedT id1 _) (UserDefinedT id2 _) = id1 == id2
 laxEq (StructT s1 _) (StructT s2 _) = s1 == s2
+laxEq (ArrayT t1 ds1 _) (ArrayT t2 ds2 _) = t1 `laxEq` t2 && length ds1 == length ds2
 laxEq (ContractT id1) (ContractT id2) = id1 == id2
 laxEq _ _ = False
 

@@ -16,7 +16,6 @@ contract Contract {
   private uint[][] xxs;
   private mut WA wa;
   private mut WA[] was;
-
   
   constructor() {
     a <- 0;
@@ -25,13 +24,14 @@ contract Contract {
 
   public mut fn fact (uint n) -> uint {
     Z storage v <- zzz;
-    // mut bool aaa := v.h.b.q;
+    mut bool aaa := v.h.b.q;
     if (n == 1) {
       uint wallagong := 23;
       return 1;
     }
     was[0] <- wa;
-    arr[0].f[0][0] <- 11;
+    was[0].f[0][0] <- 11;
+    was[0].f[1] <- [1, 2, 3, 4, 5];
     uint haha := xs[0];
     uint[] storage test <- xxs[0];
     return n * fact(n - 1);

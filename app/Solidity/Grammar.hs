@@ -204,4 +204,5 @@ data Literal
   | HexLit T.Text
   | EnumLit T.Text T.Text
   | StructLit Identifier [(Identifier, Expression)]
+  | ArrayLit [Expression]
   deriving stock (Eq, Show)

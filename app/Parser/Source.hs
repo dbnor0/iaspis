@@ -408,6 +408,7 @@ literal = backtrack
   , stringLit
   , uintLit
   , enumLit
+  , arrayLit
   ]
 
 boolLit :: Parser Value
@@ -430,6 +431,9 @@ structLit = StructV <$> structValue
 
 enumLit :: Parser Value
 enumLit = EnumV <$> identifier <*> (reserved "::" *> identifier)
+
+arrayLit :: Parser Value
+arrayLit = ArrayV <$> brackets (sepBy expression comma)
 
 -- raw values
 

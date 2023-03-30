@@ -38,6 +38,7 @@ data Value
   | StringV Text
   | StructV StructValue
   | EnumV Text Text
+  | ArrayV [Expression]
   deriving stock (Eq, Show, Generic)
 
 instance ToJSON Value where

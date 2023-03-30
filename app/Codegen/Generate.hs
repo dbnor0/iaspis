@@ -217,6 +217,7 @@ genLit = \case
   S.HexLit v -> "0x" <> v
   S.EnumLit e v -> e <> "." <> v
   S.StructLit id ms -> id <> "({" <> T.concat (L.intersperse "," (genStructLitMember <$> ms)) <> "})"
+  S.ArrayLit es -> "[" <> T.concat (L.intersperse "," (genExpr <$> es)) <> "]"
 
 genStructLitMember :: (S.Identifier, S.Expression) -> SolText
 genStructLitMember (id, e) = id <> ": " <> genExpr e
