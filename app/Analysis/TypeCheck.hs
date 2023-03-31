@@ -75,7 +75,7 @@ typeCheckStmt fn = \case
             return ()
           _ -> throwError $ Debug "Storage pointers can only be initialized with storage values"
       _ -> do
-        unless (field ^. fdType == et)
+        unless ((field ^. fdType) `strictEq` et)
           (throwError $ InvalidAssigType (field ^. fdId) (field ^. fdType) et)
   AssignmentStmt e _ ex -> do
     ft <- typeCheckExpr e
@@ -145,7 +145,7 @@ typeCheckExpr = \case
     traverse_ typeCheckArg (Prelude.zip (fn ^. fnArgs) ts)
     return . argType $ fn ^. fnReturn
     where typeCheckArg (arg, t) =
-            unless (argType arg == t)
+            unless (argType arg `strictEq` t)
               (throwError $ InvalidArgType arg (argType arg) t)
   UnaryE op e -> typeCheckUnaryExpr e op
   BinaryE op e1 e2 -> typeCheckBinaryExpr e1 e2 op

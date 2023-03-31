@@ -1,10 +1,7 @@
 module HelloWorld;
 
-import S, Z, T, Q, States from Structs;
+import WA, S, Z, T, Q, States from Structs;
 
-struct WA {
-  uint[][5] f;
-}
 
 contract Contract {
   public mut uint a <- 123;
@@ -32,6 +29,11 @@ contract Contract {
       uint wallagong := 23;
       return 1;
     }
+
+    string s1 := "hello ";
+    string s2 := "world";
+    string s12 := concat(v, j);
+
     map["heh"] <- 1;
     mm[0]["test"] <- [ [1], [1] ];
     m2[0] <- [ [ 0 ] ];
@@ -46,6 +48,8 @@ contract Contract {
   public mut fn f1 () override {
     a <- 123;
     uint id := block.chainid;
+    uint o := tx.gasprice;
+    bytes32 b32 := blockhash(1);
     address addr := 0x1234567890123456789012345678901234567890;
     if (true) {
       return;
@@ -70,6 +74,7 @@ facet Facet1 to Proxy {
     mut string memory y := "false";
     mut string memory c := y;
     mut string memory x := "heh";
+    uint o := tx.gasprice;
     x := "dd";
     States st := States::STARTED;
     y := "true";

@@ -55,6 +55,7 @@ strictEq (BytesT n1) (BytesT n2) = n1 == n2
 strictEq UIntT UIntT = True
 strictEq UnitT UnitT = True
 strictEq (EnumT e1) (EnumT e2) = e1 == e2
+strictEq (StringT Nothing) (StringT _) = True
 strictEq (StringT l1) (StringT l2) = l1 == l2
 strictEq (UserDefinedT id1 l1) (UserDefinedT id2 l2) = id1 == id2 && l1 == l2
 strictEq (StructT s1 l1) (StructT s2 l2) = s1 == s2 && l1 == l2

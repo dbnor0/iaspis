@@ -172,17 +172,80 @@ mkEnv = BuildEnv
   , _contracts = M.empty
   , _proxies = M.empty
   , _facets = M.empty
-  , _functions = M.empty
+  , _functions = preludeFns
   , _fields = preludeFields
   }
 
 preludeFields :: Bindings FieldEntry
 preludeFields = M.fromList
   [ ("block", FieldEntry "block" (StructT blockType Nothing) View True)
+  , ("tx", FieldEntry "tx" (StructT txType Nothing) View True)
+  , ("msg", FieldEntry "msg" (StructT msgType Nothing) View True)
   ]
 
-preludeFns :: Bindings FunctionHeader
-preludeFns = M.empty
+preludeFns :: Bindings FunctionEntry
+preludeFns = M.fromList
+  [ ("blockhash"
+    , FunctionEntry 
+        { _fnId = "blockhash" 
+        , _fnArgs = [FunctionArg UIntT "blockNumber"]
+        , _fnReturn = FunctionArg (BytesT 32) ""
+        , _fnMutability = View
+        , _fnVisibility = Public
+        , _fnPayability = NonPayable
+        }
+    )
+  , ("gasleft"
+    , FunctionEntry
+        { _fnId = "gasleft" 
+        , _fnArgs = []
+        , _fnReturn = FunctionArg UnitT ""
+        , _fnMutability = View
+        , _fnVisibility = Public
+        , _fnPayability = NonPayable
+        }
+    )
+  , ("concat"
+    , FunctionEntry
+        { _fnId = "concat" 
+        , _fnArgs = [FunctionArg (StringT Nothing) "s1", FunctionArg (StringT Nothing) "s2"]
+        , _fnReturn = FunctionArg (StringT $ Just Memory) ""
+        , _fnMutability = View
+        , _fnVisibility = Public
+        , _fnPayability = NonPayable
+        }
+    )
+  , ("assert"
+    , FunctionEntry
+      { _fnId = "assert" 
+      , _fnArgs = [FunctionArg BoolT "condition"]
+      , _fnReturn = FunctionArg UnitT ""
+      , _fnMutability = View
+      , _fnVisibility = Public
+      , _fnPayability = NonPayable
+      }
+    )
+  , ("require"
+    , FunctionEntry
+      { _fnId = "require"
+      , _fnArgs = [FunctionArg BoolT "condition", FunctionArg (StringT $ Just Memory) "message"]
+      , _fnReturn = FunctionArg UnitT ""
+      , _fnMutability = View
+      , _fnVisibility = Public
+      , _fnPayability = NonPayable
+      }
+    )
+  , ("revert"
+    , FunctionEntry
+      { _fnId = "revert"
+      , _fnArgs = [FunctionArg (StringT $ Just Memory) "message"]
+      , _fnReturn = FunctionArg UnitT ""
+      , _fnMutability = View
+      , _fnVisibility = Public
+      , _fnPayability = NonPayable
+      }
+    )
+  ]
 
 preludeTypes :: Bindings Type
 preludeTypes = M.fromList $
@@ -191,6 +254,8 @@ preludeTypes = M.fromList $
   , ("bool", BoolT)
   , ("address", AddressT)
   , ("__block", StructT blockType Nothing)
+  , ("__tx", StructT txType Nothing)
+  , ("__msg", StructT msgType Nothing)
   ] <> preludeByteTypes
 
 blockType :: Struct
@@ -202,6 +267,19 @@ blockType = Struct "__block"
   , StructField UIntT "gaslimit"
   , StructField UIntT "number"
   , StructField UIntT "timestamp"
+  ]
+
+txType :: Struct
+txType = Struct "__tx"
+  [ StructField UIntT "gasprice"
+  , StructField AddressT "origin"
+  ]
+
+msgType :: Struct
+msgType = Struct "__msg"
+  [ StructField AddressT "sender"
+  , StructField (BytesT 4) "sig"
+  , StructField UIntT "value"
   ]
 
 preludeByteTypes :: [(Identifier, Type)]

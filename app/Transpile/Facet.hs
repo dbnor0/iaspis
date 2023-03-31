@@ -115,8 +115,7 @@ transpileFacetExpr fId = \case
     return $ S.SubscriptE te tidx
   I.MemberAccessE lv id -> do
     tlv <- transpileFacetExpr fId lv
-    tid <- transpileFacetExpr fId $ I.IdentifierE id
-    return $ S.MemberAccessE tlv tid
+    return $ S.MemberAccessE tlv (S.IdentifierE id)
   I.FunctionCallE id es -> do
     tes <- traverse (transpileFacetExpr fId) es
     return $ S.FunctionCallE (S.IdentifierE id) tes

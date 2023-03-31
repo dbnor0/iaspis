@@ -42,10 +42,10 @@ getField id = do
   s <- gets (^. (buildInfo . biScope))
   ls <- localScopes
   fs <- gets (^. fields)
-  case findInScope id ls fs of
+  case findFdInScope id ls fs of
     [] -> do
       ps <- proxyFieldsScope
-      case findInScope id ps fs of
+      case findFdInScope id ps fs of
         [] -> throwError $ FieldNotInScope id s
         fd : _ -> do
           _ <- facetFieldCheck id
@@ -60,10 +60,10 @@ getFacetField id = do
   s <- gets (^. (buildInfo . biScope))
   ls <- localScopes
   fs <- gets (^. fields)
-  case findInScope id ls fs of
+  case findFdInScope id ls fs of
     [] -> do
       ps <- proxyFieldsScope
-      case findInScope id ps fs of
+      case findFdInScope id ps fs of
         [] -> throwError $ FieldNotInScope id s
         fd : _ -> do
           fId <- facetFieldCheck id
@@ -74,10 +74,16 @@ getFacetField id = do
       return (fd, Nothing)
 
 
-findInScope :: Identifier -> [Scope] -> Bindings FieldEntry -> [FieldEntry]
-findInScope id ss fs = filter (^. fdInScope) $ mapMaybe (lookupFn fs) ss
+findFdInScope :: Identifier -> [Scope] -> Bindings FieldEntry -> [FieldEntry]
+findFdInScope id ss fs = filter (^. fdInScope) $ mapMaybe (lookupFn fs) ss
   where lookupFn fs "" = M.lookup id fs
         lookupFn fs s = M.lookup (s <> "::" <> id) fs
+
+findFnInScope :: Identifier -> [Scope] -> Bindings FunctionEntry -> [FunctionEntry]
+findFnInScope id ss fs = mapMaybe (lookupFn fs) ss
+  where lookupFn fs "" = M.lookup id fs
+        lookupFn fs s = M.lookup (s <> "::" <> id) fs
+
 
 facetFieldCheck :: BuildContext m => Identifier -> m (Maybe Identifier)
 facetFieldCheck id = do
@@ -100,8 +106,7 @@ getFn :: BuildContext m => Identifier -> m FunctionEntry
 getFn id = do
   ls <- localScopes
   fs <- gets (^. functions)
-  let entries = mapMaybe (\s -> M.lookup (s <> "::" <> id) fs) ls
-  case entries of
+  case findFnInScope id ls fs of
     [] -> throwError $ UndefinedId id
     fd : _ -> return fd
 
