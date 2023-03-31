@@ -2,9 +2,9 @@
 
 module Parser.Source where
 
-import Control.Monad (guard)
+import Control.Monad (guard, when)
 import Data.Char (isHexDigit, isAlpha, isAlphaNum)
-import Data.Text
+import Data.Text hiding (elem)
 import Parser.Base
 import Parser.Types
 import Parser.Utils
@@ -345,6 +345,7 @@ type' = backtrack
   , reserved' "string" (StringT Nothing)
   , reserved' "uint" UIntT
   , chunk "bytes" *> sizedType BytesT bytesPredicates
+  , reserved' "bytes" (BytesDynT Nothing)
   , mappingType
   , UserDefinedT <$> identifier <*> pure Nothing
   ]
@@ -356,6 +357,7 @@ nonArrayType = backtrack
   , reserved' "string" (StringT Nothing)
   , reserved' "uint" UIntT
   , chunk "bytes" *> sizedType BytesT bytesPredicates
+  , reserved' "bytes" (BytesDynT Nothing)
   , UserDefinedT <$> identifier <*> pure Nothing
   ]
 
@@ -366,6 +368,7 @@ mappingKeyType = backtrack
   , reserved' "string" (StringT Nothing)
   , reserved' "uint" UIntT
   , chunk "bytes" *> sizedType BytesT bytesPredicates
+  , reserved' "bytes" (BytesDynT Nothing)
   ]
 
 -- used for contract & proxy field declarations
@@ -377,6 +380,7 @@ storageType = backtrack
   , reserved' "string" (StringT (Just Storage))
   , reserved' "uint" UIntT
   , chunk "bytes" *> sizedType BytesT bytesPredicates
+  , reserved' "bytes" (BytesDynT (Just Storage))
   , mappingType
   , UserDefinedT <$> identifier <*> pure (Just Storage)
   ]
@@ -389,8 +393,9 @@ typeWithLoc = backtrack
   , StringT <$> (reserved "string" *> (Just <$> memoryLocation))
   , reserved' "uint" UIntT
   , chunk "bytes" *> sizedType BytesT bytesPredicates
+  , BytesDynT <$> (reserved "bytes" *> (Just <$> memoryLocation))
   , mappingType
-  , UserDefinedT <$> identifier <*> option Nothing (Just <$> memoryLocation)
+  , UserDefinedT <$> userDefinedId <*> option Nothing (Just <$> memoryLocation)
   ]
 
 mappingType :: Parser Type
@@ -416,6 +421,11 @@ typeSize ps = do
 identifier :: Parser Text
 identifier = lexeme' $ cons <$> satisfy isAlpha <*> takeWhileP Nothing isAlphaNum
 
+userDefinedId :: Parser Text
+userDefinedId = do
+  id <- lexeme' $ cons <$> satisfy isAlpha <*> takeWhileP Nothing isAlphaNum
+  when (id `elem` reservedTypeIds) (fail . show $ id <> "is a reserved type")
+  return id
 -- literals
 
 literal :: Parser Value
@@ -469,3 +479,14 @@ hexRaw = chunk "0x" *> takeWhile1P Nothing isHexDigit
 
 bytesRaw :: Parser Text
 bytesRaw = lexeme' hexRaw
+
+-- 
+
+reservedTypeIds :: [Text]
+reservedTypeIds =
+  [ "uint"
+  , "string"
+  , "bool"
+  , "address"
+  , "bytes"
+  ]

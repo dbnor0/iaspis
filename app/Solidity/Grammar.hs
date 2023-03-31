@@ -119,7 +119,7 @@ data PrimitiveType
   | BytesT Int
   | IntT Int
   | UintT Int
-  | BytesDynamicT
+  | BytesDynamicT (Maybe MemoryLocation)
   | UnitT
   | UserDefinedT Identifier (Maybe MemoryLocation)
   | StructT Identifier (Maybe MemoryLocation)

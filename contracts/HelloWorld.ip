@@ -16,6 +16,7 @@ contract Contract {
   private mut mapping (string => uint) map;
   private mut mapping (uint => uint[][]) m2;
   private mut mapping (uint => mapping(string => uint[][])) mm;
+  private bytes yooo;
   
   constructor() {
     a <- 0;
@@ -29,10 +30,12 @@ contract Contract {
       uint wallagong := 23;
       return 1;
     }
-
-    string s1 := "hello ";
-    string s2 := "world";
-    string s12 := concat(v, j);
+    bytes2 bbb := 0x1234;
+    string memory jj := j;
+    bytes memory b3 := yooo;
+    string memory s1 := "hello ";
+    string memory s2 := "world";
+    string memory s12 := concat(s1, j);
 
     map["heh"] <- 1;
     mm[0]["test"] <- [ [1], [1] ];

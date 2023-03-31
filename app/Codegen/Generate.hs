@@ -301,7 +301,7 @@ genPlainType = \case
   PrimitiveT (BytesT n) -> "bytes" <> showT n
   PrimitiveT (IntT n) -> "int" <> showT n
   PrimitiveT (UintT n) -> "uint" <> showT n
-  PrimitiveT BytesDynamicT -> "bytes"
+  PrimitiveT (BytesDynamicT _) -> "bytes"
   PrimitiveT UnitT -> ""
   PrimitiveT (UserDefinedT id _) -> id
   PrimitiveT (StructT id _) -> id
@@ -322,7 +322,7 @@ genType = \case
   PrimitiveT (BytesT n) -> "bytes" <> showT n
   PrimitiveT (IntT n) -> "int" <> showT n
   PrimitiveT (UintT n) -> "uint" <> showT n
-  PrimitiveT BytesDynamicT -> "bytes"
+  PrimitiveT (BytesDynamicT l) -> "bytes " <> genLocation l
   PrimitiveT UnitT -> ""
   PrimitiveT (UserDefinedT id l) -> id <> " " <> genLocation l
   PrimitiveT (StructT id l) -> id <> " " <> genLocation l
@@ -345,7 +345,7 @@ genLocationWithType t l =
   case (t, l) of
     (ArrayT _, l) -> genLocation $ Just l
     (MappingT _, l) -> genLocation $ Just l
-    (PrimitiveT BytesDynamicT, l) -> genLocation $ Just l
+    (PrimitiveT (BytesDynamicT l), _) -> genLocation l
     (PrimitiveT (StringT l), _) -> genLocation l
     (PrimitiveT (StructT _ l), _) -> genLocation l
     (PrimitiveT (ContractT _), l) -> genLocation $ Just l

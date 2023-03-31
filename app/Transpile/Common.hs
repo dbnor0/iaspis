@@ -103,6 +103,7 @@ transpileType = \case
   I.BoolT -> S.PrimitiveT S.BoolT
   I.BytesT n -> S.PrimitiveT $ S.BytesT n
   I.UIntT -> S.PrimitiveT $ S.UintT 256
+  I.BytesDynT l -> S.PrimitiveT $ S.BytesDynamicT (transpileLocation <$> l)
   I.StringT l -> S.PrimitiveT $ S.StringT (transpileLocation <$> l)
   I.UnitT -> S.PrimitiveT S.UnitT
   I.UserDefinedT id l -> S.PrimitiveT $ S.UserDefinedT id (transpileLocation <$> l)

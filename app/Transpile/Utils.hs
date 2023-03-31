@@ -11,8 +11,8 @@ uint = PrimitiveT . UintT
 bytes :: Int -> Type
 bytes = PrimitiveT . BytesT
 
-bytes' :: Type
-bytes' = PrimitiveT BytesDynamicT
+bytes' :: Maybe MemoryLocation -> Type
+bytes' = PrimitiveT . BytesDynamicT
 
 bool :: Type
 bool = PrimitiveT BoolT

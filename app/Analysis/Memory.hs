@@ -97,6 +97,7 @@ memCheckStmt = \case
 canBeStorage :: Type -> Bool
 canBeStorage = \case
   StringT _ -> True
+  BytesDynT _ -> True
   StructT _ _ -> True
   ArrayT{} -> True
   MappingT _ _ -> True
