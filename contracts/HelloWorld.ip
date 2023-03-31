@@ -35,7 +35,7 @@ contract Contract {
     bytes memory b3 := yooo;
     string memory s1 := "hello ";
     string memory s2 := "world";
-    string memory s12 := concat(s1, j);
+    string memory s12 := sconcat(s1, j);
 
     map["heh"] <- 1;
     mm[0]["test"] <- [ [1], [1] ];
@@ -54,6 +54,8 @@ contract Contract {
     uint o := tx.gasprice;
     bytes32 b32 := blockhash(1);
     address addr := 0x1234567890123456789012345678901234567890;
+    uint bl := balanceof(addr);
+    delegatecall(addr, yooo);
     if (true) {
       return;
     } else {

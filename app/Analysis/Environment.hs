@@ -205,15 +205,25 @@ preludeFns = M.fromList
         , _fnPayability = NonPayable
         }
     )
-  , ("concat"
+  , ("sconcat"
     , FunctionEntry
-        { _fnId = "concat" 
+        { _fnId = "sconcat" 
         , _fnArgs = [FunctionArg (StringT Nothing) "s1", FunctionArg (StringT Nothing) "s2"]
         , _fnReturn = FunctionArg (StringT $ Just Memory) ""
         , _fnMutability = View
         , _fnVisibility = Public
         , _fnPayability = NonPayable
         }
+    )
+  , ("bconcat"
+    , FunctionEntry
+      { _fnId = "bconcat" 
+      , _fnArgs = [FunctionArg (BytesDynT Nothing) "b1", FunctionArg (BytesDynT Nothing) "b2"]
+      , _fnReturn = FunctionArg (BytesDynT $ Just Memory) ""
+      , _fnMutability = View
+      , _fnVisibility = Public
+      , _fnPayability = NonPayable
+      }
     )
   , ("assert"
     , FunctionEntry
@@ -243,6 +253,111 @@ preludeFns = M.fromList
       , _fnMutability = View
       , _fnVisibility = Public
       , _fnPayability = NonPayable
+      }
+    )
+  , ("keccak256"
+    , FunctionEntry
+      { _fnId = "keccak256"
+      , _fnArgs = [FunctionArg (BytesDynT $ Just Memory) "payload"]
+      , _fnReturn = FunctionArg (BytesT 32) ""
+      , _fnMutability = View
+      , _fnVisibility = Public
+      , _fnPayability = NonPayable
+      }
+    )
+  , ("sha256"
+    , FunctionEntry
+      { _fnId = "sha256"
+      , _fnArgs = [FunctionArg (BytesDynT $ Just Memory) "payload"]
+      , _fnReturn = FunctionArg (BytesT 32) ""
+      , _fnMutability = View
+      , _fnVisibility = Public
+      , _fnPayability = NonPayable
+      }
+    )
+  , ("ripemd160"
+    , FunctionEntry
+      { _fnId = "ripemd160"
+      , _fnArgs = [FunctionArg (BytesDynT $ Just Memory) "payload"]
+      , _fnReturn = FunctionArg (BytesT 20) ""
+      , _fnMutability = View
+      , _fnVisibility = Public
+      , _fnPayability = NonPayable
+      }
+    )
+  , ("ecrecover"
+    , FunctionEntry
+      { _fnId = "ecrecover"
+      , _fnArgs = 
+          [ FunctionArg (BytesT 32) "hash"
+          , FunctionArg UIntT "v"
+          , FunctionArg (BytesT 32) "r"
+          , FunctionArg (BytesT 32) "s"
+          ]
+      , _fnReturn = FunctionArg AddressT ""
+      , _fnMutability = View
+      , _fnVisibility = Public
+      , _fnPayability = NonPayable
+      }
+    )
+  , ("balanceof"
+    , FunctionEntry
+      { _fnId = "balanceof"
+      , _fnArgs = [FunctionArg AddressT "a"]
+      , _fnReturn = FunctionArg UIntT ""
+      , _fnMutability = View
+      , _fnVisibility = Public
+      , _fnPayability = NonPayable
+      }
+    )
+  , ("transfer"
+    , FunctionEntry
+      { _fnId = "transfer"
+      , _fnArgs = [FunctionArg AddressT "to", FunctionArg AddressT "amount"]
+      , _fnReturn = FunctionArg UnitT ""
+      , _fnMutability = Mutable
+      , _fnVisibility = Public
+      , _fnPayability = Payable
+      }
+    )
+  , ("send"
+    , FunctionEntry
+      { _fnId = "send"
+      , _fnArgs = [FunctionArg AddressT "to", FunctionArg AddressT "amount"]
+      , _fnReturn = FunctionArg BoolT ""
+      , _fnMutability = Mutable
+      , _fnVisibility = Public
+      , _fnPayability = Payable
+      }
+    )
+  , ("call"
+    , FunctionEntry
+      { _fnId = "call"
+      , _fnArgs = [FunctionArg AddressT "to", FunctionArg (BytesDynT (Just Memory)) "to"]
+      , _fnReturn = FunctionArg BoolT ""
+      , _fnMutability = Mutable
+      , _fnVisibility = Public
+      , _fnPayability = Payable
+      }
+    )
+  , ("delegatecall"
+    , FunctionEntry
+      { _fnId = "delegatecall"
+      , _fnArgs = [FunctionArg AddressT "to", FunctionArg (BytesDynT (Just Memory)) "to"]
+      , _fnReturn = FunctionArg BoolT ""
+      , _fnMutability = Mutable
+      , _fnVisibility = Public
+      , _fnPayability = Payable
+      }
+    )
+  , ("staticcall"
+    , FunctionEntry
+      { _fnId = "staticcall"
+      , _fnArgs = [FunctionArg AddressT "to", FunctionArg (BytesDynT (Just Memory)) "to"]
+      , _fnReturn = FunctionArg BoolT ""
+      , _fnMutability = Mutable
+      , _fnVisibility = Public
+      , _fnPayability = Payable
       }
     )
   ]

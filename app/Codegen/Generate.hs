@@ -202,12 +202,31 @@ genExpr = \case
   S.InlineArrayE es -> "[" <> T.concat (L.intersperse "," (genExpr <$> es)) <> "]"
   S.MemberAccessE lv m -> genExpr lv <> "." <> genExpr m
   S.SubscriptE lv i -> genExpr lv <> "[" <> genExpr i <> "]"
-  S.FunctionCallE id args -> genExpr id <> "(" <> T.concat (L.intersperse "," (genExpr <$> args)) <> ")"
+  S.FunctionCallE id args -> genFunctionCallExpr id args
   S.InstantiationE id args -> "new " <> genExpr id <> "(" <> T.concat (L.intersperse "," (genExpr <$> args)) <> ")"
   S.ArrayInstantiationE id size -> "new " <> id <> "[](" <> genExpr size <> ")"
   S.CastE t e -> genType t <> "(" <> genExpr e <> ")"
   S.BinaryE op e1 e2 -> genExpr e1 <> " " <> genBinaryOp op <> " " <> genExpr e2
   S.UnaryE op e -> genUnaryOp op <> " " <> genExpr e
+
+genFunctionCallExpr :: S.Expression -> [S.Expression] -> SolText
+genFunctionCallExpr (S.IdentifierE "sconcat") [e1, e2] = 
+  "string.concat(" <> genExpr e1 <> ", " <> genExpr e2 <> ")"
+genFunctionCallExpr (S.IdentifierE "bconcat") [e1, e2] = 
+  "bytes.concat(" <> genExpr e1 <> ", " <> genExpr e2 <> ")"
+genFunctionCallExpr (S.IdentifierE "balanceof") [e] = 
+  genExpr e <> ".balance"
+genFunctionCallExpr (S.IdentifierE "transfer") [e1, e2] = 
+  genExpr e1 <> ".transfer(" <> genExpr e2 <> ")"
+genFunctionCallExpr (S.IdentifierE "send") [e1, e2] = 
+  genExpr e1 <> ".send(" <> genExpr e2 <> ")"
+genFunctionCallExpr (S.IdentifierE "call") [e1, e2] = 
+  genExpr e1 <> ".call(" <> genExpr e2 <> ")"
+genFunctionCallExpr (S.IdentifierE "delegatecall") [e1, e2] = 
+  genExpr e1 <> ".delegatecall(" <> genExpr e2 <> ")"
+genFunctionCallExpr (S.IdentifierE "staticcall") [e1, e2] = 
+  genExpr e1 <> ".staticcall(" <> genExpr e2 <> ")"
+genFunctionCallExpr id args = genExpr id <> "(" <> T.concat (L.intersperse "," (genExpr <$> args)) <> ")"
 
 genLit :: S.Literal -> SolText
 genLit = \case
