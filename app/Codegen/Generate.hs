@@ -279,7 +279,7 @@ genStruct StructDefinition{ structId, structMembers } = do
 
 genStructMember :: StructMember -> SolTextGen
 genStructMember (StructMember t id) = do
-  genText $ genType t <> " " <> id <> ";\n"
+  genText $ genPlainType t <> " " <> id <> ";\n"
 
 genEnum :: EnumDefinition -> SolTextGen
 genEnum EnumDefinition{ enumId, enumMembers } = do
@@ -328,8 +328,8 @@ genType = \case
   PrimitiveT (StructT id l) -> id <> " " <> genLocation l
   PrimitiveT (EnumT id) -> id
   PrimitiveT (ContractT id) -> id
-  MappingT (MappingType k v) -> "mapping (" <> genType k <> " => " <> genType v <> ")"
-  ArrayT (ArrayType t ds l) -> genType t <> T.concat (genDim <$> ds) <> " " <> genLocation l
+  MappingT (MappingType k v) -> "mapping (" <> genPlainType k <> " => " <> genPlainType v <> ")"
+  ArrayT (ArrayType t ds l) -> genPlainType t <> T.concat (genDim <$> ds) <> " " <> genLocation l
   where genDim Nothing = "[]"
         genDim (Just n) = "[" <> showT n <> "]"
 
