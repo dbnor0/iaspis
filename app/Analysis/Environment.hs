@@ -313,7 +313,7 @@ preludeFns = M.fromList
   , ("transfer"
     , FunctionEntry
       { _fnId = "transfer"
-      , _fnArgs = [FunctionArg AddressT "to", FunctionArg AddressT "amount"]
+      , _fnArgs = [FunctionArg AddressT "to", FunctionArg UIntT "amount"]
       , _fnReturn = FunctionArg UnitT ""
       , _fnMutability = Mutable
       , _fnVisibility = Public
@@ -323,7 +323,7 @@ preludeFns = M.fromList
   , ("send"
     , FunctionEntry
       { _fnId = "send"
-      , _fnArgs = [FunctionArg AddressT "to", FunctionArg AddressT "amount"]
+      , _fnArgs = [FunctionArg AddressT "to", FunctionArg UIntT "amount"]
       , _fnReturn = FunctionArg BoolT ""
       , _fnMutability = Mutable
       , _fnVisibility = Public
@@ -333,7 +333,7 @@ preludeFns = M.fromList
   , ("call"
     , FunctionEntry
       { _fnId = "call"
-      , _fnArgs = [FunctionArg AddressT "to", FunctionArg (BytesDynT (Just Memory)) "to"]
+      , _fnArgs = [FunctionArg AddressT "to", FunctionArg (BytesDynT (Just Memory)) "data"]
       , _fnReturn = FunctionArg BoolT ""
       , _fnMutability = Mutable
       , _fnVisibility = Public
@@ -343,7 +343,7 @@ preludeFns = M.fromList
   , ("delegatecall"
     , FunctionEntry
       { _fnId = "delegatecall"
-      , _fnArgs = [FunctionArg AddressT "to", FunctionArg (BytesDynT (Just Memory)) "to"]
+      , _fnArgs = [FunctionArg AddressT "to", FunctionArg (BytesDynT (Just Memory)) "data"]
       , _fnReturn = FunctionArg BoolT ""
       , _fnMutability = Mutable
       , _fnVisibility = Public
@@ -353,7 +353,7 @@ preludeFns = M.fromList
   , ("staticcall"
     , FunctionEntry
       { _fnId = "staticcall"
-      , _fnArgs = [FunctionArg AddressT "to", FunctionArg (BytesDynT (Just Memory)) "to"]
+      , _fnArgs = [FunctionArg AddressT "to", FunctionArg (BytesDynT (Just Memory)) "data"]
       , _fnReturn = FunctionArg BoolT ""
       , _fnMutability = Mutable
       , _fnVisibility = Public

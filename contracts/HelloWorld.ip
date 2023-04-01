@@ -48,7 +48,7 @@ contract Contract {
     return n * fact(n - 1);
   }
 
-  public mut fn f1 () override {
+  public pay mut fn f1 () override {
     a <- 123;
     uint id := block.chainid;
     uint o := tx.gasprice;
@@ -121,7 +121,8 @@ facet Facet2 to Proxy {
 }
 
 facet Facet3 to Proxy {
-  public mut fn m() {
+  public pay mut fn m() {
     test <- "!23";
+    send(0x1234567890123456789012345678901234567890, 1);
   }
 }

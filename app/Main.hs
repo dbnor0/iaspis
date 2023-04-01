@@ -25,6 +25,7 @@ import Analysis.Mutability
 import Analysis.Contract
 import Analysis.TypeCheck (typeCheck)
 import Analysis.Environment
+import Analysis.Payability
 import Control.Monad.Writer
 import Codegen.Generate
 import Transpile.Module
@@ -54,8 +55,10 @@ analyze ms = do
   tell ["Finished build pass"]
   mutCheck ms
   tell ["Finished mutability pass"]
+  payCheck ms
+  tell ["Finished mutability pass"]
   memCheck ms
-  tell ["Finished memory pass"]
+  tell ["Finished syntax pass"]
   contractChecks ms
   tell ["Finished contract pass"]
   typeCheck ms
