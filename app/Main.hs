@@ -4,31 +4,31 @@
 module Main where
 
 import Data.Text.IO as T
-import Parser.Source
+import Transpiler.Parser.Source
 import Text.Megaparsec
 import Control.Monad
 import System.Directory
 import Control.Monad.State
-import Iaspis.Grammar as I
+import Transpiler.Iaspis.Grammar as I
 import Control.Monad.Except
 import System.FilePath
 import Data.Text as T
 import Data.Either.Combinators
-import Utils.Text
+import Transpiler.Utils.Text
 import Data.Either
 import Data.Foldable
-import Analysis.Build (build)
+import Transpiler.Analysis.Build (build)
 import Data.ByteString.Lazy.Char8 as BS (unpack)
 import Data.Aeson
-import Analysis.Memory
-import Analysis.Mutability
-import Analysis.Contract
-import Analysis.TypeCheck (typeCheck)
-import Analysis.Environment
-import Analysis.Payability
+import Transpiler.Analysis.Memory
+import Transpiler.Analysis.Mutability
+import Transpiler.Analysis.Contract
+import Transpiler.Analysis.TypeCheck (typeCheck)
+import Transpiler.Analysis.Environment
+import Transpiler.Analysis.Payability
 import Control.Monad.Writer
-import Codegen.Generate
-import Transpile.Module
+import Transpiler.Codegen.Generate
+import Transpiler.Transpile.Module
 
 
 hasExt :: FilePath -> FilePath -> Bool
@@ -47,7 +47,7 @@ getContractFiles ext dir = do
 loadFile :: FilePath -> IO (Either T.Text I.Module)
 loadFile fp = do
   file <- T.readFile fp
-  return $ mapLeft showT $ runParser Parser.Source.module' "" file
+  return $ mapLeft showT $ runParser module' "" file
 
 analyze :: BuildContext m => [Module] -> m ()
 analyze ms = do

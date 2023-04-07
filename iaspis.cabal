@@ -24,39 +24,39 @@ executable iaspis
   main-is:
     Main.hs
   other-modules:
-    Analysis.Build
-    Analysis.Error
-    Analysis.Module
-    Analysis.Mutability
-    Analysis.Memory
-    Analysis.Utils
-    Analysis.Scope
-    Analysis.Contract
-    Analysis.Environment
-    Analysis.TypeCheck
-    Codegen.Generate
-    Codegen.Types
-    Iaspis.DeclUtils
-    Iaspis.Grammar
-    Iaspis.TypeUtils
-    Parser.Base
-    Parser.Source
-    Parser.Types
-    Parser.Utils
-    Solidity.Grammar
-    Transpile.Common
-    Transpile.Contract
-    Transpile.Enum
-    Transpile.Facet
-    Transpile.Module
-    Transpile.Proxy
-    Transpile.Storage
-    Transpile.Struct
-    Transpile.Types
-    Transpile.Utils
-    Utils.Error
-    Utils.Text
-    Yul.Grammar
+    Transpiler.Analysis.Build
+    Transpiler.Analysis.Error
+    Transpiler.Analysis.Module
+    Transpiler.Analysis.Mutability
+    Transpiler.Analysis.Memory
+    Transpiler.Analysis.Utils
+    Transpiler.Analysis.Scope
+    Transpiler.Analysis.Contract
+    Transpiler.Analysis.Environment
+    Transpiler.Analysis.TypeCheck
+    Transpiler.Codegen.Generate
+    Transpiler.Codegen.Types
+    Transpiler.Iaspis.DeclUtils
+    Transpiler.Iaspis.Grammar
+    Transpiler.Iaspis.TypeUtils
+    Transpiler.Parser.Base
+    Transpiler.Parser.Source
+    Transpiler.Parser.Types
+    Transpiler.Parser.Utils
+    Transpiler.Solidity.Grammar
+    Transpiler.Transpile.Common
+    Transpiler.Transpile.Contract
+    Transpiler.Transpile.Enum
+    Transpiler.Transpile.Facet
+    Transpiler.Transpile.Module
+    Transpiler.Transpile.Proxy
+    Transpiler.Transpile.Storage
+    Transpiler.Transpile.Struct
+    Transpiler.Transpile.Types
+    Transpiler.Transpile.Utils
+    Transpiler.Utils.Error
+    Transpiler.Utils.Text
+    Transpiler.Yul.Grammar
   other-extensions:
     ApplicativeDo
     BlockArguments

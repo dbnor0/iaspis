@@ -19,7 +19,7 @@ Although the concepts are readily available, they still expose the end user to a
 
 Iaspis aims to ease development using upgradeable contracts by abstracting over the scaffolding provided by proxy libraries & restricting potentially vulnerable design decisions as much as possible, while still offering most of the features & syntax Solidity developers are used to.
 
-### Language features
+### Transpiler features
 
 In addition to the usual contracts & interfaces Ethereum developers are used to, Iaspis provides 2 additional contract types:
 
