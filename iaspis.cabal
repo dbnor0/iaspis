@@ -24,6 +24,9 @@ executable iaspis
   main-is:
     Main.hs
   other-modules:
+    CLI.Command
+    CLI.Parser
+    Transpiler.Entry
     Transpiler.Analysis.Build
     Transpiler.Analysis.Error
     Transpiler.Analysis.Module
@@ -33,6 +36,7 @@ executable iaspis
     Transpiler.Analysis.Scope
     Transpiler.Analysis.Contract
     Transpiler.Analysis.Environment
+    Transpiler.Analysis.Payability
     Transpiler.Analysis.TypeCheck
     Transpiler.Codegen.Generate
     Transpiler.Codegen.Types
@@ -55,6 +59,7 @@ executable iaspis
     Transpiler.Transpile.Types
     Transpiler.Transpile.Utils
     Transpiler.Utils.Error
+    Transpiler.Utils.File
     Transpiler.Utils.Text
     Transpiler.Yul.Grammar
   other-extensions:
@@ -115,6 +120,7 @@ executable iaspis
     , megaparsec
     , microlens-platform
     , mtl
+    , optparse-applicative
     , text
   hs-source-dirs:   app
   default-language: Haskell2010
