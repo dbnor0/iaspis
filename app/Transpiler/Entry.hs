@@ -64,8 +64,8 @@ analyze ms = do
 dump :: BuildOutput -> [Module] -> IO ()
 dump o ms = do
   traverse_ print (logs o)
-  writeFile "output.json" (unpack $ encode $ env o)
-  writeFile "ast.json" (unpack $ encode ms)
+  writeFile "build/output.json" (unpack $ encode $ env o)
+  writeFile "build/.json" (unpack $ encode ms)
   when (isLeft $ err o) (error $ "Build error(s): " <> show (err o))
 
 write :: [Module] -> BuildEnv -> IO ()

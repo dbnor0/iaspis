@@ -13,6 +13,7 @@ import Transpiler.Utils.Text
 import Text.Megaparsec
 import Transpiler.Parser.Source
 import Data.Foldable
+import Transpiler.Utils.SolContracts (rawContracts)
 
 loadFile :: FilePath -> IO (Either T.Text I.Module)
 loadFile fp = do
@@ -20,7 +21,7 @@ loadFile fp = do
   return $ mapLeft showT $ runParser module' "" file
 
 transpileDir :: FilePath
-transpileDir = "./output"
+transpileDir = "scripts/contracts"
 
 hasExt :: FilePath -> FilePath -> Bool
 hasExt ex fp = snd (splitExtension fp) == ex
@@ -36,7 +37,8 @@ getContractFiles ext dir = do
   where withRelativePath = (++) (dir ++ "\\")
 
 writeEIP2535 :: IO ()
-writeEIP2535 = do
-  fps <- getContractFiles ".sol" "./sol"
-  cs <- traverse T.readFile fps
-  traverse_ (uncurry T.writeFile) $ Prelude.zip (("./output/" <>) . takeFileName <$> fps) cs
+writeEIP2535 = traverse_ (uncurry T.writeFile) $ zip fileNames fileContents
+  where fileNames = (\f -> "scripts/contracts/" <> f <> ".sol") . fst <$> rawContracts 
+        fileContents =snd <$> rawContracts
+
+

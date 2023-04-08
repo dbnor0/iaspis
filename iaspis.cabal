@@ -24,8 +24,10 @@ executable iaspis
   main-is:
     Main.hs
   other-modules:
-    CLI.Command
     CLI.Parser
+    CLI.Utils
+    CLI.Commands.Compile
+    CLI.Commands.Init
     Transpiler.Entry
     Transpiler.Analysis.Build
     Transpiler.Analysis.Error
@@ -60,6 +62,7 @@ executable iaspis
     Transpiler.Transpile.Utils
     Transpiler.Utils.Error
     Transpiler.Utils.File
+    Transpiler.Utils.SolContracts
     Transpiler.Utils.Text
     Transpiler.Yul.Grammar
   other-extensions:
@@ -112,6 +115,7 @@ executable iaspis
     base ^>=4.16.4.0
     , aeson
     , bytestring
+    , command
     , containers
     , directory
     , either
