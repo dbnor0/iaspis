@@ -19,6 +19,15 @@ import Prelude hiding (Enum)
 import Data.Foldable
 import Transpiler.Transpile.Storage
 
+getContract :: BuildContext m => Identifier -> m ContractEntry
+getContract id = do
+  ls <- localScopes
+  cs <- gets (^. contracts)
+  let entries = Data.Maybe.mapMaybe (\s -> M.lookup (s <> "::" <> id) cs) ls
+  case entries of
+    [] -> throwError $ UndefinedContract id
+    c : _ -> return c
+
 getFacet :: BuildContext m => Identifier -> m FacetEntry
 getFacet id = do
   ls <- localScopes

@@ -3,6 +3,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 
 module Transpiler.Analysis.Build where
 
@@ -19,6 +20,8 @@ import Data.Maybe (fromJust)
 import Transpiler.Iaspis.TypeUtils
 import Control.Monad
 import Transpiler.Analysis.Scope
+import Data.Set qualified as S
+import Control.Monad.Writer
 
 
 build :: BuildContext m => [Module] -> m ()
@@ -59,7 +62,7 @@ addDecls = \case
     uniqueId contractName (name <$> ts) (DupId TypeId)
     modify $ contracts %~ M.insert (s <> "::" <> contractName) entry
     modify $ types %~ M.insert contractName (ContractT contractName)
-    where entry = ContractEntry contractName fieldNames fnNames
+    where entry = ContractEntry contractName fieldNames fnNames S.empty
           fnNames = functionName . functionHeader <$> contractFns
           fieldNames = fieldName <$> contractFields
   ProxyDecl (ProxyContract{ proxyName, facetList, proxyDecls }) -> do
@@ -68,7 +71,7 @@ addDecls = \case
     s <- gets (^. (buildInfo . biScope))
     uniqueId proxyName (ns <> (m ^. moduleImportedDecls)) (DupId ProxyId)
     modify $ proxies %~ M.insert (s <> "::" <> proxyName) (entry s)
-    where entry = ProxyEntry proxyName facetList fields
+    where entry s = ProxyEntry proxyName facetList fields s S.empty
           fields = zip (fieldName <$> proxyDecls) (fieldProxyKind <$> proxyDecls)
   FacetDecl (FacetContract{ facetName, proxyList, facetDecls }) -> do
     ns <- contractNamespace
@@ -76,7 +79,7 @@ addDecls = \case
     s <- gets (^. (buildInfo . biScope))
     uniqueId facetName (ns <> (m ^. moduleImportedDecls)) (DupId FacetId)
     modify $ facets %~ M.insert (s <> "::" <> facetName) entry
-    where entry = FacetEntry facetName proxyList fnNames
+    where entry = FacetEntry facetName proxyList fnNames S.empty
           fnNames = functionName . functionHeader <$> facetDecls
   StructDecl s@Struct{ structName } -> do
     ts <- gets (M.elems . (^. types))
@@ -128,6 +131,7 @@ addField Field{ fieldName, fieldType, fieldMutability } = do
   uniqueId fieldName evs (DupId FieldId)
   uniqueId (scopedName s) (fst <$> fs) (DupId FieldId)
   modify $ fields %~ M.insert (scopedName s) entry
+  addTypeToContract fieldType
   where entry = FieldEntry fieldName fieldType fieldMutability False
         scopedName s = s <> "::" <> fieldName
 
@@ -139,6 +143,7 @@ addFnArg FunctionArg{ argName, argType } = do
   uniqueId argName evs (DupId FieldId)
   uniqueId (scopedName s) (fst <$> fs) (DupId FieldId)
   modify $ fields %~ M.insert (scopedName s) entry
+  addTypeToContract argType
   where entry = FieldEntry argName argType Mutable False
         scopedName s = s <> "::" <> argName
 
@@ -150,8 +155,23 @@ addDeclArg DeclArg{ declName, declType, declMutability } = do
   uniqueId declName evs (DupId FieldId)
   uniqueId (scopedName s) (fst <$> fs) (DupId FieldId)
   modify $ fields %~ M.insert (scopedName s) entry
+  addTypeToContract declType
   where entry = FieldEntry declName declType declMutability False
         scopedName s = s <> "::" <> declName
+
+addTypeToContract :: BuildContext m => Type -> m ()
+addTypeToContract (UserDefinedT id _) = do
+  m <- gets (^. (buildInfo . biModule))
+  (c, p, f) <- (,,) 
+    <$> gets (^. (buildInfo . biContract)) 
+    <*> gets (^. (buildInfo . biProxy)) 
+    <*> gets (^. (buildInfo . biFacet))
+  case (m, c, p, f) of
+    (Just m', Just c', _, _) -> modify $ contracts %~ M.adjust (& contractTypes %~ (S.insert id)) (m' <> "::" <> c')
+    (Just m', _, Just p', _) -> modify $ proxies %~ M.adjust (& proxyTypes %~ (S.insert id)) (m' <> "::" <> p')
+    (Just m', _, _, Just f') -> modify $ facets %~ M.adjust (& facetTypes %~ (S.insert id)) (m' <> "::" <> f')
+    (_, _, _, _) -> return ()
+addTypeToContract _ = return ()
 
 addStmtDecl :: BuildContext m => Statement -> m ()
 addStmtDecl = \case

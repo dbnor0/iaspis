@@ -21,6 +21,7 @@ data BuildError
   | UndefinedImport
   | UndefinedType Identifier
   | UndefinedId Identifier
+  | UndefinedContract Identifier
   | UndefinedFacet Identifier
   | InvalidFacets
   | InvalidProxy

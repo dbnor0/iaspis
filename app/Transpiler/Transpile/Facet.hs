@@ -14,17 +14,22 @@ import Transpiler.Iaspis.Grammar (Identifier)
 import Transpiler.Transpile.Storage (qualifiedTypeId, storageGetterId, storageModuleId, sharedStorageId)
 import Transpiler.Analysis.Scope
 import Transpiler.Analysis.Environment
-import Transpiler.Analysis.Utils (getFacetField)
+import Transpiler.Analysis.Utils (getFacetField, getFacet)
+import Data.Set qualified as S
+import Lens.Micro.Platform
 
 
 transpileFacet :: BuildContext m => ([I.Import], I.Module, I.FacetContract) -> m T.Module
 transpileFacet (is, m, f@I.FacetContract { I.facetName, I.proxyList }) = withScope m $ do
   tc <- transpileFacetContract f
+  ce <- getFacet facetName
   return T.Module
     { T.moduleId = facetName
-    , T.imports = proxyList : storageModuleId : (I.importIds =<< is)
+    , T.imports = proxyList : storageModuleId : unifyImports (ce ^. facetTypes)
     , T.decls = [tc]
     }
+  where unifyImports ts = S.toList $ S.union (S.fromList (I.importIds =<< is)) ts
+
 
 transpileFacetContract :: BuildContext m => I.FacetContract -> m T.Declaration
 transpileFacetContract c@(I.FacetContract fId _ fns) = withScope c $ do

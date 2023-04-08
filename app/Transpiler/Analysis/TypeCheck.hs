@@ -20,8 +20,6 @@ import Transpiler.Analysis.Scope
 import Control.Monad.State.Class
 import Data.Map qualified as M
 import Transpiler.Analysis.Module (detectCycles)
-import Control.Monad.Writer
-import Transpiler.Utils.Text
 
 typeCheck :: BuildContext m => [Module] -> m ()
 typeCheck ms = do

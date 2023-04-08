@@ -21,6 +21,7 @@ import Transpiler.Analysis.Error
 import Control.Monad.Error.Class
 import Control.Monad.Writer
 import Data.Text qualified as T
+import Data.Set qualified as S
 
 
 type Scope = Identifier
@@ -41,6 +42,7 @@ data ContractEntry = ContractEntry
   { _contractId :: Identifier
   , _contractFields :: [Identifier]
   , _contractFns :: [Identifier]
+  , _contractTypes :: S.Set Identifier
   } deriving stock (Eq, Generic, Show)
 
 instance ToJSON ContractEntry where
@@ -52,6 +54,7 @@ data ProxyEntry = ProxyEntry
   , _proxyFacetList :: [Identifier]
   , _proxyFields :: [(Identifier, Maybe ProxyMemberKind)]
   , _proxyScope :: Scope
+  , _proxyTypes :: S.Set Identifier
   } deriving stock (Eq, Generic, Show)
 
 instance ToJSON ProxyEntry where
@@ -62,6 +65,7 @@ data FacetEntry = FacetEntry
   { _facetId :: Identifier
   , _facetProxy :: Identifier
   , _facetFns :: [Identifier]
+  , _facetTypes :: S.Set Identifier
   } deriving stock (Eq, Generic, Show)
 
 instance ToJSON FacetEntry where

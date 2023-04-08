@@ -11,14 +11,14 @@ import Prelude hiding (Enum)
 
 type Facet = (Identifier, [Function])
 
-contractDecls :: Module -> [([Import], ImmutableContract)]
-contractDecls Module{ imports, declarations } = mapMaybe getContract declarations
-  where getContract (ContractDecl c@ImmutableContract{}) = Just (imports, c)
+contractDecls :: Module -> [([Import], Module, ImmutableContract)]
+contractDecls m@Module{ imports, declarations } = mapMaybe getContract declarations
+  where getContract (ContractDecl c@ImmutableContract{}) = Just (imports, m, c)
         getContract _ = Nothing
 
-proxyDecls :: [FacetContract] -> Module -> [([Import], ProxyContract, [Facet])]
-proxyDecls fs Module{ imports, declarations } = mapMaybe getContract declarations
-  where getContract (ProxyDecl p@ProxyContract{ facetList }) = Just (imports, p, getFacet =<< facetList)
+proxyDecls :: [FacetContract] -> Module -> [([Import], ProxyContract, Module, [Facet])]
+proxyDecls fs m@Module{ imports, declarations } = mapMaybe getContract declarations
+  where getContract (ProxyDecl p@ProxyContract{ facetList }) = Just (imports, p, m, getFacet =<< facetList)
           where getFacet fId = mapMaybe (filterFn fId) fs
                 filterFn fId FacetContract{ facetName, I.facetDecls }
                   | facetName == fId = Just (facetName, facetDecls)

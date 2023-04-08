@@ -33,7 +33,7 @@ storageGetterId id = "StorageStructs." <> id <> "Storage"
 sharedStorageId :: Identifier
 sharedStorageId = "global"
 
-storageModule :: [([I.Import], I.ProxyContract, [Facet])] -> T.Module
+storageModule :: [([I.Import], I.ProxyContract, I.Module, [Facet])] -> T.Module
 storageModule ps =
   T.Module
   { T.imports = I.importIds =<< ((^. _1) =<< ps)

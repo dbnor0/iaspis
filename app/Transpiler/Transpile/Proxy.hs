@@ -12,12 +12,19 @@ import Transpiler.Iaspis.DeclUtils
 import Transpiler.Transpile.Types qualified as T
 import Transpiler.Transpile.Utils
 import Transpiler.Analysis.Environment
+import Transpiler.Analysis.Scope
+import Transpiler.Analysis.Utils
+import Data.Set qualified as S
+import Lens.Micro.Platform
 
-transpileProxy :: BuildContext m => ([I.Import], I.ProxyContract, [Facet]) -> m T.Module
-transpileProxy (is, p@I.ProxyContract { I.proxyName, I.facetList }, facets) =
-  return T.Module { T.moduleId=proxyName, T.imports=is', T.decls=proxyDecl }
+transpileProxy :: BuildContext m => ([I.Import], I.ProxyContract, I.Module, [Facet]) -> m T.Module
+transpileProxy (is, p@I.ProxyContract { I.proxyName, I.facetList }, m, facets) = withScope m $ do
+  pe <- getProxy proxyName
+  return T.Module { T.moduleId=proxyName, T.imports=unifyImports (pe ^. proxyTypes), T.decls=proxyDecl }
   where proxyDecl = transpileProxyContract p facets
         is' = defaultProxyImports <> (I.importIds =<< is) <> facetList
+        unifyImports ts = S.toList $ S.union (S.fromList is') ts
+
 
 transpileProxyContract :: I.ProxyContract -> [Facet] -> [T.Declaration]
 transpileProxyContract (I.ProxyContract _ pId _ _) facets = [T.ContractDef contractDef]

@@ -71,12 +71,13 @@ dump o ms = do
 write :: [Module] -> BuildEnv -> IO ()
 write ms env = do
   writeEIP2535
-  case fst tms of
+  traverse_ print logs
+  case tms of
     Left e -> error $ "Transpile error(s): " <> show e
     Right rs -> do
       traverse_ (genFile transpileDir) (genModule <$> rs)
       putStrLn ("Compilation successful" :: String)
-  where tms = evalState (runWriterT (runExceptT $ transpile ms)) env
+  where (tms, logs) = evalState (runWriterT (runExceptT $ transpile ms)) env
 
 entry :: IO ()
 entry = do
