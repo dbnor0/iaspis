@@ -26,6 +26,8 @@ executable iaspis
   other-modules:
     CLI.Parser
     CLI.Utils
+    CLI.Commands.Account
+    CLI.Commands.Clear
     CLI.Commands.Compile
     CLI.Commands.Init
     Transpiler.Entry
