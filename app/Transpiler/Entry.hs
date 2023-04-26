@@ -24,6 +24,7 @@ import Transpiler.Codegen.Generate
 import Transpiler.Transpile.Module
 import Transpiler.Analysis.Error
 import Transpiler.Utils.File
+import Transpiler.LayoutCache.Layout (persistLayout)
 
 
 -- this looks weird, but we went for this layering
@@ -43,7 +44,7 @@ env (_, e) = e
 
 parse :: IO [Module]
 parse = do
-  files <- getContractFiles ".ip" "./contracts"
+  files <- getFilesWithExt ".ip" "./contracts"
   parsed <- traverse loadFile files
   when (length parsed /= length (rights parsed))
     (error "Encountered error(s) while parsing")
@@ -85,3 +86,4 @@ entry = do
   o <- analyze ms
   dump o ms
   write ms (env o)
+  persistLayout ms "./cache"

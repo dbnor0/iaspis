@@ -26,12 +26,12 @@ transpileDir = "scripts/contracts"
 hasExt :: FilePath -> FilePath -> Bool
 hasExt ex fp = snd (splitExtension fp) == ex
 
-getContractFiles :: FilePath -> FilePath -> IO [FilePath]
-getContractFiles ext dir = do
+getFilesWithExt :: FilePath -> FilePath -> IO [FilePath]
+getFilesWithExt ext dir = do
   isDir <- doesDirectoryExist dir
   if isDir then do
     contents <- listDirectory dir
-    join <$> traverse (getContractFiles ext) (withRelativePath <$> contents)
+    join <$> traverse (getFilesWithExt ext) (withRelativePath <$> contents)
   else
     return $ [dir | hasExt ext dir]
   where withRelativePath = (++) (dir ++ "\\")
