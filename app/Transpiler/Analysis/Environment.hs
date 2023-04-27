@@ -136,6 +136,7 @@ makeLenses ''BuildInfo
 
 data BuildEnv = BuildEnv
   { _buildInfo :: BuildInfo
+  , _storageUtils :: S.Set Identifier
   , _modules :: Bindings ModuleEntry
   , _types :: Bindings Type
   , _structs :: Bindings StructEntry
@@ -169,6 +170,7 @@ mkBuildInfo = BuildInfo
 mkEnv :: BuildEnv
 mkEnv = BuildEnv
   { _buildInfo = mkBuildInfo
+  , _storageUtils = S.empty
   , _modules = M.empty
   , _types = preludeTypes
   , _structs = M.empty

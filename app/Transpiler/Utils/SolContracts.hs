@@ -204,7 +204,7 @@ iDiamondLoupe =
 
 ierc165 :: T.Text
 ierc165 =
-  "\ \n\
+  "\
   \  // SPDX-License-Identifier: MIT \n\
   \  pragma solidity ^0.8.0; \n\
   \   \n\

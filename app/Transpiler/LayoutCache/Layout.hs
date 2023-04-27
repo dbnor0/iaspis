@@ -24,8 +24,6 @@ persistLayout ms dir = do
       writeFile fp (unpack $ encode layouts)
     Just lc' -> do
       let merged = elems $ mergeLayouts (toMap lc') (toMap layouts)
-      print merged
-      print $ uncurry isUpdateInvalid <$> merged
       when (or $ uncurry isUpdateInvalid <$> merged) 
         (error "Invalid memory layout upgrade")
       when (layouts /= lc') 

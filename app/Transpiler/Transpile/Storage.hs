@@ -30,9 +30,6 @@ storageStructId = (<> "_storage_struct")
 storageGetterId :: Identifier -> Identifier
 storageGetterId id = "StorageStructs." <> id <> "Storage"
 
-sharedStorageId :: Identifier
-sharedStorageId = "global"
-
 storageModule :: [([I.Import], I.ProxyContract, I.Module, [Facet])] -> T.Module
 storageModule ps =
   T.Module
@@ -43,14 +40,14 @@ storageModule ps =
   where libraryDef = S.LibraryDefinition storageModuleId (storageModuleElems . (^. _2) =<< ps)
 
 storageModuleElems :: I.ProxyContract -> [S.ContractBodyElem]
-storageModuleElems (I.ProxyContract _ _ _ fs) = let x = toElems . storageTuple =<< fieldMappings in x
+storageModuleElems (I.ProxyContract _ pId _ fs) = toElems . storageTuple =<< fieldMappings
   where
     toElems = \(v, s, f) -> [S.StateVarDecl v, S.StructDef s, S.FunctionDef f]
     fieldMappings = groupSort (mapMaybe kindToFacetId fs)
     kindToFacetId f@I.Field{ I.fieldProxyKind } =
       case fieldProxyKind of
         Nothing -> Nothing
-        (Just I.SharedProxyMember) -> Just (sharedStorageId, f)
+        (Just I.SharedProxyMember) -> Just (pId, f)
         (Just (I.UniqueProxyMember id)) -> Just (id, f)
 
 storageTuple :: (S.Identifier, [I.Field]) -> StorageElem

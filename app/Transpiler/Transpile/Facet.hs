@@ -11,12 +11,14 @@ import Transpiler.Solidity.Grammar qualified as S
 import Transpiler.Transpile.Types qualified as T
 import Transpiler.Transpile.Common
 import Transpiler.Iaspis.Grammar (Identifier)
-import Transpiler.Transpile.Storage (qualifiedTypeId, storageGetterId, storageModuleId, sharedStorageId)
+import Transpiler.Transpile.Storage (qualifiedTypeId, storageGetterId, storageModuleId)
 import Transpiler.Analysis.Scope
 import Transpiler.Analysis.Environment
 import Transpiler.Analysis.Utils (getFacetField, getFacet)
 import Data.Set qualified as S
 import Lens.Micro.Platform
+import Control.Monad.State.Class
+import Data.Maybe
 
 
 transpileFacet :: BuildContext m => ([I.Import], I.Module, I.FacetContract) -> m T.Module
@@ -32,14 +34,15 @@ transpileFacet (is, m, f@I.FacetContract { I.facetName, I.proxyList }) = withSco
 
 
 transpileFacetContract :: BuildContext m => I.FacetContract -> m T.Declaration
-transpileFacetContract c@(I.FacetContract fId _ fns) = withScope c $ do
-  tfns <- traverse (transpileFacetFn fId) fns
+transpileFacetContract c@(I.FacetContract fId pId fns) = withScope c $ do
+  tfns <- traverse (transpileFacetFn fId pId) fns
   return $ T.ContractDef (contractDef tfns)
   where contractDef = S.ContractDefinition False fId []
 
-transpileFacetFn :: BuildContext m => Identifier -> I.Function -> m S.ContractBodyElem
-transpileFacetFn fId fn@(I.Function hd body) = withScope fn $ do
+transpileFacetFn :: BuildContext m => Identifier -> Identifier -> I.Function -> m S.ContractBodyElem
+transpileFacetFn fId pId fn@(I.Function hd body) = withScope fn $ do
   tbody <- traverse (transpileFacetStmt fId) body
+  storageDecls <- storageStructDecls fId pId
   return $ S.FunctionDef $ S.FunctionDefinition
     { S.functionId = I.functionName hd
     , S.functionVisibility = transpileVisibility . Just $ I.functionVisibility hd
@@ -49,17 +52,21 @@ transpileFacetFn fId fn@(I.Function hd body) = withScope fn $ do
     , S.functionOverrideSpec = False
     , S.functionArgs = transpileFunctionArg <$> I.functionArgs hd
     , S.functionReturnType = [transpileFunctionArg $ I.functionReturnType hd]
-    , S.functionBody = storageStructDecls fId <> tbody
+    , S.functionBody = storageDecls <> tbody
     }
 
 storageStructId :: Identifier -> Identifier
 storageStructId = (<> "Ds")
 
-storageStructDecls :: Identifier -> [S.Statement]
-storageStructDecls pId =
-  [ transpileStorageStructDecl pId
-  , transpileStorageStructDecl sharedStorageId
-  ]
+storageStructDecls :: BuildContext m => Identifier -> Identifier -> m [S.Statement]
+storageStructDecls fId pId = do
+  utils <- gets (^. storageUtils)
+  return $ transpileStorageStructDecl <$> catMaybes 
+    [ toMaybe (S.member fId utils) fId
+    , toMaybe (S.member pId utils) pId
+    ]
+  where toMaybe False = const Nothing
+        toMaybe True = Just
 
 transpileStorageStructDecl :: Identifier -> S.Statement
 transpileStorageStructDecl id = S.VarDeclStmt arg (Just expr)

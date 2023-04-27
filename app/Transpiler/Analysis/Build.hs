@@ -21,7 +21,6 @@ import Transpiler.Iaspis.TypeUtils
 import Control.Monad
 import Transpiler.Analysis.Scope
 import Data.Set qualified as S
-import Control.Monad.Writer
 
 
 build :: BuildContext m => [Module] -> m ()
@@ -71,6 +70,7 @@ addDecls = \case
     s <- gets (^. (buildInfo . biScope))
     uniqueId proxyName (ns <> (m ^. moduleImportedDecls)) (DupId ProxyId)
     modify $ proxies %~ M.insert (s <> "::" <> proxyName) (entry s)
+    traverse_ (addProxyMapping proxyName) proxyDecls
     where entry s = ProxyEntry proxyName facetList fields s S.empty
           fields = zip (fieldName <$> proxyDecls) (fieldProxyKind <$> proxyDecls)
   FacetDecl (FacetContract{ facetName, proxyList, facetDecls }) -> do
@@ -95,6 +95,13 @@ addDecls = \case
     modify $ types %~ M.insert enumName (EnumT e)
     modify $ enums %~ M.insert enumName entry
     where entry = EnumEntry enumName e
+
+addProxyMapping :: BuildContext m => Identifier -> Field -> m ()
+addProxyMapping pId Field{ fieldProxyKind } =
+  case fieldProxyKind of
+    Nothing -> return ()
+    Just SharedProxyMember -> modify $ storageUtils %~ S.insert pId
+    Just (UniqueProxyMember fId) -> modify $ storageUtils %~ S.insert fId
 
 fieldPass :: BuildContext m => [Module] -> m ()
 fieldPass ms = do

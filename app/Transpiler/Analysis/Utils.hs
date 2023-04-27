@@ -17,7 +17,7 @@ import Data.Maybe
 import Control.Monad.Writer
 import Prelude hiding (Enum)
 import Data.Foldable
-import Transpiler.Transpile.Storage
+
 
 getContract :: BuildContext m => Identifier -> m ContractEntry
 getContract id = do
@@ -105,7 +105,7 @@ facetFieldCheck id = do
       case find (\f -> fst f == id) (p ^. proxyFields) of
         Nothing -> throwError $ FieldNotInScope id s
         Just (_, Nothing) -> throwError $ FieldNotInScope id s
-        Just (_, Just SharedProxyMember) -> return $ Just sharedStorageId
+        Just (_, Just SharedProxyMember) -> return $ Just (p ^. proxyId)
         Just (_, Just (UniqueProxyMember f')) -> do
           unless (f' == fId) (throwError $ FieldNotInScope id s)
           return $ Just fId
