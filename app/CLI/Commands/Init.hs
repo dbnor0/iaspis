@@ -13,17 +13,17 @@ isFailure :: ExitCode -> Bool
 isFailure (ExitFailure _) = True
 isFailure _ = False
 
-runShell :: String -> String -> IO String
-runShell cmd msg = do
+runShell :: String -> String -> Bool -> IO String
+runShell cmd msg shouldThrow = do
   (ec, r, err) <- readCreateProcessWithExitCode (shell cmd) ""
-  when (isFailure ec) (error $ msg <> ": " <> err)
+  when (isFailure ec && shouldThrow) (error $ msg <> ": " <> err)
   return r
 
 -- subcommands
 checkNode :: IO ()
 checkNode = do
   putStrLn "Checking Node installation..."
-  void $ runShell "node -v" nodeMsg
+  void $ runShell "node -v" nodeMsg True
   () <- putStrLn "Node is installed"
   return ()
 
@@ -44,22 +44,21 @@ createProjectFile = do
 checkTruffle :: IO ()
 checkTruffle = do
   putStrLn "Checking Truffle installation..."
-  r <- runShell "npm ls -g truffle" "Error checking Truffle installation"
+  r <- runShell "npm ls -g truffle" "Error checking Truffle installation" False
   if isInstalled r then
     putStrLn "Truffle is already installed"
   else do
     putStrLn "No Truffle installation found; installing globally now..."
     installTruffle
-  where isInstalled r = packageSuffix r /= "-- (empty) \n\n"
-        packageSuffix r = reverse $ takeWhile (/= '`') $ reverse r
+  where isInstalled r = not $ "(empty)\n\n" `L.isSuffixOf` r
 
 installTruffle :: IO ()
-installTruffle = void $ runShell "npm i -g truffle" truffleMsg
+installTruffle = void $ runShell "npm i -g truffle" truffleMsg True
 
 initTruffle :: IO ()
 initTruffle = withCurrentDirectory "./scripts" $ do
   putStrLn "Initializing Truffle project..."
-  void $ runShell "truffle init" truffleInitMsg
+  void $ runShell "truffle init" truffleInitMsg True
   putStrLn "Initialized Truffle project"
 
 initCmd :: IO ()
