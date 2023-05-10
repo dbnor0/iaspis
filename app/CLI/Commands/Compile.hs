@@ -16,7 +16,7 @@ compileCmd = do
 compileSolidity :: IO ()
 compileSolidity = withCurrentDirectory "./scripts" $ do
   putStrLn "Compiling Solidity..."
-  void $ runShell "truffle compile" solidityMsg
+  void $ runShell "truffle compile" solidityMsg True
   putStrLn "Compiled Solidity"
 
 solidityMsg :: String

@@ -61,18 +61,18 @@ storageStructId = (<> "Ds")
 storageStructDecls :: BuildContext m => Identifier -> Identifier -> m [S.Statement]
 storageStructDecls fId pId = do
   utils <- gets (^. storageUtils)
-  return $ transpileStorageStructDecl <$> catMaybes 
+  return $ transpileStorageStructDecl pId <$> catMaybes 
     [ toMaybe (S.member fId utils) fId
     , toMaybe (S.member pId utils) pId
     ]
   where toMaybe False = const Nothing
         toMaybe True = Just
 
-transpileStorageStructDecl :: Identifier -> S.Statement
-transpileStorageStructDecl id = S.VarDeclStmt arg (Just expr)
+transpileStorageStructDecl :: Identifier -> Identifier -> S.Statement
+transpileStorageStructDecl pId id = S.VarDeclStmt arg (Just expr)
   where arg = S.FunctionArg argType (storageStructId id)
-        argType = S.PrimitiveT $ S.UserDefinedT (qualifiedTypeId id) (Just S.Storage)
-        expr = S.FunctionCallE (S.IdentifierE $ storageGetterId id) []
+        argType = S.PrimitiveT $ S.UserDefinedT (qualifiedTypeId pId id) (Just S.Storage)
+        expr = S.FunctionCallE (S.IdentifierE $ storageGetterId pId id) []
 
 transpileFacetStmt :: BuildContext m => Identifier -> I.Statement -> m S.Statement
 transpileFacetStmt fId = \case

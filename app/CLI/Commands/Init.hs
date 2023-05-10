@@ -1,23 +1,17 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 module CLI.Commands.Init where
 
-import System.Process.Extra
 import System.Exit
 import System.Directory (getCurrentDirectory, getDirectoryContents, createDirectory, withCurrentDirectory)
 import Control.Monad
 import Data.Foldable
 import Data.List qualified as L
+import CLI.Utils
 
 -- utils
 isFailure :: ExitCode -> Bool
 isFailure (ExitFailure _) = True
 isFailure _ = False
-
-runShell :: String -> String -> Bool -> IO String
-runShell cmd msg shouldThrow = do
-  (ec, r, err) <- readCreateProcessWithExitCode (shell cmd) ""
-  when (isFailure ec && shouldThrow) (error $ msg <> ": " <> err)
-  return r
 
 -- subcommands
 checkNode :: IO ()

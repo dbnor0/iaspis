@@ -18,8 +18,10 @@ isFailure :: ExitCode -> Bool
 isFailure (ExitFailure _) = True
 isFailure _ = False
 
-runShell :: String -> String -> IO String
-runShell cmd msg = do
+runShell :: String -> String -> Bool -> IO String
+runShell cmd msg shouldThrow = do
   (ec, r, err) <- readCreateProcessWithExitCode (shell cmd) ""
-  when (isFailure ec) (error $ msg <> ": " <> err)
+  when (isFailure ec && shouldThrow) (do
+    print $ msg <> ": " <> err
+    error $ msg <> ": " <> err)
   return r
