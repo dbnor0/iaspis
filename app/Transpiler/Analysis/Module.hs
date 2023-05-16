@@ -1,4 +1,3 @@
-
 {-# LANGUAGE FlexibleContexts #-}
 
 module Transpiler.Analysis.Module where

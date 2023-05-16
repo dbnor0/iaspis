@@ -134,3 +134,34 @@ executable iaspis
     , unix-time
   hs-source-dirs:   app
   default-language: Haskell2010
+
+library
+  hs-source-dirs: app
+  build-depends:
+    base ^>=4.16.4.0
+    , aeson
+    , bytestring
+    , command
+    , containers
+    , directory
+    , either
+    , extra
+    , filepath
+    , megaparsec
+    , microlens-platform
+    , mtl
+    , optparse-applicative
+    , text
+    , unix-time
+  exposed-modules:
+    Transpiler.Iaspis.Grammar
+
+test-suite ast-test
+  type:                exitcode-stdio-1.0
+  main-is:             Main.hs
+  hs-source-dirs:      test
+  build-depends:       
+    base
+    , iaspis
+    , QuickCheck
+  default-language:    Haskell2010
