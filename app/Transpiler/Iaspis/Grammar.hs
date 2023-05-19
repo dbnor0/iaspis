@@ -203,7 +203,7 @@ data MemberDecl
   deriving stock Show
 
 newtype ModuleDecl = ModuleDecl Identifier
-  deriving stock Show
+  deriving stock  (Show, Generic)
 
 data Declaration 
   = ContractDecl ImmutableContract
