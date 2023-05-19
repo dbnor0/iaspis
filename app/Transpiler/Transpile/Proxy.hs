@@ -53,10 +53,14 @@ proxyConstructorBody facets =
   [ S.ExpressionStmt $ S.FunctionCallE (S.IdentifierE "LibDiamond.setContractOwner") [S.IdentifierE "_contractOwner"]
   , S.VarDeclStmt
     (S.FunctionArg (array (struct "IDiamondCut.FacetCut" (Just S.Memory)) [Nothing] (Just S.Memory)) "cut")
-    (Just $ S.ArrayInstantiationE "IDiamondCut.FacetCut" (S.LiteralE (S.NumberLit (length facets))))
+    (Just $ S.ArrayInstantiationE "IDiamondCut.FacetCut" (S.LiteralE (S.NumberLit (length facets + 2))))
   ]
   <>
-  (proxyFacetCutInit =<< zip [0..n] facets)
+  proxyDiamondCutInit
+  <>
+  proxyDiamondLoupeInit
+  <>
+  (proxyFacetCutInit =<< zip [2..n + 1] facets)
   <>
   [ S.ExpressionStmt $ S.FunctionCallE (S.IdentifierE "LibDiamond.diamondCut")
     [ S.IdentifierE "cut"
@@ -66,7 +70,49 @@ proxyConstructorBody facets =
   ]
   where n = length facets
 
+proxyDiamondCutInit :: [S.Statement]
+proxyDiamondCutInit = 
+  [ S.VarDeclStmt (S.FunctionArg (array (bytes 4) [Nothing] (Just S.Memory)) "DiamondCutfunctionSelectors")
+    (Just $ S.ArrayInstantiationE "bytes4" (S.LiteralE (S.NumberLit 1)))
+  , S.AssignmentStmt
+    (S.SubscriptE (S.IdentifierE "DiamondCutfunctionSelectors") (S.LiteralE (S.NumberLit 0)))
+    (S.IdentifierE "IDiamondCut.diamondCut.selector")
+  , S.AssignmentStmt (S.SubscriptE (S.IdentifierE "cut") (S.LiteralE (S.NumberLit 0)))
+    (S.LiteralE (S.StructLit "IDiamondCut.FacetCut"
+      [ ("facetAddress", S.IdentifierE "_DiamondCutAddress")
+      , ("action", S.IdentifierE "IDiamondCut.FacetCutAction.Add")
+      , ("functionSelectors", S.IdentifierE "DiamondCutfunctionSelectors")
+      ]
+    ))
+  ]
+
+proxyDiamondLoupeInit :: [S.Statement]
+proxyDiamondLoupeInit = 
+  [ S.VarDeclStmt (S.FunctionArg (array (bytes 4) [Nothing] (Just S.Memory)) "DiamondLoupefunctionSelectors")
+    (Just $ S.ArrayInstantiationE "bytes4" (S.LiteralE (S.NumberLit 4)))
+  , S.AssignmentStmt
+    (S.SubscriptE (S.IdentifierE "DiamondLoupefunctionSelectors") (S.LiteralE (S.NumberLit 0)))
+    (S.IdentifierE "IDiamondLoupe.facets.selector")
+  , S.AssignmentStmt
+    (S.SubscriptE (S.IdentifierE "DiamondLoupefunctionSelectors") (S.LiteralE (S.NumberLit 1)))
+    (S.IdentifierE "IDiamondLoupe.facetFunctionSelectors.selector")
+  , S.AssignmentStmt
+    (S.SubscriptE (S.IdentifierE "DiamondLoupefunctionSelectors") (S.LiteralE (S.NumberLit 2)))
+    (S.IdentifierE "IDiamondLoupe.facetAddresses.selector")
+  , S.AssignmentStmt
+    (S.SubscriptE (S.IdentifierE "DiamondLoupefunctionSelectors") (S.LiteralE (S.NumberLit 3)))
+    (S.IdentifierE "IDiamondLoupe.facetAddress.selector")
+  , S.AssignmentStmt (S.SubscriptE (S.IdentifierE "cut") (S.LiteralE (S.NumberLit 1)))
+    (S.LiteralE (S.StructLit "IDiamondCut.FacetCut"
+      [ ("facetAddress", S.IdentifierE "_DiamondLoupeAddress")
+      , ("action", S.IdentifierE "IDiamondCut.FacetCutAction.Add")
+      , ("functionSelectors", S.IdentifierE "DiamondLoupefunctionSelectors")
+      ]
+    ))
+  ]
+
 proxyFacetCutInit :: (Int, Facet) -> [S.Statement]
+proxyFacetCutInit (_, (_, [])) = []
 proxyFacetCutInit (idx, (fId, fFns)) =
   [ S.VarDeclStmt (S.FunctionArg (array (bytes 4) [Nothing] (Just S.Memory)) (fId <> "functionSelectors"))
     (Just $ S.ArrayInstantiationE "bytes4" (S.LiteralE (S.NumberLit 1)))
@@ -94,8 +140,15 @@ proxyFacetCutSelectors (idx, fId, I.Function hd _) =
     (S.IdentifierE $ fId <> "." <> I.functionName hd <> ".selector")
 
 proxyConstructorArgs :: [S.Identifier] -> [S.FunctionArg]
-proxyConstructorArgs fIds = S.FunctionArg address "_contractOwner" : (facetAddress <$> fIds)
-  where facetAddress fId = S.FunctionArg address ("_" <> fId <> "Address")
+proxyConstructorArgs fIds = 
+  ownerArg 
+  : diamondCutArg
+  : diamondLoupeArg
+  : (facetAddress <$> fIds)
+  where ownerArg = S.FunctionArg address "_contractOwner"
+        diamondCutArg = facetAddress "DiamondCut"
+        diamondLoupeArg = facetAddress "DiamondLoupe"
+        facetAddress fId = S.FunctionArg address ("_" <> fId <> "Address")
 
 transpileProxyFallback :: S.ContractBodyElem
 transpileProxyFallback = S.FallbackDef $ S.FunctionDefinition
@@ -174,5 +227,5 @@ transpileProxyReceive = S.FallbackDef $ S.FunctionDefinition
   }
 
 defaultProxyImports :: [S.Identifier]
-defaultProxyImports = ["LibDiamond", "IDiamondCut"]
+defaultProxyImports = ["LibDiamond", "IDiamondCut", "IDiamondLoupe"]
 

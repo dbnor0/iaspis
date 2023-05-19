@@ -30,6 +30,11 @@ executable iaspis
     CLI.Commands.Clear
     CLI.Commands.Compile
     CLI.Commands.Init
+    Deployments.Entry
+    LayoutCache.Entry
+    LayoutCache.Layout
+    LayoutCache.Types
+    LayoutCache.Utils
     Transpiler.Entry
     Transpiler.Analysis.Build
     Transpiler.Analysis.Error
@@ -47,9 +52,6 @@ executable iaspis
     Transpiler.Iaspis.DeclUtils
     Transpiler.Iaspis.Grammar
     Transpiler.Iaspis.TypeUtils
-    Transpiler.LayoutCache.Layout
-    Transpiler.LayoutCache.Types
-    Transpiler.LayoutCache.Utils
     Transpiler.Parser.Base
     Transpiler.Parser.Source
     Transpiler.Parser.Types

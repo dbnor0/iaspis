@@ -1,9 +1,9 @@
-module Transpiler.LayoutCache.Utils where
+module LayoutCache.Utils where
 
 import Transpiler.Utils.File (getFilesWithExt)
 import Data.Aeson
 import Data.ByteString.Lazy.Char8 hiding (dropWhile, length, readFile, reverse)
-import Transpiler.LayoutCache.Types
+import LayoutCache.Types
 import Data.UnixTime (getUnixTime, UnixTime (utSeconds))
 import System.FilePath
 import Data.Maybe

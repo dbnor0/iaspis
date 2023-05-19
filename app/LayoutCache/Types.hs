@@ -2,7 +2,7 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE DeriveGeneric #-}
 
-module Transpiler.LayoutCache.Types where
+module LayoutCache.Types where
   
 import Data.Aeson
 import GHC.Generics

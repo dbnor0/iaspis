@@ -24,7 +24,8 @@ import Transpiler.Codegen.Generate
 import Transpiler.Transpile.Module
 import Transpiler.Analysis.Error
 import Transpiler.Utils.File
-import Transpiler.LayoutCache.Layout (persistLayout)
+import LayoutCache.Entry (persistLayout)
+import Deployments.Entry (genDeployments)
 
 
 -- this looks weird, but we went for this layering
@@ -87,3 +88,4 @@ entry = do
   dump o ms
   write ms (env o)
   persistLayout ms "./cache"
+  genDeployments (env o)
