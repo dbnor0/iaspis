@@ -27,7 +27,7 @@ contract Contract {
     Z storage v <- zzz;
     mut bool aaa := v.h.b.q;
     if (n == 1) {
-      uint wallagong := 23;
+      uint hhh := 23;
       return 1;
     }
     bytes2 bbb := 0x1234;
@@ -74,18 +74,18 @@ open proxy Proxy for Facet1, Facet2 {
 facet Facet1 to Proxy {
   public mut fn f1 (uint uh) -> string memory {
     x <- "123";
-    test <- "yeeeeeeee";
+    test <- "str";
     mut uint z := 123;
     mut string memory y := "false";
     mut string memory c := y;
-    mut string memory x := "heh";
+    mut string memory x := "str2";
     uint o := tx.gasprice;
     x := "dd";
     States st := States::STARTED;
     y := "true";
-    mut string memory q := "abc";
+    mut string memory q := "str3";
     if (true) {
-      mut string memory stuff := "stuff";
+      mut string memory stuff := "str4";
       if (true) {
         mut string memory kek := "kek";
         mut uint i := 5;
@@ -95,7 +95,7 @@ facet Facet1 to Proxy {
         }
       }
     } else {
-      test <- "hey";
+      test <- "str5";
     }
     return c;
   }

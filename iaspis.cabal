@@ -157,6 +157,11 @@ library
     , unix-time
   exposed-modules:
     Transpiler.Iaspis.Grammar
+    , Transpiler.Parser.Base
+    , Transpiler.Parser.Source
+    , Transpiler.Parser.Types
+    , Transpiler.Parser.Utils
+
 
 test-suite ast-test
   type:                exitcode-stdio-1.0
@@ -165,5 +170,10 @@ test-suite ast-test
   build-depends:       
     base
     , iaspis
+    , directory
     , QuickCheck
+    , megaparsec
+    , tasty
+    , tasty-golden
+    , HUnit
   default-language:    Haskell2010
