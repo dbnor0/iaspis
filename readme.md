@@ -3,6 +3,36 @@
 
 EVM compatible programming language with support for first-class upgradeable contracts
 
+### Installation and use
+
+The necessary build tools can be acquired and used through `ghcup`, available at https://www.haskell.org/ghcup/
+
+Once the source code has been cloned, it can be built with
+
+`cabal build` 
+
+Additionally, Iaspis can be installed as a command-line tool using
+
+`cabal install`
+
+Although the framework will attempt to install its dependencies, it is recommended to have `npm` and `truffle` installed before using the transpiler. `npm` is available at https://nodejs.org/en/download, and `truffle` can be installed using
+
+`npm i -g truffle`
+
+A new project can be initialized in an empty directory using
+
+`iaspis init`
+
+Contracts will be developed within the `./contracts` generated folder.
+
+Contracts can be compiled with
+
+`iaspis compile`
+
+We recommand `ganache` for a local Ethereum blockchain setup for deployment tests
+
+`npm i -g ganache`
+
 ### Reasoning
 
 Ethereum contracts are immutable by default. This means that once confirmed by the network, the code associated with a given contract's address will stay unchanged. Transparency is one of the forefront selling points of blockchains - however, this seemingly straight-forward aspect has also proved to be a (sometimes costly) painpoint in development. 

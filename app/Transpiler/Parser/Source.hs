@@ -38,7 +38,6 @@ decl = backtrack
   , StructDecl <$> struct
   , EnumDecl <$> enum
   ]
-
 immutableContract :: Parser ImmutableContract
 immutableContract = do
   name <- reserved "contract" *> identifier
@@ -47,7 +46,7 @@ immutableContract = do
 
 proxyContract :: Parser ProxyContract
 proxyContract = ProxyContract <$> proxyKind' <*> name  <*> facetList <*> memberList
-  where proxyKind' = proxyKind <* reserved "proxy"
+  where proxyKind' = ProxyOpen <$ reserved "proxy"
         name       = identifier <* reserved "for"
         facetList  = sepBy identifier comma
         memberList = block $ many (endsIn ";" contractFieldDecl)
@@ -350,7 +349,7 @@ type' = backtrack
   , UserDefinedT <$> identifier <*> pure Nothing
   ]
 
-nonArrayType :: Parser Type 
+nonArrayType :: Parser Type
 nonArrayType = backtrack
   [ reserved' "address" AddressT
   , reserved' "bool" BoolT
@@ -399,9 +398,9 @@ typeWithLoc = backtrack
   ]
 
 mappingType :: Parser Type
-mappingType = 
-  MappingT 
-  <$> (reserved "mapping" *> reserved "(" *> mappingKeyType) 
+mappingType =
+  MappingT
+  <$> (reserved "mapping" *> reserved "(" *> mappingKeyType)
   <*> (reserved "=>" *> type' <* reserved ")")
 
 arrayDims :: Parser [Maybe Int]

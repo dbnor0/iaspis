@@ -171,9 +171,6 @@ test-suite ast-test
     base
     , iaspis
     , directory
-    , QuickCheck
     , megaparsec
-    , tasty
-    , tasty-golden
     , HUnit
   default-language:    Haskell2010

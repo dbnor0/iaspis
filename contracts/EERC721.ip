@@ -1,0 +1,154 @@
+module EERC721;
+
+proxy EERC721 for Admin, Balances, Metadata, Ownable {
+  @ Admin public mut string name;
+  @ Admin public mut string symbol;
+  @ Admin public mut uint supply;
+
+  @ *        private mut mapping(uint => address) owners;
+  @ Balances private mut mapping(address => uint) balances;
+  @ Balances private mut mapping(uint => address) tokenApprovals;
+  @ Balances private mut 
+    mapping(address => mapping(address => bool)) operatorApprovals;
+
+  @ Metadata private mut mapping(uint => string) tokenUris;
+
+  @ * private mut address owner;
+}
+
+facet Admin to EERC721 {
+  public mut fn setSupply(uint s) {
+    require(msg.sender == owner);
+    
+    supply <- s;
+  }
+
+  public mut fn setName(string memory n) {
+    require(msg.sender == owner);
+
+    name <- n;
+  }
+
+  public mut fn setSymbol(string memory s) {
+    require(msg.sender == owner);
+
+    symbol <- s;
+  }
+}
+
+facet Balances to EERC721 {
+  public fn balanceOf(address owner) -> uint {
+    require(owner != 0x0000000000000000000000000000000000000000);
+    return balances[owner];
+  }
+
+  public fn ownerOf(uint tokenId) -> address {
+    return owners[tokenId];
+  }
+
+
+  public mut fn approve(address to, uint tokenId) {
+    address owner := owners[tokenId];
+
+    if (
+      to != owner 
+      && msg.sender != owner 
+      && !isApprovedForAll(owner, msg.sender)
+    ) {
+      tokenApprovals[tokenId] <- to;
+    }
+  }
+
+  public fn isApprovedForAll(
+    address owner,
+    address operator
+  ) -> bool {
+    return operatorApprovals[owner][operator];
+  }
+
+  public fn getApproved(uint tokenId) -> address {
+    return tokenApprovals[tokenId];
+  }
+
+  public mut fn setApprovalForAll(
+    address operator,
+    bool approved
+  ) {
+    operatorApprovals[owner][operator] <- approved;
+  }
+
+  public mut fn transferFrom(
+    address from, 
+    address to,
+    uint tokenId
+  ) {
+    if (isApprovedOrOwner(msg.sender, tokenId)) {
+      ercTransfer(from, to, tokenId);
+    }
+  }
+
+  public fn isApprovedOrOwner(
+    address spender, 
+    uint tokenId
+  ) -> bool {
+    address owner := owners[tokenId];
+    return (
+      spender == owner 
+      || isApprovedForAll(owner, spender) 
+      || getApproved(tokenId) == spender
+    );
+  }
+
+
+  public mut fn ercTransfer(
+    address from, 
+    address to, 
+    uint tokenId
+  ) {
+    address owner := owners[tokenId];
+    if (owner != from) {
+      revert("Not owner");
+    }
+
+    if (to == 0x0000000000000000000000000000000000000000) {
+      revert("Invalid address");
+    }
+
+    tokenApprovals[tokenId] 
+      <- 0x0000000000000000000000000000000000000000;
+    balances[from] <- balances[from] - 1;
+    balances[to] <- balances[to] + 1;
+    owners[tokenId] <- to;
+  }
+
+  public mut fn mint(address to, uint tokenId) {
+    require(msg.sender == owner);
+    if (to == 0x0000000000000000000000000000000000000000) {
+        revert("Invalid receiver");
+    }
+    
+    balances[to] <- balances[to] + 1;
+    owners[tokenId] <- to;
+  }
+}
+
+facet Metadata to EERC721 {
+  public mut fn setTokenUri(uint tokenId, string memory uri) {
+    require(msg.sender == owners[tokenId]);
+
+    tokenUris[tokenId] <- uri;
+  }
+
+
+  public fn tokenUri(uint tokenId) -> string memory {
+    return tokenUris[tokenId];
+  }
+}
+
+facet Ownable to EERC721 {
+  public mut fn setOwner(address newOwner) {
+    require(msg.sender == owner);
+
+    owner <- newOwner;
+  }
+}

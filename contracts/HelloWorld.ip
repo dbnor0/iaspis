@@ -65,7 +65,7 @@ contract Contract {
   }
 }
 
-open proxy Proxy for Facet1, Facet2 {
+proxy Proxy for Facet1, Facet2 {
   @      *   public  mut string test;
   @ Facet1   private mut string x;
   @ Facet2   private mut string y; 
